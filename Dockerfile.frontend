@@ -2,8 +2,8 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# 安装 tzdata 以支持时区设置
-RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+# 安装 tzdata 以支持时区设置，安装 curl 以便进行健康检查
+RUN apt-get update && apt-get install -y tzdata curl && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件并安装Python包
 COPY requirements.txt .
@@ -20,7 +20,7 @@ EXPOSE 8501
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import requests; requests.get('http://localhost:8501/_stcore/health', timeout=3).raise_for_status()"
+  CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
 # 启动命令
 CMD ["streamlit", "run", "ui.py", "--server.port", "8501", "--server.address", "0.0.0.0"]

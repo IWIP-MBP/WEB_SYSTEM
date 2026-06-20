@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     postgresql-client \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件并安装Python包
@@ -24,7 +25,7 @@ EXPOSE 8000 8501
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import requests; requests.get('http://localhost:8000/api/health', timeout=3).raise_for_status()"
+  CMD curl -f http://localhost:8000/api/health || exit 1
 
 # 启动命令 - 默认启动后端
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

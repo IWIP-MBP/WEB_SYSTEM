@@ -1,0 +1,137 @@
+import json
+import logging
+from sqlalchemy import select, func
+from fastapi import HTTPException
+from models import employees, config_meta
+
+logger = logging.getLogger(__name__)
+
+def load_org_layout(db):
+    raw = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "org_layout")).scalar()
+    if not raw:
+        return {}
+    try:
+        saved = json.loads(raw)
+    except Exception:
+        logger.warning("Invalid org_layout JSON ignored")
+        return {}
+    if isinstance(saved, dict) and "nodes" in saved:
+        saved = saved["nodes"]
+    if not isinstance(saved, list):
+        return {}
+    result = {}
+    for item in saved:
+        if not isinstance(item, dict) or not item.get("key"):
+            continue
+        result[item["key"]] = {
+            "display_name": item.get("display_name") or item.get("name") or item["key"],
+            "type": item.get("type") or "",
+            "parent": item.get("parent") or "",
+            "sort": int(item.get("sort") or 0),
+        }
+    return result
+
+def build_org_chart(db, current_user=None):
+    stmt = select(
+        employees.c.ws_bengkel,
+        employees.c.team_grup,
+        employees.c.nat_negara,
+        func.count().label("cnt")
+    ).where(employees.c.status_status.contains("在职"))
+    
+    if current_user:
+        ws_scope_str = current_user.get("ws_scope")
+        if ws_scope_str:
+            try:
+                allowed = json.loads(ws_scope_str)
+                if isinstance(allowed, list) and len(allowed) > 0:
+                    stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
+            except:
+                pass
+    rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
+
+    nodes = {
+        "root": {
+            "key": "root", "name": "后勤三部", "display_name": "后勤三部",
+            "type": "部门", "parent": "", "level": 0, "total": 0, "nations": {}, "sort": 0
+        }
+    }
+
+    for row in rows:
+        ws = (row.ws_bengkel or "未分配车间").strip() or "未分配车间"
+        team = (row.team_grup or "未分配班组").strip() or "未分配班组"
+        nat = (row.nat_negara or "未知").strip() or "未知"
+        cnt = int(row.cnt or 0)
+        ws_key = f"ws::{ws}"
+        team_key = f"team::{ws}::{team}"
+
+        if ws_key not in nodes:
+            nodes[ws_key] = {
+                "key": ws_key, "name": ws, "display_name": ws,
+                "type": "车间", "parent": "root", "level": 1,
+                "total": 0, "nations": {}, "sort": len(nodes)
+            }
+        if team_key not in nodes:
+            nodes[team_key] = {
+                "key": team_key, "name": team, "display_name": team,
+                "type": "班组", "parent": ws_key, "level": 2,
+                "total": 0, "nations": {}, "sort": len(nodes)
+            }
+
+        for key in ("root", ws_key, team_key):
+            nodes[key]["total"] += cnt
+            nodes[key]["nations"][nat] = nodes[key]["nations"].get(nat, 0) + cnt
+
+    saved = load_org_layout(db)
+    valid_keys = set(nodes.keys())
+    for key, override in saved.items():
+        if key not in nodes:
+            continue
+        parent = override.get("parent", nodes[key]["parent"])
+        if key == "root":
+            parent = ""
+        elif parent not in valid_keys or parent == key:
+            parent = nodes[key]["parent"]
+        nodes[key]["display_name"] = override.get("display_name") or nodes[key]["display_name"]
+        nodes[key]["type"] = override.get("type") or nodes[key]["type"]
+        nodes[key]["parent"] = parent
+        nodes[key]["sort"] = override.get("sort", nodes[key]["sort"])
+
+    ordered = sorted(nodes.values(), key=lambda n: (n.get("level", 9), n.get("sort", 0), n["display_name"]))
+    name_map = {n["key"]: n["display_name"] for n in ordered}
+    for node in ordered:
+        node["parent_name"] = name_map.get(node["parent"], "")
+
+    edges = [{"from": n["parent"], "to": n["key"]} for n in ordered if n["parent"]]
+    nations = sorted({nat for n in ordered for nat in n.get("nations", {})})
+    return {"nodes": ordered, "edges": edges, "nations": nations}
+
+def validate_org_nodes(nodes):
+    if not isinstance(nodes, list) or not nodes:
+        raise HTTPException(400, "组织架构数据不能为空")
+    keys = [n.get("key") for n in nodes if isinstance(n, dict)]
+    if len(keys) != len(set(keys)):
+        raise HTTPException(400, "节点 ID 重复，请刷新后重试")
+    key_set = set(keys)
+    if "root" not in key_set:
+        raise HTTPException(400, "缺少根节点 root")
+    parent_map = {}
+    for node in nodes:
+        key = node.get("key")
+        parent = node.get("parent") or ""
+        if key == "root":
+            parent = ""
+        elif parent not in key_set:
+            raise HTTPException(400, f"节点 {node.get('display_name') or key} 的父级无效")
+        if parent == key:
+            raise HTTPException(400, f"节点 {node.get('display_name') or key} 不能选择自己作为父级")
+        parent_map[key] = parent
+
+    for key in key_set:
+        seen = set()
+        cursor = key
+        while parent_map.get(cursor):
+            cursor = parent_map[cursor]
+            if cursor in seen:
+                raise HTTPException(400, "父级关系形成循环，请重新选择")
+            seen.add(cursor)
