@@ -4333,8 +4333,8 @@ elif menu == t("backup_management"):
     # CSS 注入 - 深色宝石绿毛玻璃特效 (Deep Gemstone Green Glassmorphism)
     st.markdown("""
     <style>
-        /* 宝石绿毛玻璃容器样式 */
-        .gemstone-card {
+        /* 宝石绿毛玻璃容器样式 - 使用 :has 选择器精确定位 Streamlit 容器，避免多余颜色带 */
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) {
             background: linear-gradient(135deg, rgba(2, 48, 40, 0.45), rgba(0, 100, 80, 0.3)) !important;
             backdrop-filter: blur(15px) saturate(180%) !important;
             -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
@@ -4368,9 +4368,9 @@ elif menu == t("backup_management"):
         }
         
         /* 高对比度边框输入框 */
-        .gemstone-card input, 
-        .gemstone-card select, 
-        .gemstone-card div[data-baseweb="select"] > div {
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) input, 
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) select, 
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) div[data-baseweb="select"] > div {
             border: 1.5px solid rgba(0, 200, 150, 0.5) !important;
             background-color: rgba(2, 40, 35, 0.6) !important;
             color: #ffffff !important;
@@ -4378,8 +4378,8 @@ elif menu == t("backup_management"):
             transition: all 0.2s ease !important;
         }
         
-        .gemstone-card input:focus, 
-        .gemstone-card div[data-baseweb="select"] > div:focus-within {
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) input:focus, 
+        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) div[data-baseweb="select"] > div:focus-within {
             border-color: #00ffcc !important;
             box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.25) !important;
         }
@@ -4411,80 +4411,79 @@ elif menu == t("backup_management"):
     # 获取当前配置
     config = api_get("/system/backup/config") or {"hour": 2, "minute": 0, "retention_days": 7}
     
-    st.markdown('<div class="gemstone-card">', unsafe_allow_html=True)
-    st.subheader(t("backup_config"))
-    
-    # 策略配置表单
-    with st.form("backup_config_form"):
-        col_h, col_m, col_d = st.columns(3)
-        with col_h:
-            hour_val = st.number_input(t("backup_hour"), min_value=0, max_value=23, value=config.get("hour", 2), step=1)
-        with col_m:
-            minute_val = st.number_input(t("backup_minute"), min_value=0, max_value=59, value=config.get("minute", 0), step=1)
-        with col_d:
-            days_val = st.number_input(t("retention_days"), min_value=1, max_value=365, value=config.get("retention_days", 7), step=1)
-            
-        save_btn = st.form_submit_button(t("save"), use_container_width=True)
-        if save_btn:
-            resp = api_post("/system/backup/config", json_data={
-                "hour": int(hour_val),
-                "minute": int(minute_val),
-                "retention_days": int(days_val)
-            })
-            if resp and resp.get("status") == "success":
-                st.session_state.toast_message = (t("save_success"), "✅")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error(t("operation_failed"))
+    # 使用 container + 锚点方式代替原始 HTML 拼接，防止 Streamlit 多解析出空 div 卡片
+    with st.container():
+        st.markdown('<div class="gemstone-card-anchor"></div>', unsafe_allow_html=True)
+        st.subheader(t("backup_config"))
+        
+        # 策略配置表单
+        with st.form("backup_config_form"):
+            col_h, col_m, col_d = st.columns(3)
+            with col_h:
+                hour_val = st.number_input(t("backup_hour"), min_value=0, max_value=23, value=config.get("hour", 2), step=1)
+            with col_m:
+                minute_val = st.number_input(t("backup_minute"), min_value=0, max_value=59, value=config.get("minute", 0), step=1)
+            with col_d:
+                days_val = st.number_input(t("retention_days"), min_value=1, max_value=365, value=config.get("retention_days", 7), step=1)
                 
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="gemstone-card">', unsafe_allow_html=True)
-    col_title, col_action = st.columns([4, 1])
-    with col_title:
-        st.subheader(t("backup_files"))
-    with col_action:
-        # 手动立即备份
-        if st.button(t("backup_now"), key="manual_backup_btn", use_container_width=True):
-            with st.spinner(t("db_backing_up")):
-                resp = api_post("/system/backup/create")
+            save_btn = st.form_submit_button(t("save"), use_container_width=True)
+            if save_btn:
+                resp = api_post("/system/backup/config", json_data={
+                    "hour": int(hour_val),
+                    "minute": int(minute_val),
+                    "retention_days": int(days_val)
+                })
                 if resp and resp.get("status") == "success":
-                    st.session_state.toast_message = (t("operation_success"), "✅")
+                    st.session_state.toast_message = (t("save_success"), "✅")
                     time.sleep(1)
                     st.rerun()
                 else:
                     st.error(t("operation_failed"))
                     
-    # 获取并渲染备份文件表格
-    backups = api_get("/system/backups") or []
-    if backups:
-        # 格式化数据用于显示
-        formatted_backups = []
-        for i, b in enumerate(backups):
-            size_mb = f"{b['size_bytes'] / (1024 * 1024):.2f} MB"
-            formatted_backups.append({
-                t("seq_no"): i + 1,
-                "File Name": b["filename"],
-                "Size": size_mb,
-                "Time Created": b["created_at"]
-            })
-        
-        df_backups = pd.DataFrame(formatted_backups)
-        # 用 streamlit 渲染只读数据表格
-        st.dataframe(df_backups, use_container_width=True, hide_index=True)
-        
-        st.divider()
-        st.write("#### " + t("choose_record") + " / " + t("restore"))
-        # 提供一个下拉框选择并进行还原
-        selected_file = st.selectbox(t("choose_record"), [b["filename"] for b in backups], key="restore_select")
-        if selected_file:
-            if st.button(t("restore"), key="restore_trigger_btn"):
-                show_restore_dialog(selected_file)
-    else:
-        st.info(t("no_data"))
-        
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="gemstone-card-anchor"></div>', unsafe_allow_html=True)
+        col_title, col_action = st.columns([4, 1])
+        with col_title:
+            st.subheader(t("backup_files"))
+        with col_action:
+            # 手动立即备份
+            if st.button(t("backup_now"), key="manual_backup_btn", use_container_width=True):
+                with st.spinner(t("db_backing_up")):
+                    resp = api_post("/system/backup/create")
+                    if resp and resp.get("status") == "success":
+                        st.session_state.toast_message = (t("operation_success"), "✅")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(t("operation_failed"))
+                        
+        # 获取并渲染备份文件表格
+        backups = api_get("/system/backups") or []
+        if backups:
+            # 格式化数据用于显示
+            formatted_backups = []
+            for i, b in enumerate(backups):
+                size_mb = f"{b['size_bytes'] / (1024 * 1024):.2f} MB"
+                formatted_backups.append({
+                    t("seq_no"): i + 1,
+                    "File Name": b["filename"],
+                    "Size": size_mb,
+                    "Time Created": b["created_at"]
+                })
+            
+            df_backups = pd.DataFrame(formatted_backups)
+            # 用 streamlit 渲染只读数据表格
+            st.dataframe(df_backups, use_container_width=True, hide_index=True)
+            
+            st.divider()
+            st.write("#### " + t("choose_record") + " / " + t("restore"))
+            # 提供一个下拉框选择并进行还原
+            selected_file = st.selectbox(t("choose_record"), [b["filename"] for b in backups], key="restore_select")
+            if selected_file:
+                if st.button(t("restore"), key="restore_trigger_btn"):
+                    show_restore_dialog(selected_file)
+        else:
+            st.info(t("no_data"))
 
 # ==================== 系统设置 ====================
 elif menu == t("settings"):
