@@ -4333,18 +4333,25 @@ elif menu == t("backup_management"):
     # CSS 注入 - 深色宝石绿毛玻璃特效 (Deep Gemstone Green Glassmorphism)
     st.markdown("""
     <style>
-        /* 宝石绿毛玻璃容器样式 - 使用 :has 选择器精确定位 Streamlit 容器，避免多余颜色带 */
-        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) {
-            background: linear-gradient(135deg, rgba(2, 48, 40, 0.45), rgba(0, 100, 80, 0.3)) !important;
-            backdrop-filter: blur(15px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        /* 宝石绿毛玻璃容器样式 - 使用 border wrapper 使得卡片包裹紧凑且正确 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) {
+            background: linear-gradient(135deg, rgba(2, 48, 40, 0.5), rgba(0, 80, 65, 0.35)) !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            border: 1.5px solid rgba(0, 200, 150, 0.45) !important;
             border-radius: 16px !important;
             padding: 24px !important;
             box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 
                         0 8px 32px 0 rgba(0, 40, 30, 0.35) !important;
             margin-bottom: 24px !important;
-            color: #f1f5f9 !important;
+        }
+
+        /* 移除卡片内部 form 表单的自带背景与边框，使其透明贴合 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) div[data-testid="stForm"] {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
         }
         
         /* 深度毛玻璃 Dialog 弹窗样式 */
@@ -4352,7 +4359,7 @@ elif menu == t("backup_management"):
             background: linear-gradient(135deg, rgba(2, 60, 50, 0.85), rgba(0, 80, 60, 0.8)) !important;
             backdrop-filter: blur(25px) !important;
             -webkit-backdrop-filter: blur(25px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border: 1.5px solid rgba(0, 200, 150, 0.5) !important;
             box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 
                         0 24px 64px rgba(0, 30, 20, 0.6) !important;
             border-radius: 16px !important;
@@ -4367,21 +4374,49 @@ elif menu == t("backup_management"):
             color: #f8fafc !important;
         }
         
+        /* 强制卡片内部的文本颜色，防止在深色背景下看不清 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) p,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) h4,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) label,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) span {
+            color: #f1f5f9 !important;
+        }
+
         /* 高对比度边框输入框 */
-        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) input, 
-        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) select, 
-        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) div[data-baseweb="select"] > div {
-            border: 1.5px solid rgba(0, 200, 150, 0.5) !important;
-            background-color: rgba(2, 40, 35, 0.6) !important;
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) input, 
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) select, 
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) div[data-baseweb="select"] > div {
+            border: 1.5px solid rgba(0, 200, 150, 0.6) !important;
+            background-color: rgba(2, 40, 35, 0.75) !important;
             color: #ffffff !important;
             border-radius: 10px !important;
             transition: all 0.2s ease !important;
         }
         
-        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) input:focus, 
-        div[data-testid="stVerticalBlock"]:has(> div.element-container .gemstone-card-anchor) div[data-baseweb="select"] > div:focus-within {
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) input:focus, 
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) div[data-baseweb="select"] > div:focus-within {
             border-color: #00ffcc !important;
-            box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.25) !important;
+            box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.3) !important;
+        }
+
+        /* 高级毛玻璃微立体按钮 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) button {
+            background: linear-gradient(135deg, rgba(0, 150, 120, 0.45), rgba(0, 100, 80, 0.3)) !important;
+            border: 1px solid rgba(0, 255, 200, 0.4) !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 2px 8px rgba(0, 40, 30, 0.2) !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) button:hover {
+            background: linear-gradient(135deg, rgba(0, 180, 140, 0.55), rgba(0, 120, 90, 0.4)) !important;
+            border-color: #00ffcc !important;
+            box-shadow: 0 4px 12px rgba(0, 255, 204, 0.35) !important;
+            transform: translateY(-1px) !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) button:active {
+            transform: translateY(1px) !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -4407,12 +4442,12 @@ elif menu == t("backup_management"):
         with col2:
             if st.button(t("cancel"), key="restore_cancel_btn", use_container_width=True):
                 st.rerun()
-
+ 
     # 获取当前配置
     config = api_get("/system/backup/config") or {"hour": 2, "minute": 0, "retention_days": 7}
     
     # 使用 container + 锚点方式代替原始 HTML 拼接，防止 Streamlit 多解析出空 div 卡片
-    with st.container():
+    with st.container(border=True):
         st.markdown('<div class="gemstone-card-anchor"></div>', unsafe_allow_html=True)
         st.subheader(t("backup_config"))
         
@@ -4440,7 +4475,7 @@ elif menu == t("backup_management"):
                 else:
                     st.error(t("operation_failed"))
                     
-    with st.container():
+    with st.container(border=True):
         st.markdown('<div class="gemstone-card-anchor"></div>', unsafe_allow_html=True)
         col_title, col_action = st.columns([4, 1])
         with col_title:
