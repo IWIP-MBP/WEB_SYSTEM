@@ -82,12 +82,12 @@ st.markdown("""
     section[data-testid="stSidebar"] {
         width: 280px !important;    /* 可根据需求修改，原默认约300px */
         min-width: 220px !important; /* 防止过窄 */
-        background: linear-gradient(180deg, #ffffff 0%, #f4fbf9 100%) !important;
+        background: linear-gradient(180deg, var(--app-panel) 0%, var(--app-bg) 100%) !important;
         border-right: 1px solid var(--app-border);
     }
     section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
     section[data-testid="stSidebar"] label {
-        color: #263244;
+        color: var(--app-text) !important;
         font-weight: 500;
     }
     /* 4. 登录 Logo 样式 */
@@ -103,15 +103,20 @@ st.markdown("""
         --app-accent: #2563eb;
         --app-bg: #f8fafc;
         --app-panel: #ffffff;
-        --app-border: #e2e8f0;
+        --app-border: rgba(128, 128, 128, 0.2);
         --app-text: #0f172a;
         --app-muted: #64748b;
     }
     .stApp {
+        --app-bg: var(--background-color, #f8fafc);
+        --app-panel: var(--secondary-background-color, #ffffff);
+        --app-border: var(--border-color, rgba(128, 128, 128, 0.2));
+        --app-text: var(--text-color, #0f172a);
+        
         background:
             radial-gradient(circle at 0% 0%, rgba(15,118,110,0.08), transparent 40rem),
             radial-gradient(circle at 100% 0%, rgba(37,99,235,0.05), transparent 40rem),
-            linear-gradient(180deg, #f8fafc 0%, var(--app-bg) 100%);
+            linear-gradient(180deg, var(--background-color, #f8fafc) 0%, var(--app-bg) 100%);
         color: var(--app-text);
     }
     .main .block-container {
@@ -133,7 +138,7 @@ st.markdown("""
     }
     h1, h2, h3, h4, h5, h6 {
         letter-spacing: -0.025em !important;
-        color: #0f172a !important;
+        color: var(--app-text) !important;
         font-weight: 700 !important;
     }
     
@@ -142,8 +147,8 @@ st.markdown("""
     .stDownloadButton > button {
         border-radius: 10px !important;
         border: 1px solid var(--app-border) !important;
-        background: #ffffff !important;
-        color: #0f172a !important;
+        background: var(--app-panel) !important;
+        color: var(--app-text) !important;
         font-weight: 600 !important;
         min-height: 2.5rem;
         padding: 0.5rem 1.2rem !important;
@@ -153,8 +158,8 @@ st.markdown("""
     .stButton > button:hover,
     .stDownloadButton > button:hover {
         border-color: var(--app-primary) !important;
-        color: var(--app-primary-dark) !important;
-        background: #f0fdfa !important;
+        color: var(--app-primary) !important;
+        background: rgba(15, 118, 110, 0.1) !important;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(15, 118, 110, 0.08);
     }
@@ -183,7 +188,7 @@ st.markdown("""
     
     /* 高级卡片样式 */
     [data-testid="stMetric"] {
-        background: #ffffff !important;
+        background: var(--app-panel) !important;
         border: 1px solid var(--app-border) !important;
         border-left: 5px solid var(--app-primary) !important;
         border-radius: 12px !important;
@@ -197,14 +202,15 @@ st.markdown("""
         border-color: rgba(15, 118, 110, 0.2) !important;
     }
     [data-testid="stMetricLabel"] {
-        color: var(--app-muted) !important;
+        color: var(--app-text) !important;
+        opacity: 0.65;
         font-weight: 600 !important;
         font-size: 0.88rem !important;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
     [data-testid="stMetricValue"] {
-        color: #0f172a !important;
+        color: var(--app-text) !important;
         font-weight: 700 !important;
         font-size: 2rem !important;
     }
@@ -218,7 +224,7 @@ st.markdown("""
     div[data-testid="stExpander"] {
         border: 1px solid var(--app-border) !important;
         border-radius: 10px !important;
-        background: #ffffff !important;
+        background: var(--app-panel) !important;
         box-shadow: 0 4px 18px rgba(15,23,42,0.02);
         margin-bottom: 0.75rem;
     }
@@ -226,22 +232,25 @@ st.markdown("""
         border-radius: 10px 10px 0 0 !important;
         padding: 0.6rem 1.2rem !important;
         font-weight: 600 !important;
-        color: var(--app-muted) !important;
+        color: var(--app-text) !important;
+        opacity: 0.7;
         transition: all 0.2s ease !important;
     }
     div[data-testid="stTabs"] button[aria-selected="true"] {
         color: var(--app-primary-dark) !important;
+        opacity: 1;
         background-color: rgba(15, 118, 110, 0.04) !important;
         border-bottom-color: var(--app-primary) !important;
     }
     .section-note {
-        color: var(--app-muted);
+        color: var(--app-text) !important;
+        opacity: 0.8;
         font-size: 0.92rem;
         margin: -0.5rem 0 1.2rem 0;
-        background: #f1f5f9;
+        background: rgba(128, 128, 128, 0.1) !important;
         padding: 0.6rem 1rem;
         border-radius: 8px;
-        border-left: 3px solid var(--app-muted);
+        border-left: 3px solid var(--app-primary) !important;
     }
     
     /* 登录面板毛玻璃样式 */
@@ -328,8 +337,8 @@ st.markdown("""
         object-fit: contain;
     }
     div[data-testid="stForm"] {
-        background: rgba(255,255,255,0.85);
-        border: 1px solid var(--app-border);
+        background: var(--app-panel) !important;
+        border: 1px solid var(--app-border) !important;
         border-radius: 16px;
         padding: 1.75rem 1.75rem 2rem 1.75rem;
         box-shadow: 0 20px 50px rgba(15,23,42,0.08);
@@ -339,9 +348,11 @@ st.markdown("""
     .login-heading h2 {
         margin: 0 0 0.4rem 0;
         font-size: 1.55rem !important;
+        color: var(--app-text) !important;
     }
     .login-heading .hint {
-        color: var(--app-muted);
+        color: var(--app-text) !important;
+        opacity: 0.7;
         margin-bottom: 0;
     }
     @media (max-width: 820px) {
@@ -1413,17 +1424,17 @@ components.html(
                 left: 0;
                 right: 0;
                 height: 48px;
-                background: rgba(243, 244, 246, 0.85);
+                background: var(--secondary-background-color, rgba(243, 244, 246, 0.85)) !important;
                 backdrop-filter: blur(20px) saturate(180%);
                 -webkit-backdrop-filter: blur(20px) saturate(180%);
-                border-top: 1px solid rgba(0, 0, 0, 0.15);
+                border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.15)) !important;
                 z-index: 999990;
                 display: none;
                 align-items: center;
                 justify-content: space-between;
                 padding: 0 16px;
                 font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-                color: #1f2937;
+                color: var(--text-color, #1f2937) !important;
                 box-sizing: border-box;
                 user-select: none;
                 box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
@@ -1442,7 +1453,7 @@ components.html(
             .taskbar-title {{
                 font-size: 13.5px;
                 font-weight: 600;
-                color: #111827;
+                color: var(--text-color, #111827) !important;
             }}
             .taskbar-right {{
                 display: flex;
@@ -1459,11 +1470,12 @@ components.html(
                 font-size: 13px;
                 transition: background-color 0.2s, transform 0.1s;
                 position: relative;
-                background-color: rgba(255, 255, 255, 0.4);
-                border: 1px solid rgba(0, 0, 0, 0.05);
+                background-color: var(--background-color, rgba(255, 255, 255, 0.4)) !important;
+                border: 1px solid var(--border-color, rgba(0, 0, 0, 0.05)) !important;
+                color: var(--text-color, #1f2937) !important;
             }}
             .taskbar-widget:hover {{
-                background-color: rgba(0, 0, 0, 0.06);
+                background-color: var(--secondary-background-color, rgba(0, 0, 0, 0.06)) !important;
                 transform: translateY(-1px);
             }}
             .taskbar-widget:active {{
@@ -1490,13 +1502,14 @@ components.html(
                 flex-direction: column;
                 align-items: flex-end;
                 font-size: 11px;
-                color: #4b5563;
+                color: var(--text-color, #4b5563) !important;
+                opacity: 0.8;
                 padding-left: 10px;
-                border-left: 1px solid rgba(0, 0, 0, 0.12);
+                border-left: 1px solid var(--border-color, rgba(0, 0, 0, 0.12)) !important;
             }}
             .taskbar-clock #taskbar-time {{
                 font-weight: 600;
-                color: #1f2937;
+                color: var(--text-color, #1f2937) !important;
                 font-size: 12px;
             }}
             
@@ -1505,10 +1518,10 @@ components.html(
                 bottom: 56px;
                 width: 340px;
                 max-height: 420px;
-                background: rgba(255, 255, 255, 0.90);
+                background: var(--background-color, rgba(255, 255, 255, 0.90)) !important;
                 backdrop-filter: blur(25px) saturate(180%);
                 -webkit-backdrop-filter: blur(25px) saturate(180%);
-                border: 1px solid rgba(0, 0, 0, 0.12);
+                border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12)) !important;
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
                 z-index: 1000000;
@@ -1532,33 +1545,35 @@ components.html(
                 padding: 12px 16px;
                 font-weight: 600;
                 font-size: 14px;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-                background: rgba(249, 250, 251, 0.6);
+                border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08)) !important;
+                background: var(--secondary-background-color, rgba(249, 250, 251, 0.6)) !important;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                color: var(--text-color, #111827) !important;
             }}
             .popup-close {{
                 cursor: pointer;
                 font-size: 14px;
-                color: #9ca3af;
+                color: var(--text-color, #9ca3af) !important;
+                opacity: 0.6;
             }}
             .popup-close:hover {{
-                color: #374151;
+                opacity: 1;
             }}
             .popup-content {{
                 padding: 12px;
                 overflow-y: auto;
                 flex: 1;
                 font-size: 12.5px;
-                color: #374151;
+                color: var(--text-color, #374151) !important;
             }}
             .popup-item {{
                 padding: 10px;
                 border-radius: 8px;
                 margin-bottom: 8px;
-                background: rgba(255, 255, 255, 0.7);
-                border: 1px solid rgba(0, 0, 0, 0.05);
+                background: var(--secondary-background-color, rgba(255, 255, 255, 0.7)) !important;
+                border: 1px solid var(--border-color, rgba(0, 0, 0, 0.05)) !important;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             }}
             .popup-item:last-child {{
@@ -1566,7 +1581,7 @@ components.html(
             }}
             .popup-item-title {{
                 font-weight: 600;
-                color: #111827;
+                color: var(--text-color, #111827) !important;
                 margin-bottom: 4px;
                 display: flex;
                 align-items: center;
@@ -1574,12 +1589,14 @@ components.html(
             }}
             .popup-item-desc {{
                 font-size: 12px;
-                color: #4b5563;
+                color: var(--text-color, #4b5563) !important;
+                opacity: 0.85;
                 line-height: 1.4;
             }}
             .no-data-msg {{
                 text-align: center;
-                color: #9ca3af;
+                color: var(--text-color, #9ca3af) !important;
+                opacity: 0.6;
                 padding: 24px 0;
                 font-style: italic;
             }}
@@ -1771,12 +1788,15 @@ components.html(
             if (users.length === 0) {{
                 listEl.innerHTML = '<div class="no-data-msg">{t("no_online_users")}</div>';
             }} else {{
-                listEl.innerHTML = users.map(u => `
-                    <div class="popup-item">
-                        <div class="popup-item-title">🟢 ${{u.user}}</div>
-                        <div class="popup-item-desc">IP: ${{u.ip}}</div>
-                    </div>
-                `).join('');
+                listEl.innerHTML = users.map(u => {{
+                    const ipHtml = u.ip ? `<div class="popup-item-desc">IP: ${{u.ip}}</div>` : '';
+                    return `
+                        <div class="popup-item">
+                            <div class="popup-item-title">🟢 ${{u.user}}</div>
+                            ${{ipHtml}}
+                        </div>
+                    `;
+                }}).join('');
             }}
         }}
 
@@ -1887,6 +1907,43 @@ components.html(
         }}
     }};
 
+    window.parent.connectSessionsWS = function() {{
+        const token = window.parent._current_access_token;
+        const url = window.parent._resolved_api_base;
+        if (!token || !url) return;
+
+        if (window.parent._sessions_ws && (window.parent._sessions_ws.readyState === WebSocket.OPEN || window.parent._sessions_ws.readyState === WebSocket.CONNECTING)) {{
+            return;
+        }}
+
+        let wsProtocol = window.parent.location.protocol === "https:" ? "wss:" : "ws:";
+        let baseHost = url.replace(/^https?:\/\//, "").replace(/\/api$/, "");
+        let wsUrl = wsProtocol + "//" + baseHost + "/ws/sessions?token=" + encodeURIComponent(token);
+
+        const ws = new WebSocket(wsUrl);
+        window.parent._sessions_ws = ws;
+
+        ws.onmessage = function(event) {{
+            try {{
+                const msg = JSON.parse(event.data);
+                if (msg.type === "online_users") {{
+                    window.parent.updateOnlineUsersUI(msg.data);
+                }}
+            }} catch (e) {{
+                console.error("WS error parsing message:", e);
+            }}
+        }};
+
+        ws.onclose = function() {{
+            setTimeout(window.parent.connectSessionsWS, 5000);
+        }};
+
+        ws.onerror = function(err) {{
+            console.error("WS error:", err);
+            ws.close();
+        }};
+    }};
+
     window.parent.fetchTaskbarData = function() {{
         const token = window.parent._current_access_token;
         const url = window.parent._resolved_api_base;
@@ -1899,13 +1956,6 @@ components.html(
         const dd = String(yesterdayDate.getDate()).padStart(2, '0');
         const yesterdayStr = yyyy + "-" + mm + "-" + dd;
         
-        const virtualMac = window.parent.getOrCreateVirtualMac();
-        
-        let p1 = fetch(url + "/sessions/heartbeat?mac=" + encodeURIComponent(virtualMac), {{
-            method: "POST",
-            headers: {{ "Authorization": "Bearer " + token }}
-        }}).then(res => res.json()).catch(err => {{ console.log(err); return []; }});
-
         let p2 = fetch(url + "/employees/birthday_reminders?days=7", {{
             headers: {{ "Authorization": "Bearer " + token }}
         }}).then(res => res.json()).catch(err => {{ console.log(err); return []; }});
@@ -1918,19 +1968,20 @@ components.html(
             headers: {{ "Authorization": "Bearer " + token }}
         }}).then(res => res.json()).catch(err => {{ console.log(err); return null; }});
 
-        Promise.all([p1, p2, p3, p4]).then(([onlineUsers, birthdays, labors, summary]) => {{
-            window.parent.updateOnlineUsersUI(onlineUsers);
+        Promise.all([p2, p3, p4]).then(([birthdays, labors, summary]) => {{
             window.parent.updateMessagesUI(birthdays, labors, summary);
         }});
     }};
 
     if (!window.parent._taskbar_poll_id) {{
         window.parent.fetchTaskbarData();
+        window.parent.connectSessionsWS();
         window.parent._taskbar_poll_id = setInterval(function() {{
             window.parent.fetchTaskbarData();
-        }}, 20000);
+        }}, 60000);
     }} else {{
         window.parent.fetchTaskbarData();
+        window.parent.connectSessionsWS();
     }}
     </script>
     """,

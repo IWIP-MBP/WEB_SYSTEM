@@ -2,7 +2,7 @@
 # 后勤三部人事管理系统 - 后端（最终修正版）
 # 修复：劳保报表去重、身份证清洗、车间-班组-国籍矩阵
 # ============================================
-from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -355,6 +355,124 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
+def is_real_ip(ip: str) -> bool:
+    if not ip:
+        return False
+    ip = ip.strip()
+    if ip in ("127.0.0.1", "::1", "localhost", "unknown", "UNKNOWN", ""):
+        return False
+    if ip.startswith("172.16.") or ip.startswith("172.17.") or ip.startswith("172.18.") or ip.startswith("172.19.") or \
+       ip.startswith("172.20.") or ip.startswith("172.21.") or ip.startswith("172.22.") or ip.startswith("172.23.") or \
+       ip.startswith("172.24.") or ip.startswith("172.25.") or ip.startswith("172.26.") or ip.startswith("172.27.") or \
+       ip.startswith("172.28.") or ip.startswith("172.29.") or ip.startswith("172.30.") or ip.startswith("172.31."):
+        return False
+    if ip.startswith("169.254."):
+        return False
+    return True
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections = {}
+
+    async def connect(self, websocket: WebSocket, user_key: str):
+        await websocket.accept()
+        if user_key not in self.active_connections:
+            self.active_connections[user_key] = []
+        self.active_connections[user_key].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, user_key: str) -> bool:
+        if user_key in self.active_connections:
+            if websocket in self.active_connections[user_key]:
+                self.active_connections[user_key].remove(websocket)
+            if not self.active_connections[user_key]:
+                del self.active_connections[user_key]
+                return True
+        return False
+
+    async def broadcast(self, message: dict):
+        for connections in list(self.active_connections.values()):
+            for ws in list(connections):
+                try:
+                    await ws.send_json(message)
+                except Exception:
+                    pass
+
+manager = ConnectionManager()
+
+async def broadcast_online_users():
+    with SessionLocal() as db:
+        clean_sessions(db, 60)
+        rows = db.execute(select(active_sessions.c.username, active_sessions.c.ip_address)).fetchall()
+        users_list = []
+        for r in rows:
+            ip = r[1]
+            display_ip = ip if is_real_ip(ip) else ""
+            users_list.append({"user": r[0], "ip": display_ip})
+    
+    await manager.broadcast({"type": "online_users", "data": users_list})
+
+@app.websocket("/ws/sessions")
+async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
+    if not token:
+        await websocket.close(code=1008)
+        return
+    payload = verify_token(token)
+    if not payload:
+        await websocket.close(code=1008)
+        return
+    
+    username = payload.get("sub")
+    
+    forwarded = websocket.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    else:
+        real_ip = websocket.headers.get("X-Real-IP")
+        if real_ip:
+            client_ip = real_ip
+        else:
+            client_ip = websocket.client.host if websocket.client else "unknown"
+
+    user_key = f"{username}@{client_ip}"
+    await manager.connect(websocket, user_key)
+    
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with SessionLocal() as db:
+        db.execute(text("""
+            INSERT INTO active_sessions (username, ip_address, mac_address, last_seen)
+            VALUES (:u, :ip, :mac, :now)
+            ON CONFLICT (username, ip_address) DO UPDATE
+            SET last_seen = :now
+        """), {"u": username, "ip": client_ip, "mac": "WS_CONN", "now": now})
+        db.commit()
+    
+    await broadcast_online_users()
+    
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        is_last = manager.disconnect(websocket, user_key)
+        if is_last:
+            with SessionLocal() as db:
+                db.execute(text("""
+                    DELETE FROM active_sessions 
+                    WHERE username = :u AND ip_address = :ip
+                """), {"u": username, "ip": client_ip})
+                db.commit()
+            await broadcast_online_users()
+    except Exception as e:
+        logger.warning(f"WebSocket error for {user_key}: {e}")
+        is_last = manager.disconnect(websocket, user_key)
+        if is_last:
+            with SessionLocal() as db:
+                db.execute(text("""
+                    DELETE FROM active_sessions 
+                    WHERE username = :u AND ip_address = :ip
+                """), {"u": username, "ip": client_ip})
+                db.commit()
+            await broadcast_online_users()
 
 @app.get("/api/health")
 def health_check():
@@ -2345,7 +2463,7 @@ def heartbeat(request: Request, mac: Optional[str] = None, db=Depends(get_db), c
     db.commit()
     clean_sessions(db, 60)
     rows = db.execute(select(active_sessions.c.username, active_sessions.c.ip_address)).fetchall()
-    return [{"user": r[0], "ip": r[1]} for r in rows]
+    return [{"user": r[0], "ip": r[1] if is_real_ip(r[1]) else ""} for r in rows]
 
 @app.get("/api/logs")
 def get_logs(
