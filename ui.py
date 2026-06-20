@@ -12,6 +12,104 @@ import time
 API_BASE = os.getenv("API_BASE", "http://localhost:8000/api")
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
 
+def init_session_state():
+    defaults = {
+        "lang": "zh",
+        "access_token": None,
+        "user_info": None,
+        "greeting_shown": False,
+        "menu_position": "sidebar",
+        "edit_employee_id": None,
+        "resign_employee_id": None,
+        "edit_assign_id": None,
+        "edit_assign_data": None,
+        "selected_employee": None,
+        "show_edit_form": False,
+        "show_resign_form": False,
+        "summary_shown_today": False,
+        "reminder_shown_today": False,
+        "show_history": False,
+        "theme_choice": "Teal Trust",
+    }
+    for key, default in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
+
+init_session_state()
+
+# ---------- Theme Mapping Configuration ----------
+theme_choice = st.session_state.get("theme_choice_select", st.session_state.get("theme_choice", "Teal Trust"))
+
+theme_primary = "#0f766e"
+theme_primary_dark = "#115e59"
+theme_accent = "#2563eb"
+theme_bg = "var(--background-color, #f8fafc)"
+theme_panel = "var(--secondary-background-color, #ffffff)"
+theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
+theme_text = "var(--text-color, #0f172a)"
+theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(15,118,110,0.08), transparent 40rem), radial-gradient(circle at 100% 0%, rgba(37,99,235,0.05), transparent 40rem)"
+
+if theme_choice == "Ocean Breeze":
+    theme_primary = "#1e40af"
+    theme_primary_dark = "#1e3a8a"
+    theme_accent = "#0284c7"
+    theme_bg = "var(--background-color, #f0f4f8)"
+    theme_panel = "var(--secondary-background-color, #ffffff)"
+    theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
+    theme_text = "var(--text-color, #1e293b)"
+    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(30,64,175,0.08), transparent 40rem)"
+elif theme_choice == "Sunset Glow":
+    theme_primary = "#c2410c"
+    theme_primary_dark = "#9a3412"
+    theme_accent = "#ea580c"
+    theme_bg = "var(--background-color, #fdf8f6)"
+    theme_panel = "var(--secondary-background-color, #ffffff)"
+    theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
+    theme_text = "var(--text-color, #431407)"
+    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(194,65,12,0.08), transparent 40rem)"
+elif theme_choice == "Midnight Dark":
+    theme_primary = "#14b8a6"
+    theme_primary_dark = "#0d9488"
+    theme_accent = "#3b82f6"
+    theme_bg = "#0f172a"
+    theme_panel = "#1e293b"
+    theme_border = "#334155"
+    theme_text = "#f1f5f9"
+    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(20,184,166,0.15), transparent 40rem)"
+elif theme_choice == "Sakura Pink":
+    theme_primary = "#db2777"
+    theme_primary_dark = "#be185d"
+    theme_accent = "#f43f5e"
+    theme_bg = "var(--background-color, #fff5f7)"
+    theme_panel = "var(--secondary-background-color, #ffffff)"
+    theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
+    theme_text = "var(--text-color, #4c0519)"
+    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(219,39,119,0.08), transparent 40rem)"
+
+st.markdown(f"""
+<style>
+    :root {{
+        --app-primary: {theme_primary};
+        --app-primary-dark: {theme_primary_dark};
+        --app-accent: {theme_accent};
+        --app-bg: {theme_bg};
+        --app-panel: {theme_panel};
+        --app-border: {theme_border};
+        --app-text: {theme_text};
+    }}
+    .stApp {{
+        --app-bg: {theme_bg};
+        --app-panel: {theme_panel};
+        --app-border: {theme_border};
+        --app-text: {theme_text};
+        background:
+            {theme_bg_radial},
+            linear-gradient(180deg, {theme_bg} 0%, var(--app-bg) 100%) !important;
+        color: var(--app-text) !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
 st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -97,28 +195,7 @@ st.markdown("""
         border-radius: 50%;             /* 圆形裁剪（如果图片为正方形则成圆） */
         box-shadow: 0 8px 16px rgba(0,0,0,0.08); /* 轻微阴影，提升层次感 */
     }
-    :root {
-        --app-primary: #0f766e;
-        --app-primary-dark: #115e59;
-        --app-accent: #2563eb;
-        --app-bg: #f8fafc;
-        --app-panel: #ffffff;
-        --app-border: rgba(128, 128, 128, 0.2);
-        --app-text: #0f172a;
-        --app-muted: #64748b;
-    }
-    .stApp {
-        --app-bg: var(--background-color, #f8fafc);
-        --app-panel: var(--secondary-background-color, #ffffff);
-        --app-border: var(--border-color, rgba(128, 128, 128, 0.2));
-        --app-text: var(--text-color, #0f172a);
-        
-        background:
-            radial-gradient(circle at 0% 0%, rgba(15,118,110,0.08), transparent 40rem),
-            radial-gradient(circle at 100% 0%, rgba(37,99,235,0.05), transparent 40rem),
-            linear-gradient(180deg, var(--background-color, #f8fafc) 0%, var(--app-bg) 100%);
-        color: var(--app-text);
-    }
+
     .main .block-container {
         padding-top: 2.5rem !important;
         padding-bottom: 2.5rem !important;
@@ -405,6 +482,29 @@ st.markdown("""
         width: 100% !important;
         display: flex !important;
         justify-content: center !important;
+    }
+
+    /* 强力修复所有主题模式下 Inactive 文本与 Label 不可见问题 */
+    div[data-testid="stTabs"] button[role="tab"] {
+        color: var(--app-text) !important;
+        opacity: 0.7 !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        color: var(--app-primary) !important;
+        opacity: 1 !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] p,
+    div[data-testid="stTabs"] button[role="tab"] span {
+        color: inherit !important;
+    }
+    
+    /* 强力修复 Radio 和 Select Label 不可见问题 */
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span,
+    label[data-testid="stWidgetLabel"] p,
+    label[data-testid="stWidgetLabel"] span {
+        color: var(--app-text) !important;
+        opacity: 0.9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -740,6 +840,12 @@ LANG = {
         "input_admin_password_confirm": "请输入管理员密码以确认删除：",
         "confirm_delete_permanently": "确认彻底删除",
         "confirm_delete_btn": "确认删除",
+        "system_theme": "系统主题",
+        "theme_teal": "雅致青绿 (Teal Trust)",
+        "theme_blue": "深海蔚蓝 (Ocean Breeze)",
+        "theme_orange": "落日余晖 (Sunset Glow)",
+        "theme_dark": "深邃极夜 (Midnight Dark)",
+        "theme_pink": "粉黛桃色 (Sakura Pink)",
     },
     "id": {
         "actions": "Aksi",
@@ -1070,6 +1176,12 @@ LANG = {
         "input_admin_password_confirm": "Silakan masukkan kata sandi administrator untuk konfirmasi:",
         "confirm_delete_permanently": "Konfirmasi Hapus Permanen",
         "confirm_delete_btn": "Konfirmasi Hapus",
+        "system_theme": "Tema Sistem",
+        "theme_teal": "Teal Trust (Hijau Toska)",
+        "theme_blue": "Ocean Breeze (Biru Laut)",
+        "theme_orange": "Sunset Glow (Jingga Senja)",
+        "theme_dark": "Midnight Dark (Malam Gelap)",
+        "theme_pink": "Sakura Pink (Merah Muda)",
     }
 }
 
@@ -1238,27 +1350,7 @@ def generate_employee_template():
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-def init_session_state():
-    defaults = {
-        "lang": "zh",
-        "access_token": None,
-        "user_info": None,
-        "greeting_shown": False,
-        "menu_position": "sidebar",
-        "edit_employee_id": None,
-        "resign_employee_id": None,
-        "edit_assign_id": None,
-        "edit_assign_data": None,
-        "selected_employee": None,
-        "show_edit_form": False,
-        "show_resign_form": False,
-        "summary_shown_today": False,
-        "reminder_shown_today": False,
-        "show_history": False,
-    }
-    for key, default in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = default
+
 
 def custom_toast(msg, icon=None):
     lang = st.session_state.get("lang", "zh")
@@ -1294,7 +1386,7 @@ def show_modal_message():
                 del st.session_state.modal_message
                 st.rerun()
 
-init_session_state()
+
 
 # Display persistent toast message if set in previous run
 if "toast_message" in st.session_state:
@@ -1997,6 +2089,27 @@ if not st.session_state.greeting_shown:
 st.sidebar.title(t("login_title"))
 st.sidebar.toggle("Bahasa Indonesia/中文", value=(st.session_state.lang == "id"), key="lang_toggle")
 st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
+
+# Theme Selector in Sidebar
+theme_options = ["Teal Trust", "Ocean Breeze", "Sunset Glow", "Midnight Dark", "Sakura Pink"]
+theme_labels = {
+    "Teal Trust": t("theme_teal"),
+    "Ocean Breeze": t("theme_blue"),
+    "Sunset Glow": t("theme_orange"),
+    "Midnight Dark": t("theme_dark"),
+    "Sakura Pink": t("theme_pink")
+}
+st.sidebar.selectbox(
+    t("system_theme"),
+    options=theme_options,
+    index=theme_options.index(st.session_state.get("theme_choice", "Teal Trust")),
+    format_func=lambda x: theme_labels.get(x, x),
+    key="theme_choice_select"
+)
+if "theme_choice_select" in st.session_state:
+    if st.session_state.theme_choice != st.session_state.theme_choice_select:
+        st.session_state.theme_choice = st.session_state.theme_choice_select
+        st.rerun()
 
 menu_options = [t("dashboard"), t("org_chart"), t("employees"), t("resigned"), t("labor"), t("logs")]
 if st.session_state.user_info.get("role") == "admin":
