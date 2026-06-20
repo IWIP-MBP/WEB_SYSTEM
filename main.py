@@ -17,7 +17,8 @@ from database import settings, engine, SessionLocal, metadata, get_db
 from models import users
 
 # ---------- 路由导入 ----------
-from routers import auth, employees, labor, logs
+from routers import auth, employees, labor, logs, backup
+from services.backup_service import init_backup_scheduler
 from services.limiter import limiter
 
 os.makedirs(settings.EXPORT_DIR, exist_ok=True)
@@ -154,6 +155,7 @@ def startup_validation():
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         logger.info("Database connection validated successfully.")
+        init_backup_scheduler()
     except Exception as e:
         logger.critical(f"Database connection validation failed: {e}")
         raise RuntimeError(f"CRITICAL ERROR: Database connection failed during startup: {e}")
@@ -173,6 +175,7 @@ app.include_router(auth.router)
 app.include_router(employees.router)
 app.include_router(labor.router)
 app.include_router(logs.router)
+app.include_router(backup.router)
 
 if __name__ == "__main__":
     import uvicorn

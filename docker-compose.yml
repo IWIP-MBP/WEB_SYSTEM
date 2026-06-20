@@ -36,6 +36,7 @@ services:
       - "8000:8000"
     volumes:
       - uploads_data:/app/uploads
+      - backups_data:/app/backups
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -69,3 +70,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  backups_data:

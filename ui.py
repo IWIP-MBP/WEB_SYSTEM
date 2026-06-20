@@ -776,6 +776,14 @@ LANG = {
         "seq_no": "序号",
         "settings": "⚙️ 系统设置",
         "settings_note": "维护基础数据、用户权限、数据库备份和系统 Logo。",
+        "backup_management": "💾 数据备份与还原",
+        "backup_config": "自动备份策略配置",
+        "backup_hour": "备份时间(小时)",
+        "backup_minute": "备份时间(分钟)",
+        "backup_files": "备份文件管理",
+        "backup_now": "立即备份",
+        "restore_confirm_title": "⚠️ 数据库还原二次确认",
+        "restore_confirm_msg": "警告：还原操作将覆盖当前系统中的所有数据库数据！此操作无法撤销。是否确认还原文件 {filename}？",
         "skipped_rows": "跳过了 {count} 行（缺少工号或姓名）",
         "skipped_rows_format": "跳过了 {count} 行（缺少工号或姓名）",
         "spec": "规格",
@@ -1106,6 +1114,14 @@ LANG = {
         "seq_no": "No",
         "settings": "⚙️ Pengaturan",
         "settings_note": "Memelihara data dasar, hak akses pengguna, cadangan database, dan Logo sistem.",
+        "backup_management": "💾 Cadangan & Pemulihan Data",
+        "backup_config": "Konfigurasi Strategi Pencadangan Otomatis",
+        "backup_hour": "Waktu Pencadangan (Jam)",
+        "backup_minute": "Waktu Pencadangan (Menit)",
+        "backup_files": "Manajemen File Cadangan",
+        "backup_now": "Cadangkan Sekarang",
+        "restore_confirm_title": "⚠️ Konfirmasi Pemulihan Database",
+        "restore_confirm_msg": "Peringatan: Operasi pemulihan akan menimpa semua data database saat ini di sistem! Operasi ini tidak dapat dibatalkan. Apakah Anda yakin ingin memulihkan file {filename}?",
         "skipped_rows": "{count} baris dilewati (ID atau nama kosong)",
         "skipped_rows_format": "{count} baris dilewati (ID atau nama kosong)",
         "spec": "Spesifikasi",
@@ -2096,6 +2112,7 @@ st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
 menu_options = [t("dashboard"), t("org_chart"), t("employees"), t("resigned"), t("labor"), t("logs")]
 if st.session_state.user_info.get("role") == "admin":
     menu_options.insert(4, t("transfer_records"))
+    menu_options.append(t("backup_management"))
     menu_options.append("📊 导出成本报表")
 if st.session_state.user_info.get("username") == "admin":
     menu_options.append(t("settings"))
@@ -4307,6 +4324,167 @@ elif menu == "📊 导出成本报表":
                         st.error(f"导出失败：{err}")
                 except Exception as ex:
                     st.error(f"请求失败：{ex}")
+
+# ==================== 数据备份与还原 ====================
+elif menu == t("backup_management"):
+    st.header(t("backup_management"))
+    st.markdown(f'<div class="section-note">{t("settings_note")}</div>', unsafe_allow_html=True)
+    
+    # CSS 注入 - 深色宝石绿毛玻璃特效 (Deep Gemstone Green Glassmorphism)
+    st.markdown("""
+    <style>
+        /* 宝石绿毛玻璃容器样式 */
+        .gemstone-card {
+            background: linear-gradient(135deg, rgba(2, 48, 40, 0.45), rgba(0, 100, 80, 0.3)) !important;
+            backdrop-filter: blur(15px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            border-radius: 16px !important;
+            padding: 24px !important;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 
+                        0 8px 32px 0 rgba(0, 40, 30, 0.35) !important;
+            margin-bottom: 24px !important;
+            color: #f1f5f9 !important;
+        }
+        
+        /* 深度毛玻璃 Dialog 弹窗样式 */
+        div[role="dialog"], div[data-testid="stDialog"] {
+            background: linear-gradient(135deg, rgba(2, 60, 50, 0.85), rgba(0, 80, 60, 0.8)) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 
+                        0 24px 64px rgba(0, 30, 20, 0.6) !important;
+            border-radius: 16px !important;
+        }
+        
+        div[role="dialog"] h2, 
+        div[role="dialog"] p,
+        div[role="dialog"] span,
+        div[data-testid="stDialog"] h2,
+        div[data-testid="stDialog"] p,
+        div[data-testid="stDialog"] span {
+            color: #f8fafc !important;
+        }
+        
+        /* 高对比度边框输入框 */
+        .gemstone-card input, 
+        .gemstone-card select, 
+        .gemstone-card div[data-baseweb="select"] > div {
+            border: 1.5px solid rgba(0, 200, 150, 0.5) !important;
+            background-color: rgba(2, 40, 35, 0.6) !important;
+            color: #ffffff !important;
+            border-radius: 10px !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .gemstone-card input:focus, 
+        .gemstone-card div[data-baseweb="select"] > div:focus-within {
+            border-color: #00ffcc !important;
+            box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.25) !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if not is_admin:
+        st.warning(t("readonly_msg"))
+        st.stop()
+        
+    @st.experimental_dialog(t("restore_confirm_title"))
+    def show_restore_dialog(filename):
+        st.warning(t("restore_confirm_msg").format(filename=filename))
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(t("confirm"), key="restore_confirm_btn", use_container_width=True):
+                resp = api_post("/system/backup/restore", json_data={"filename": filename})
+                if resp and resp.get("status") == "success":
+                    st.success(resp.get("message") or t("operation_success"))
+                    st.session_state.toast_message = (t("db_restore_success"), "✅")
+                    time.sleep(2)
+                    st.rerun()
+                else:
+                    st.error(t("operation_failed"))
+        with col2:
+            if st.button(t("cancel"), key="restore_cancel_btn", use_container_width=True):
+                st.rerun()
+
+    # 获取当前配置
+    config = api_get("/system/backup/config") or {"hour": 2, "minute": 0, "retention_days": 7}
+    
+    st.markdown('<div class="gemstone-card">', unsafe_allow_html=True)
+    st.subheader(t("backup_config"))
+    
+    # 策略配置表单
+    with st.form("backup_config_form"):
+        col_h, col_m, col_d = st.columns(3)
+        with col_h:
+            hour_val = st.number_input(t("backup_hour"), min_value=0, max_value=23, value=config.get("hour", 2), step=1)
+        with col_m:
+            minute_val = st.number_input(t("backup_minute"), min_value=0, max_value=59, value=config.get("minute", 0), step=1)
+        with col_d:
+            days_val = st.number_input(t("retention_days"), min_value=1, max_value=365, value=config.get("retention_days", 7), step=1)
+            
+        save_btn = st.form_submit_button(t("save"), use_container_width=True)
+        if save_btn:
+            resp = api_post("/system/backup/config", json_data={
+                "hour": int(hour_val),
+                "minute": int(minute_val),
+                "retention_days": int(days_val)
+            })
+            if resp and resp.get("status") == "success":
+                st.session_state.toast_message = (t("save_success"), "✅")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error(t("operation_failed"))
+                
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="gemstone-card">', unsafe_allow_html=True)
+    col_title, col_action = st.columns([4, 1])
+    with col_title:
+        st.subheader(t("backup_files"))
+    with col_action:
+        # 手动立即备份
+        if st.button(t("backup_now"), key="manual_backup_btn", use_container_width=True):
+            with st.spinner(t("db_backing_up")):
+                resp = api_post("/system/backup/create")
+                if resp and resp.get("status") == "success":
+                    st.session_state.toast_message = (t("operation_success"), "✅")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error(t("operation_failed"))
+                    
+    # 获取并渲染备份文件表格
+    backups = api_get("/system/backups") or []
+    if backups:
+        # 格式化数据用于显示
+        formatted_backups = []
+        for i, b in enumerate(backups):
+            size_mb = f"{b['size_bytes'] / (1024 * 1024):.2f} MB"
+            formatted_backups.append({
+                t("seq_no"): i + 1,
+                "File Name": b["filename"],
+                "Size": size_mb,
+                "Time Created": b["created_at"]
+            })
+        
+        df_backups = pd.DataFrame(formatted_backups)
+        # 用 streamlit 渲染只读数据表格
+        st.dataframe(df_backups, use_container_width=True, hide_index=True)
+        
+        st.divider()
+        st.write("#### " + t("choose_record") + " / " + t("restore"))
+        # 提供一个下拉框选择并进行还原
+        selected_file = st.selectbox(t("choose_record"), [b["filename"] for b in backups], key="restore_select")
+        if selected_file:
+            if st.button(t("restore"), key="restore_trigger_btn"):
+                show_restore_dialog(selected_file)
+    else:
+        st.info(t("no_data"))
+        
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== 系统设置 ====================
 elif menu == t("settings"):
