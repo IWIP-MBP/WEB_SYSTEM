@@ -31,7 +31,6 @@ def init_session_state():
         "summary_shown_today": False,
         "reminder_shown_today": False,
         "show_history": False,
-        "theme_choice": "Teal Trust",
     }
     for key, default in defaults.items():
         if key not in st.session_state:
@@ -39,76 +38,48 @@ def init_session_state():
 
 init_session_state()
 
-# ---------- Theme Mapping Configuration ----------
-theme_choice = st.session_state.get("theme_choice_select", st.session_state.get("theme_choice", "Teal Trust"))
-
-theme_primary = "#0f766e"
-theme_primary_dark = "#115e59"
-theme_accent = "#2563eb"
-theme_bg = "var(--background-color, #f8fafc)"
-theme_panel = "var(--secondary-background-color, #ffffff)"
-theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
-theme_text = "var(--text-color, #0f172a)"
-theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(15,118,110,0.08), transparent 40rem), radial-gradient(circle at 100% 0%, rgba(37,99,235,0.05), transparent 40rem)"
-
-if theme_choice == "Ocean Breeze":
-    theme_primary = "#1e40af"
-    theme_primary_dark = "#1e3a8a"
-    theme_accent = "#0284c7"
-    theme_bg = "var(--background-color, #f0f4f8)"
-    theme_panel = "var(--secondary-background-color, #ffffff)"
-    theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
-    theme_text = "var(--text-color, #1e293b)"
-    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(30,64,175,0.08), transparent 40rem)"
-elif theme_choice == "Sunset Glow":
-    theme_primary = "#c2410c"
-    theme_primary_dark = "#9a3412"
-    theme_accent = "#ea580c"
-    theme_bg = "var(--background-color, #fdf8f6)"
-    theme_panel = "var(--secondary-background-color, #ffffff)"
-    theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
-    theme_text = "var(--text-color, #431407)"
-    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(194,65,12,0.08), transparent 40rem)"
-elif theme_choice == "Midnight Dark":
-    theme_primary = "#14b8a6"
-    theme_primary_dark = "#0d9488"
-    theme_accent = "#3b82f6"
-    theme_bg = "#0f172a"
-    theme_panel = "#1e293b"
-    theme_border = "#334155"
-    theme_text = "#f1f5f9"
-    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(20,184,166,0.15), transparent 40rem)"
-elif theme_choice == "Sakura Pink":
-    theme_primary = "#db2777"
-    theme_primary_dark = "#be185d"
-    theme_accent = "#f43f5e"
-    theme_bg = "var(--background-color, #fff5f7)"
-    theme_panel = "var(--secondary-background-color, #ffffff)"
-    theme_border = "var(--border-color, rgba(128, 128, 128, 0.2))"
-    theme_text = "var(--text-color, #4c0519)"
-    theme_bg_radial = "radial-gradient(circle at 0% 0%, rgba(219,39,119,0.08), transparent 40rem)"
-
-st.markdown(f"""
+# ---------- Apple Frosted Glass (Glassmorphism) UI Configuration ----------
+st.markdown("""
 <style>
-    :root {{
-        --app-primary: {theme_primary};
-        --app-primary-dark: {theme_primary_dark};
-        --app-accent: {theme_accent};
-        --app-bg: {theme_bg};
-        --app-panel: {theme_panel};
-        --app-border: {theme_border};
-        --app-text: {theme_text};
-    }}
-    .stApp {{
-        --app-bg: {theme_bg};
-        --app-panel: {theme_panel};
-        --app-border: {theme_border};
-        --app-text: {theme_text};
-        background:
-            {theme_bg_radial},
-            linear-gradient(180deg, {theme_bg} 0%, var(--app-bg) 100%) !important;
+    :root {
+        --app-primary: #0f766e;
+        --app-primary-dark: #115e59;
+        --app-accent: #2563eb;
+        
+        /* Light Mode Glassmorphism Tokens */
+        --app-bg: #f4f5f7;
+        --app-panel: rgba(255, 255, 255, 0.45);
+        --app-border: rgba(255, 255, 255, 0.65);
+        --app-text: #0f172a;
+        --input-bg: rgba(255, 255, 255, 0.85);
+        --input-border: rgba(15, 118, 110, 0.35);
+        --dropdown-bg: #ffffff;
+        --app-bg-radial: radial-gradient(circle at 10% 20%, rgba(15, 118, 110, 0.12) 0%, transparent 45%),
+                         radial-gradient(circle at 90% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 45%),
+                         radial-gradient(circle at 50% 50%, rgba(219, 39, 119, 0.04) 0%, transparent 50%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Dark Mode Glassmorphism Tokens */
+            --app-bg: #0b0f19;
+            --app-panel: rgba(15, 23, 42, 0.45);
+            --app-border: rgba(255, 255, 255, 0.2);
+            --app-text: #f1f5f9;
+            --input-bg: rgba(15, 23, 42, 0.8);
+            --input-border: rgba(255, 255, 255, 0.25);
+            --dropdown-bg: #1e293b;
+            --app-bg-radial: radial-gradient(circle at 10% 20%, rgba(20, 184, 166, 0.15) 0%, transparent 50%),
+                             radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+                             radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.05) 0%, transparent 50%);
+        }
+    }
+
+    .stApp {
+        background-attachment: fixed !important;
+        background: var(--app-bg-radial), var(--app-bg) !important;
         color: var(--app-text) !important;
-    }}
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,7 +116,8 @@ st.markdown("""
         max-width: 1200px !important;
         width: 100% !important;
         border-radius: 10px !important;
-        border-color: var(--app-border) !important;
+        border: 1.5px solid var(--input-border) !important;
+        background-color: var(--input-bg) !important;
         transition: all 0.2s ease !important;
         color: var(--app-text) !important; /* 确保文字颜色可见 */
     }
@@ -153,8 +125,8 @@ st.markdown("""
     /* 2. 专门为 Selectbox 和 Multiselect 设置样式（避免破坏其复杂的内部结构） */
     div[data-baseweb="select"] > div {
         border-radius: 10px !important;
-        border-color: var(--app-border) !important;
-        background-color: transparent !important;
+        border: 1.5px solid var(--input-border) !important;
+        background-color: var(--input-bg) !important;
         transition: all 0.2s ease !important;
     }
 
@@ -165,12 +137,34 @@ st.markdown("""
     .stNumberInput > div > div > input:focus,
     div[data-baseweb="select"] > div:focus-within {
         border-color: var(--app-primary) !important;
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15) !important;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25) !important;
     }
 
     /* 确保 Selectbox 内部的选中文字颜色正常显示 */
     div[data-baseweb="select"] span {
         color: var(--app-text) !important;
+    }
+
+    /* 4. 专门为选择下拉框菜单设置样式，增加对比度和颜色差异，防止低对比度字样或半透明叠加造成阅读困难 */
+    div[data-baseweb="popover"],
+    div[role="listbox"],
+    div[data-baseweb="menu"] {
+        background-color: var(--dropdown-bg) !important;
+        border: 1.5px solid var(--app-border) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    }
+    div[data-baseweb="popover"] li,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"] li {
+        color: var(--app-text) !important;
+        transition: background-color 0.15s, color 0.15s !important;
+    }
+    div[data-baseweb="popover"] li:hover,
+    div[role="listbox"] li:hover,
+    div[data-baseweb="menu"] li:hover {
+        background-color: var(--app-primary) !important;
+        color: white !important;
     }
     
     /* 主内容区随侧边栏宽度自动适配，无需额外修改 */
@@ -180,10 +174,12 @@ st.markdown("""
     }
     /* 调整侧边栏宽度 */
     section[data-testid="stSidebar"] {
-        width: 280px !important;    /* 可根据需求修改，原默认约300px */
-        min-width: 220px !important; /* 防止过窄 */
-        background: linear-gradient(180deg, var(--app-panel) 0%, var(--app-bg) 100%) !important;
-        border-right: 1px solid var(--app-border);
+        width: 280px !important;
+        min-width: 220px !important;
+        background: var(--app-panel) !important;
+        backdrop-filter: blur(20px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        border-right: 1px solid var(--app-border) !important;
     }
     section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
     section[data-testid="stSidebar"] label {
@@ -272,13 +268,15 @@ st.markdown("""
         border-left: 5px solid var(--app-primary) !important;
         border-radius: 12px !important;
         padding: 1.1rem 1.3rem !important;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.02) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     [data-testid="stMetric"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 15px 30px rgba(15, 23, 42, 0.06) !important;
-        border-color: rgba(15, 118, 110, 0.2) !important;
+        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08) !important;
+        border-color: rgba(15, 118, 110, 0.3) !important;
     }
     [data-testid="stMetricLabel"] {
         color: var(--app-text) !important;
@@ -295,16 +293,21 @@ st.markdown("""
     }
     div[data-testid="stDataFrame"],
     div[data-testid="stDataEditor"] {
-        border: 1px solid var(--app-border);
+        background: var(--app-panel) !important;
+        border: 1px solid var(--app-border) !important;
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
         border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
     }
     div[data-testid="stExpander"] {
         border: 1px solid var(--app-border) !important;
         border-radius: 10px !important;
         background: var(--app-panel) !important;
-        box-shadow: 0 4px 18px rgba(15,23,42,0.02);
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
         margin-bottom: 0.75rem;
     }
     div[data-testid="stTabs"] button[role="tab"] {
@@ -420,9 +423,10 @@ st.markdown("""
         border: 1px solid var(--app-border) !important;
         border-radius: 16px;
         padding: 1.75rem 1.75rem 2rem 1.75rem;
-        box-shadow: 0 20px 50px rgba(15,23,42,0.08);
-        /* 注意：这里已经将 backdrop-filter 注释掉，防止下拉菜单被遮挡或截断 */
-        /* backdrop-filter: blur(10px); */
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08) !important;
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        overflow: visible !important;
     }
     .login-heading h2 {
         margin: 0 0 0.4rem 0;
@@ -466,10 +470,12 @@ st.markdown("""
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
         z-index: 999999 !important;
-        background: white !important;
+        background: var(--app-panel) !important;
+        backdrop-filter: blur(25px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
         padding: 30px !important;
         border-radius: 16px !important;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
         border: 1px solid var(--app-border) !important;
         max-width: 420px !important;
         width: 90% !important;
@@ -500,13 +506,15 @@ st.markdown("""
         color: inherit !important;
     }
     
-    /* 强力修复 Radio 和 Select Label 不可见问题 */
+    /* 强力修复 Radio, Select 和 Checkbox Label 不可见问题 */
     div[data-testid="stRadio"] label p,
     div[data-testid="stRadio"] label span,
+    div[data-testid="stCheckbox"] label p,
+    div[data-testid="stCheckbox"] label span,
     label[data-testid="stWidgetLabel"] p,
     label[data-testid="stWidgetLabel"] span {
         color: var(--app-text) !important;
-        opacity: 0.9 !important;
+        opacity: 0.95 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -842,12 +850,6 @@ LANG = {
         "input_admin_password_confirm": "请输入管理员密码以确认删除：",
         "confirm_delete_permanently": "确认彻底删除",
         "confirm_delete_btn": "确认删除",
-        "system_theme": "系统主题",
-        "theme_teal": "雅致青绿 (Teal Trust)",
-        "theme_blue": "深海蔚蓝 (Ocean Breeze)",
-        "theme_orange": "落日余晖 (Sunset Glow)",
-        "theme_dark": "深邃极夜 (Midnight Dark)",
-        "theme_pink": "粉黛桃色 (Sakura Pink)",
     },
     "id": {
         "actions": "Aksi",
@@ -1178,12 +1180,6 @@ LANG = {
         "input_admin_password_confirm": "Silakan masukkan kata sandi administrator untuk konfirmasi:",
         "confirm_delete_permanently": "Konfirmasi Hapus Permanen",
         "confirm_delete_btn": "Konfirmasi Hapus",
-        "system_theme": "Tema Sistem",
-        "theme_teal": "Teal Trust (Hijau Toska)",
-        "theme_blue": "Ocean Breeze (Biru Laut)",
-        "theme_orange": "Sunset Glow (Jingga Senja)",
-        "theme_dark": "Midnight Dark (Malam Gelap)",
-        "theme_pink": "Sakura Pink (Merah Muda)",
     }
 }
 
@@ -1518,17 +1514,17 @@ components.html(
                 left: 0;
                 right: 0;
                 height: 48px;
-                background: var(--secondary-background-color, rgba(243, 244, 246, 0.85)) !important;
-                backdrop-filter: blur(20px) saturate(180%);
-                -webkit-backdrop-filter: blur(20px) saturate(180%);
-                border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.15)) !important;
+                background: var(--app-panel) !important;
+                backdrop-filter: blur(20px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+                border-top: 1px solid var(--app-border) !important;
                 z-index: 999990;
                 display: none;
                 align-items: center;
                 justify-content: space-between;
                 padding: 0 16px;
                 font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-                color: var(--text-color, #1f2937) !important;
+                color: var(--app-text) !important;
                 box-sizing: border-box;
                 user-select: none;
                 box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
@@ -1547,7 +1543,7 @@ components.html(
             .taskbar-title {{
                 font-size: 13.5px;
                 font-weight: 600;
-                color: var(--text-color, #111827) !important;
+                color: var(--app-text) !important;
             }}
             .taskbar-right {{
                 display: flex;
@@ -1564,12 +1560,12 @@ components.html(
                 font-size: 13px;
                 transition: background-color 0.2s, transform 0.1s;
                 position: relative;
-                background-color: var(--background-color, rgba(255, 255, 255, 0.4)) !important;
-                border: 1px solid var(--border-color, rgba(0, 0, 0, 0.05)) !important;
-                color: var(--text-color, #1f2937) !important;
+                background-color: rgba(255, 255, 255, 0.15) !important;
+                border: 1px solid var(--app-border) !important;
+                color: var(--app-text) !important;
             }}
             .taskbar-widget:hover {{
-                background-color: var(--secondary-background-color, rgba(0, 0, 0, 0.06)) !important;
+                background-color: rgba(255, 255, 255, 0.3) !important;
                 transform: translateY(-1px);
             }}
             .taskbar-widget:active {{
@@ -1596,14 +1592,14 @@ components.html(
                 flex-direction: column;
                 align-items: flex-end;
                 font-size: 11px;
-                color: var(--text-color, #4b5563) !important;
+                color: var(--app-text) !important;
                 opacity: 0.8;
                 padding-left: 10px;
-                border-left: 1px solid var(--border-color, rgba(0, 0, 0, 0.12)) !important;
+                border-left: 1px solid var(--app-border) !important;
             }}
             .taskbar-clock #taskbar-time {{
                 font-weight: 600;
-                color: var(--text-color, #1f2937) !important;
+                color: var(--app-text) !important;
                 font-size: 12px;
             }}
             
@@ -1612,10 +1608,10 @@ components.html(
                 bottom: 56px;
                 width: 340px;
                 max-height: 420px;
-                background: var(--background-color, rgba(255, 255, 255, 0.90)) !important;
-                backdrop-filter: blur(25px) saturate(180%);
-                -webkit-backdrop-filter: blur(25px) saturate(180%);
-                border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12)) !important;
+                background: var(--app-panel) !important;
+                backdrop-filter: blur(25px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+                border: 1px solid var(--app-border) !important;
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
                 z-index: 1000000;
@@ -2092,26 +2088,6 @@ st.sidebar.title(t("login_title"))
 st.sidebar.toggle("Bahasa Indonesia/中文", value=(st.session_state.lang == "id"), key="lang_toggle")
 st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
 
-# Theme Selector in Sidebar
-theme_options = ["Teal Trust", "Ocean Breeze", "Sunset Glow", "Midnight Dark", "Sakura Pink"]
-theme_labels = {
-    "Teal Trust": t("theme_teal"),
-    "Ocean Breeze": t("theme_blue"),
-    "Sunset Glow": t("theme_orange"),
-    "Midnight Dark": t("theme_dark"),
-    "Sakura Pink": t("theme_pink")
-}
-st.sidebar.selectbox(
-    t("system_theme"),
-    options=theme_options,
-    index=theme_options.index(st.session_state.get("theme_choice", "Teal Trust")),
-    format_func=lambda x: theme_labels.get(x, x),
-    key="theme_choice_select"
-)
-if "theme_choice_select" in st.session_state:
-    if st.session_state.theme_choice != st.session_state.theme_choice_select:
-        st.session_state.theme_choice = st.session_state.theme_choice_select
-        st.rerun()
 
 menu_options = [t("dashboard"), t("org_chart"), t("employees"), t("resigned"), t("labor"), t("logs")]
 if st.session_state.user_info.get("role") == "admin":
