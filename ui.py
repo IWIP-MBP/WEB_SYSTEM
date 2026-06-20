@@ -12,6 +12,8 @@ import time
 API_BASE = os.getenv("API_BASE", "http://localhost:8000/api")
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
 
+st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
+
 def init_session_state():
     defaults = {
         "lang": "zh",
@@ -110,7 +112,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
+
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
