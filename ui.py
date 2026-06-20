@@ -10,6 +10,7 @@ import base64
 import time
 
 API_BASE = os.getenv("API_BASE", "http://localhost:8000/api")
+PUBLIC_API_BASE = os.getenv("PUBLIC_API_BASE", "")
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
 
 st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
@@ -1476,14 +1477,17 @@ components.html(
     f"""
     <script>
     const apiBase = "{API_BASE}";
+    const publicApiBase = "{PUBLIC_API_BASE}";
     const accessToken = "{st.session_state.access_token or ''}";
     
     window.parent._current_access_token = accessToken;
-    let resolvedApiBase = apiBase;
-    if (apiBase.includes("backend:8000")) {{
-        resolvedApiBase = window.parent.location.protocol + "//" + window.parent.location.hostname + ":8000/api";
-    }} else if (apiBase.includes("localhost") && window.parent.location.hostname !== "localhost") {{
-        resolvedApiBase = apiBase.replace("localhost", window.parent.location.hostname);
+    let resolvedApiBase = publicApiBase || apiBase;
+    if (!publicApiBase) {{
+        if (apiBase.includes("backend:8000")) {{
+            resolvedApiBase = window.parent.location.protocol + "//" + window.parent.location.hostname + ":8000/api";
+        }} else if (apiBase.includes("localhost") && window.parent.location.hostname !== "localhost") {{
+            resolvedApiBase = apiBase.replace("localhost", window.parent.location.hostname);
+        }}
     }}
     window.parent._resolved_api_base = resolvedApiBase;
 
