@@ -8,9 +8,24 @@ import json
 import io
 import base64
 import time
+# Monkeypatch requests to support relative paths for server-side requests
+_INTERNAL_BACKEND_URL = os.getenv("API_BASE", "http://localhost:8000/api").replace("/api", "").rstrip("/")
+_orig_get = requests.get
+_orig_post = requests.post
+_orig_put = requests.put
+_orig_delete = requests.delete
 
-API_BASE = os.getenv("API_BASE", "http://localhost:8000/api")
-PUBLIC_API_BASE = os.getenv("PUBLIC_API_BASE", "")
+def _resolve_url(url):
+    if url.startswith("/api"):
+        return f"{_INTERNAL_BACKEND_URL}{url}"
+    return url
+
+requests.get = lambda url, *args, **kwargs: _orig_get(_resolve_url(url), *args, **kwargs)
+requests.post = lambda url, *args, **kwargs: _orig_post(_resolve_url(url), *args, **kwargs)
+requests.put = lambda url, *args, **kwargs: _orig_put(_resolve_url(url), *args, **kwargs)
+requests.delete = lambda url, *args, **kwargs: _orig_delete(_resolve_url(url), *args, **kwargs)
+
+API_BASE = "/api"
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
 
 st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
@@ -1285,7 +1300,7 @@ def handle_api_response(r, default=None):
 
 def api_get(endpoint, params=None):
     try:
-        r = requests.get(f"{API_BASE}{endpoint}", params=params, headers=auth_h(), timeout=API_TIMEOUT)
+        r = requests.get(f"/api{endpoint}", params=params, headers=auth_h(), timeout=API_TIMEOUT)
         return handle_api_response(r, default={})
     except requests.RequestException as e:
         st.toast(f"{t('operation_failed')}: {e}", icon="❌")
@@ -1294,9 +1309,9 @@ def api_get(endpoint, params=None):
 def api_post(endpoint, params=None, json_data=None, files=None):
     try:
         if files:
-            r = requests.post(f"{API_BASE}{endpoint}", params=params, files=files, headers=auth_h(), timeout=max(API_TIMEOUT, 60))
+            r = requests.post(f"/api{endpoint}", params=params, files=files, headers=auth_h(), timeout=max(API_TIMEOUT, 60))
         else:
-            r = requests.post(f"{API_BASE}{endpoint}", params=params, json=json_data, headers=auth_h(), timeout=API_TIMEOUT)
+            r = requests.post(f"/api{endpoint}", params=params, json=json_data, headers=auth_h(), timeout=API_TIMEOUT)
         return handle_api_response(r)
     except requests.RequestException as e:
         st.toast(f"{t('operation_failed')}: {e}", icon="❌")
@@ -1304,7 +1319,7 @@ def api_post(endpoint, params=None, json_data=None, files=None):
 
 def api_put(endpoint, params=None, json_data=None):
     try:
-        r = requests.put(f"{API_BASE}{endpoint}", params=params, json=json_data, headers=auth_h(), timeout=API_TIMEOUT)
+        r = requests.put(f"/api{endpoint}", params=params, json=json_data, headers=auth_h(), timeout=API_TIMEOUT)
         return handle_api_response(r, default={})
     except requests.RequestException as e:
         st.toast(f"{t('operation_failed')}: {e}", icon="❌")
@@ -1312,7 +1327,7 @@ def api_put(endpoint, params=None, json_data=None):
 
 def api_delete(endpoint, params=None):
     try:
-        r = requests.delete(f"{API_BASE}{endpoint}", params=params, headers=auth_h(), timeout=API_TIMEOUT)
+        r = requests.delete(f"/api{endpoint}", params=params, headers=auth_h(), timeout=API_TIMEOUT)
         return handle_api_response(r, default={})
     except requests.RequestException as e:
         st.toast(f"{t('operation_failed')}: {e}", icon="❌")
@@ -1417,7 +1432,7 @@ if not st.session_state.access_token:
     with form_col:
         st.markdown('<div class="login-form-panel">', unsafe_allow_html=True)
         try:
-            logo_resp = requests.get(f"{API_BASE}/settings/logo", timeout=3)
+            logo_resp = requests.get("/api/settings/logo", timeout=3)
             if logo_resp.status_code == 200:
                 logo_base64 = base64.b64encode(logo_resp.content).decode()
                 st.image(f"data:image/png;base64,{logo_base64}", width=88)
@@ -1446,20 +1461,13 @@ if not st.session_state.access_token:
                     st.rerun()
                 else:
                     try:
-                        response = requests.post(f"{API_BASE}/auth/login", params={"username": u, "password": p}, timeout=10)
+                        response = requests.post("/api/auth/login", params={"username": u, "password": p}, timeout=10)
                         if response.status_code == 200:
                             res = response.json()
                             st.session_state._login_done = True
                             st.session_state.access_token = res["access_token"]
                             st.session_state.user_info = {"username": res["username"], "role": res["role"], "ws_scope": res.get("ws_scope")}
                             st.session_state.greeting_shown = False
-                            try:
-                                resp = api_post("/sessions/heartbeat")
-                                if resp and isinstance(resp, list):
-                                    st.session_state.online_users = resp
-                                    st.session_state.last_online_users = [u["user"] for u in resp]
-                            except:
-                                pass
                             st.rerun()
                         else:
                             st.error(t("login_error"))
@@ -1476,20 +1484,10 @@ import streamlit.components.v1 as components
 components.html(
     f"""
     <script>
-    const apiBase = "{API_BASE}";
-    const publicApiBase = "{PUBLIC_API_BASE}";
     const accessToken = "{st.session_state.access_token or ''}";
     
     window.parent._current_access_token = accessToken;
-    let resolvedApiBase = publicApiBase || apiBase;
-    if (!publicApiBase) {{
-        if (apiBase.includes("backend:8000")) {{
-            resolvedApiBase = window.parent.location.protocol + "//" + window.parent.location.hostname + ":8000/api";
-        }} else if (apiBase.includes("localhost") && window.parent.location.hostname !== "localhost") {{
-            resolvedApiBase = apiBase.replace("localhost", window.parent.location.hostname);
-        }}
-    }}
-    window.parent._resolved_api_base = resolvedApiBase;
+    window.parent._resolved_api_base = "/api";
 
     const doc = window.parent.document;
     const body = doc.body;
@@ -1705,7 +1703,7 @@ components.html(
         taskbar.id = 'win-taskbar';
         taskbar.innerHTML = `
             <div class="taskbar-left">
-                <img src="${{apiBase}}/settings/logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%230f766e\\'><path d=\\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z\\'/></svg>';" class="taskbar-logo">
+                <img src="/api/settings/logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%230f766e\\'><path d=\\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z\\'/></svg>';" class="taskbar-logo">
                 <span class="taskbar-title">{t('login_title')}</span>
             </div>
             <div class="taskbar-center">
@@ -1761,6 +1759,10 @@ components.html(
     if (!accessToken) {{
         if (tb) tb.style.display = 'none';
         doc.querySelectorAll('.taskbar-popup').forEach(p => p.style.display = 'none');
+        if (window.parent._sessions_ws) {{
+            window.parent._sessions_ws.close();
+            window.parent._sessions_ws = null;
+        }}
     }} else {{
         if (tb) tb.style.display = 'flex';
     }}
@@ -2003,16 +2005,14 @@ components.html(
 
     window.parent.connectSessionsWS = function() {{
         const token = window.parent._current_access_token;
-        const url = window.parent._resolved_api_base;
-        if (!token || !url) return;
+        if (!token) return;
 
         if (window.parent._sessions_ws && (window.parent._sessions_ws.readyState === WebSocket.OPEN || window.parent._sessions_ws.readyState === WebSocket.CONNECTING)) {{
             return;
         }}
 
         let wsProtocol = window.parent.location.protocol === "https:" ? "wss:" : "ws:";
-        let baseHost = url.replace(/^https?:\/\//, "").replace(/\/api$/, "");
-        let wsUrl = wsProtocol + "//" + baseHost + "/ws/sessions?token=" + encodeURIComponent(token);
+        let wsUrl = wsProtocol + "//" + window.parent.location.host + "/ws/sessions?token=" + encodeURIComponent(token);
 
         const ws = new WebSocket(wsUrl);
         window.parent._sessions_ws = ws;
@@ -3044,7 +3044,7 @@ elif menu == t("employees"):
         if is_admin and st.button(t("export"), key="export_btn"):
             export_params = {"status": status_filter, "ws": ws_filter, "team": team_filter, "nation": nation_filter}
             with st.spinner(t("export_generating")):
-                r = requests.get(f"{API_BASE}/employees/export", params=export_params, headers=auth_h(), timeout=30)
+                r = requests.get("/api/employees/export", params=export_params, headers=auth_h(), timeout=30)
                 if r.status_code == 200:
                     st.download_button(label="📥 " + t("export"), data=r.content,
                                        file_name=f"employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
@@ -3832,7 +3832,7 @@ elif menu == t("logs"):
     with col_export:
         if is_admin and st.button(t("export_logs"), key="export_logs_btn"):
             with st.spinner(t("generating_report")):
-                r = requests.get(f"{API_BASE}/logs/report", headers=auth_h(), timeout=30)
+                r = requests.get("/api/logs/report", headers=auth_h(), timeout=30)
                 if r.status_code == 200:
                     st.download_button(label="📥 " + t("export"), data=r.content,
                                        file_name=f"log_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
@@ -3940,7 +3940,7 @@ elif menu == t("logs"):
                         del_ids = list(st.session_state.log_checked_ids)
                         try:
                             resp = requests.post(
-                                f"{API_BASE}/logs/batch-delete",
+                                "/api/logs/batch-delete",
                                 json={"ids": del_ids},
                                 headers=auth_h(),
                                 timeout=API_TIMEOUT
@@ -4280,7 +4280,7 @@ elif menu == "📊 导出成本报表":
             with st.spinner("生成报表中，请稍候..."):
                 try:
                     r = requests.get(
-                        f"{API_BASE}/employees/cost_report_export",
+                        "/api/employees/cost_report_export",
                         params={
                             "start_date": start_str,
                             "end_date": end_str,
@@ -4356,7 +4356,7 @@ elif menu == t("settings"):
         st.subheader(t("db_maintenance"))
         if st.button(t("backup"), key="backup_db"):
             with st.spinner(t("db_backing_up")):
-                r = requests.get(f"{API_BASE}/db/backup", headers=auth_h(), timeout=60)
+                r = requests.get("/api/db/backup", headers=auth_h(), timeout=60)
                 if r.status_code == 200:
                     st.download_button(t("backup"), data=r.content,
                                        file_name=f"hr_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql",
@@ -4483,7 +4483,7 @@ elif menu == t("settings"):
             else:
                 st.toast(t("logo_upload_failed"), icon="❌")
         try:
-            logo_resp = requests.get(f"{API_BASE}/settings/logo", timeout=3)
+            logo_resp = requests.get("/api/settings/logo", timeout=3)
             if logo_resp.status_code == 200:
                 logo_base64 = base64.b64encode(logo_resp.content).decode()
                 st.image(f"data:image/png;base64,{logo_base64}", width=150)

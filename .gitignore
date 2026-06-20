@@ -110,3 +110,4 @@ uploads/
 exports/
 *.sql
 *.log
+ngrok.yml

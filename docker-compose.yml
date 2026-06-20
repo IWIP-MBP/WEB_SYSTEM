@@ -54,7 +54,6 @@ services:
         condition: service_healthy
     environment:
       - API_BASE=http://backend:8000/api
-      - PUBLIC_API_BASE
       - TZ=Asia/Tokyo
     ports:
       - "8501:8501"

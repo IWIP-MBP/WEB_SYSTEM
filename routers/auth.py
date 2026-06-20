@@ -1,6 +1,7 @@
 import os
 import json
 import bcrypt
+import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, insert, update, delete, text
@@ -166,15 +167,37 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     
     await broadcast_online_users()
     
+    async def keep_alive():
+        try:
+            while True:
+                await asyncio.sleep(20)
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                with SessionLocal() as db:
+                    db.execute(text("""
+                        UPDATE active_sessions 
+                        SET last_seen = :now 
+                        WHERE username = :u AND ip_address = :ip
+                    """), {"u": username, "ip": client_ip, "now": now})
+                    db.commit()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass
+
+    keep_alive_task = asyncio.create_task(keep_alive())
+
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(websocket, user_key)
-        with SessionLocal() as db:
-            db.execute(text("""
-                DELETE FROM active_sessions 
-                WHERE username = :u AND ip_address = :ip
-            """), {"u": username, "ip": client_ip})
-            db.commit()
+        pass
+    finally:
+        keep_alive_task.cancel()
+        if manager.disconnect(websocket, user_key):
+            with SessionLocal() as db:
+                db.execute(text("""
+                    DELETE FROM active_sessions 
+                    WHERE username = :u AND ip_address = :ip
+                """), {"u": username, "ip": client_ip})
+                db.commit()
         await broadcast_online_users()
