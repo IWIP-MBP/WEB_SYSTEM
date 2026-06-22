@@ -15,7 +15,8 @@ from services.backup_service import (
     save_backup_config,
     create_db_backup,
     restore_db_backup,
-    scheduler
+    scheduler,
+    init_backup_scheduler
 )
 from apscheduler.triggers.cron import CronTrigger
 
@@ -43,6 +44,8 @@ def get_backup_config(current_user=Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(403, "只有管理员可以查看备份配置")
     return load_backup_config()
+
+
 
 @router.get("/api/system/backups", response_model=List[BackupFileSchema])
 def get_backups(current_user=Depends(get_current_user)):
@@ -147,12 +150,11 @@ def update_backup_config(
     save_backup_config(config)
     
     # 动态 reschedule APScheduler 定时任务
-    if scheduler.running:
-        job = scheduler.get_job("auto_backup")
-        if job:
-            trigger = CronTrigger(hour=body.hour, minute=body.minute, timezone="Asia/Tokyo")
-            scheduler.reschedule_job("auto_backup", trigger=trigger)
-            logger.info(f"备份定时任务重构成功，运行时间已变更为 每天 {body.hour:02d}:{body.minute:02d}")
+    try:
+        init_backup_scheduler()
+        logger.info(f"备份定时任务重构成功，运行时间已变更为 每天 {body.hour:02d}:{body.minute:02d}")
+    except Exception as e:
+        logger.error(f"重构备份定时任务失败: {e}")
             
     write_audit(db, "", "", "更新自动备份配置", old=json.dumps(old_config), new=json.dumps(config), reason="管理员修改自动备份周期及保留天数", operator=current_user["username"], ip="")
     return {"status": "success", "config": config}

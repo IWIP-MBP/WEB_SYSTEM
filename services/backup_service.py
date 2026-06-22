@@ -7,7 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from services.utils import parse_db_url
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 BACKUP_DIR = "/app/backups"
 CONFIG_FILE = os.path.join(BACKUP_DIR, "config.json")
@@ -20,7 +20,10 @@ DEFAULT_CONFIG = {
     "retention_days": 7
 }
 
-scheduler = BackgroundScheduler(timezone="Asia/Tokyo")
+scheduler = BackgroundScheduler(
+    timezone="Asia/Tokyo",
+    job_defaults={'misfire_grace_time': 3600}
+)
 
 def load_backup_config():
     """
@@ -168,6 +171,7 @@ def init_backup_scheduler():
         scheduled_backup_job,
         trigger=trigger,
         id="auto_backup",
-        replace_existing=True
+        replace_existing=True,
+        misfire_grace_time=3600
     )
     logger.info(f"自动备份任务 'auto_backup' 已配置为每天 {hour:02d}:{minute:02d} (Tokyo 时间) 自动运行。")

@@ -25,7 +25,7 @@ os.makedirs(settings.EXPORT_DIR, exist_ok=True)
 os.makedirs(settings.LOGO_DIR, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 # 创建表
 metadata.create_all(bind=engine)
