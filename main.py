@@ -17,7 +17,7 @@ from database import settings, engine, SessionLocal, metadata, get_db
 from models import users
 
 # ---------- 路由导入 ----------
-from routers import auth, employees, labor, logs, backup
+from routers import auth, employees, labor, logs, backup, attendance
 from services.backup_service import init_backup_scheduler
 from services.limiter import limiter
 
@@ -176,6 +176,7 @@ app.include_router(employees.router)
 app.include_router(labor.router)
 app.include_router(logs.router)
 app.include_router(backup.router)
+app.include_router(attendance.router)
 
 if __name__ == "__main__":
     import uvicorn

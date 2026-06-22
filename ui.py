@@ -422,6 +422,17 @@ st.markdown("""
         border-color: rgba(255,255,255,0.35);
         transform: translateX(5px);
     }
+    a.login-badge {
+        text-decoration: none !important;
+        color: white !important;
+    }
+    a.login-badge:hover {
+        text-decoration: none !important;
+        color: white !important;
+        background: rgba(255,255,255,0.15) !important;
+        border-color: rgba(255,255,255,0.35) !important;
+        transform: translateX(5px) !important;
+    }
     .login-heading {
         margin: 0 0 1.5rem 0;
         padding: 0.15rem 0 0.35rem 0;
@@ -672,7 +683,8 @@ LANG = {
         "login_badge1": "人员数据统一维护",
         "login_badge2": "劳保发放可追溯",
         "login_badge3": "操作记录实时审计",
-        "login_desc": "集中管理员工花名册、劳保用品、库存发放、组织架构和操作审计，让日常人事工作更清晰、更可靠。",
+        "login_desc": "集中管理员工花名册、劳保用品、库存发放、组织架构和操作审计，让日常人事工作更清晰、更可靠。同时集成印尼语学习系统，助力员工快速提升语言技能与沟通效率。",
+        "indonesian_learning_portal": "印尼语学习系统 (账号是工号，密码是123456，地址是http://10.158.0.185:8080/login，点击可打开)",
         "login_empty": "请输入用户名和密码",
         "login_error": "用户名或密码错误",
         "login_footer": "后勤三部 张金刚 | 版本 2.0",
@@ -874,6 +886,14 @@ LANG = {
         "input_admin_password_confirm": "请输入管理员密码以确认删除：",
         "confirm_delete_permanently": "确认彻底删除",
         "confirm_delete_btn": "确认删除",
+        "attendance_converter": "📅 考勤排休转换",
+        "attendance_converter_note": "### 📅 跨月考勤排休智能转换\n1. **上传出勤明细**：请同时多选并上传<b>上个月</b>和<b>本月</b>的系统原始出勤明细 Excel 文件（支持多选、跨月追踪）。\n2. **上传输出模板**：上传最新的空白排班输出模板 Excel 文件。\n3. **一键智能转换**：系统会自动分析跨月出入园轨迹、自动匹配出入园闭环并生成备注，计算休息日加班高亮并写入模板中。",
+        "upload_attendance_logs": "📂 步骤一：上传出勤明细 Excel 文件（可多选，请同时选中上月和本月流水）",
+        "upload_attendance_template": "📄 步骤二：上传您的『输出模板.xlsx』",
+        "start_conversion": "开始跨月深度追踪与转换",
+        "converting_msg": "程序正在全局检索出勤轨迹并重构矩阵，请稍候...",
+        "conversion_success": "✨ 转换大功告成！已成功重构调休排班数据。",
+        "download_attendance_result": "点击下载更新后的排休表 Excel 附件",
     },
     "id": {
         "actions": "Aksi",
@@ -1010,7 +1030,8 @@ LANG = {
         "login_badge1": "Pemeliharaan Data Pegawai Terpadu",
         "login_badge2": "Pemberian APD Dapat Dilacak",
         "login_badge3": "Audit Operasi Real-time",
-        "login_desc": "Mengelola data pegawai, alat pelindung diri (APD), stok & distribusi, bagan organisasi, dan audit aktivitas secara terpusat untuk pekerjaan personalia yang lebih teratur dan andal.",
+        "login_desc": "Mengelola data pegawai, alat pelindung diri (APD), stok & distribusi, bagan organisasi, dan audit aktivitas secara terpusat untuk pekerjaan personalia yang lebih teratur dan andal. Terintegrasi dengan sistem pembelajaran bahasa Indonesia untuk membantu meningkatkan keterampilan bahasa.",
+        "indonesian_learning_portal": "Sistem Belajar Bahasa Indonesia (Username: ID Karyawan, Password: 123456, Alamat: http://10.158.0.185:8080/login)",
         "login_empty": "Silakan masukkan nama pengguna dan kata sandi",
         "login_error": "Nama pengguna atau kata sandi salah",
         "login_footer": "ACC Departemen 3 Zhang Jingang | Versi 2.0",
@@ -1212,6 +1233,14 @@ LANG = {
         "input_admin_password_confirm": "Silakan masukkan kata sandi administrator untuk konfirmasi:",
         "confirm_delete_permanently": "Konfirmasi Hapus Permanen",
         "confirm_delete_btn": "Konfirmasi Hapus",
+        "attendance_converter": "📅 Konversi Absensi",
+        "attendance_converter_note": "### 📅 Konversi Pintar Absensi Lintas Bulan\n1. **Unggah Detail Kehadiran**: Harap pilih dan unggah file Excel detail kehadiran asli sistem untuk **bulan lalu** dan **bulan ini** sekaligus (mendukung pelacakan lintas bulan).\n2. **Unggah Template Output**: Unggah file template output jadwal kerja kosong terbaru.\n3. **Konversi Sekali Klik**: Sistem akan secara otomatis menganalisis riwayat keluar/masuk taman, mencocokkan keluar/masuk taman untuk menghasilkan catatan, menghitung lembur hari libur dan menulis ke template.",
+        "upload_attendance_logs": "📂 Langkah 1: Unggah file Excel detail kehadiran (Bisa pilih banyak, harap pilih riwayat bulan lalu dan bulan ini)",
+        "upload_attendance_template": "📄 Langkah 2: Unggah file 『output_template.xlsx』 Anda",
+        "start_conversion": "Mulai Pelacakan Lintas Bulan & Konversi",
+        "converting_msg": "Sistem sedang mencari riwayat kehadiran secara global dan merekonstruksi matriks, harap tunggu...",
+        "conversion_success": "✨ Konversi berhasil! Data pengaturan libur dan jadwal kerja berhasil direkonstruksi.",
+        "download_attendance_result": "Klik untuk mengunduh lampiran Excel tabel jadwal kerja yang diperbarui",
     }
 }
 
@@ -1440,6 +1469,9 @@ if not st.session_state.access_token:
                     <div class="login-badge">{t("login_badge1")}</div>
                     <div class="login-badge">{t("login_badge2")}</div>
                     <div class="login-badge">{t("login_badge3")}</div>
+                    <a href="http://10.158.0.185:8080/login" target="_blank" class="login-badge">
+                        {t("indonesian_learning_portal")}
+                    </a>
                 </div>
             </div>
             <p>{t("login_footer")}</p>
@@ -2114,6 +2146,7 @@ if st.session_state.user_info.get("role") == "admin":
     menu_options.insert(4, t("transfer_records"))
     menu_options.append(t("backup_management"))
     menu_options.append("📊 导出成本报表")
+    menu_options.append(t("attendance_converter"))
 if st.session_state.user_info.get("username") == "admin":
     menu_options.append(t("settings"))
 menu = st.sidebar.radio("Menu", menu_options, key="menu_radio")
@@ -4519,6 +4552,53 @@ elif menu == t("backup_management"):
                     show_restore_dialog(selected_file)
         else:
             st.info(t("no_data"))
+
+# ==================== 考勤排休转换 ====================
+elif menu == t("attendance_converter"):
+    st.header(t("attendance_converter"))
+    st.markdown(f'<div class="section-note">{t("attendance_converter_note")}</div>', unsafe_allow_html=True)
+    if not is_admin:
+        st.warning(t("readonly_msg"))
+        st.stop()
+        
+    uploaded_logs = st.file_uploader(t("upload_attendance_logs"), type=["xlsx", "xls"], accept_multiple_files=True, key="uploaded_attendance_logs")
+    uploaded_template = st.file_uploader(t("upload_attendance_template"), type=["xlsx"], key="uploaded_attendance_template")
+    
+    if uploaded_logs and uploaded_template:
+        if st.button("🚀 " + t("start_conversion"), key="start_attendance_conversion"):
+            with st.spinner(t("converting_msg")):
+                try:
+                    # 构建 multipart 上传数据
+                    files = []
+                    for f in uploaded_logs:
+                        files.append(('files', (f.name, f.getvalue(), f.type)))
+                    files.append(('template', (uploaded_template.name, uploaded_template.getvalue(), uploaded_template.type)))
+                    
+                    # 向后端发起转换请求
+                    r = requests.post(
+                        f"{_INTERNAL_BACKEND_URL}/api/attendance/convert",
+                        files=files,
+                        headers=auth_h(),
+                        timeout=120
+                    )
+                    
+                    if r.status_code == 200:
+                        st.success(t("conversion_success"))
+                        st.download_button(
+                            label="💾 " + t("download_attendance_result"),
+                            data=r.content,
+                            file_name=f"attendance_converted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key="download_attendance_result_btn"
+                        )
+                    else:
+                        try:
+                            detail = r.json().get("detail", r.text)
+                        except Exception:
+                            detail = r.text
+                        st.error(f"❌ {t('operation_failed')}: {detail}")
+                except Exception as e:
+                    st.error(f"❌ {t('operation_failed')}: {str(e)}")
 
 # ==================== 系统设置 ====================
 elif menu == t("settings"):
