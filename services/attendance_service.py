@@ -427,14 +427,24 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
     for r in range(1, 6):
         for c in range(1, ws.max_column + 1):
             val = ws.cell(row=r, column=c).value
-            if val and isinstance(val, str) and "月份" in val:
-                if "：" in val:
-                    ws.cell(row=r, column=c).value = f"月份：{current_year}年{current_month}月"
-                elif ":" in val:
-                    ws.cell(row=r, column=c).value = f"月份:{current_year}年{current_month}月"
-                else:
-                    ws.cell(row=r, column=c).value = f"月份：{current_year}年{current_month}月"
-                logger.info(f"已更正月份单元格 (行 {r}, 列 {c}) 为：{ws.cell(row=r, column=c).value}")
+            if val is not None:
+                val_str = str(val).strip()
+                is_month_cell = False
+                if "月份" in val_str:
+                    is_month_cell = True
+                elif re.search(r'\d{4}[-/年]\d{1,2}', val_str):
+                    is_month_cell = True
+                elif isinstance(val, (datetime, date)):
+                    is_month_cell = True
+                
+                if is_month_cell:
+                    if "：" in val_str:
+                        ws.cell(row=r, column=c).value = f"月份：{current_year}年{current_month}月"
+                    elif ":" in val_str:
+                        ws.cell(row=r, column=c).value = f"月份:{current_year}年{current_month}月"
+                    else:
+                        ws.cell(row=r, column=c).value = f"月份：{current_year}年{current_month}月"
+                    logger.info(f"已更正月份单元格 (行 {r}, 列 {c}) 为：{ws.cell(row=r, column=c).value}")
 
     # 自动增加或删除 31日列，并更正周几
     date_row_idx = None
@@ -515,6 +525,16 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
                 start_ins_col = day_1_col + template_days
                 num_to_insert = target_days - template_days
                 
+                # 计算原有日期列的最小宽度作为新插入列的宽度（保证最窄/和原有日期列一致）
+                day_widths = []
+                for day_c in range(day_1_col, day_1_col + template_days):
+                    import openpyxl
+                    col_letter = openpyxl.utils.get_column_letter(day_c)
+                    w = ws.column_dimensions[col_letter].width
+                    if w is not None and w > 0:
+                        day_widths.append(w)
+                target_width = min(day_widths) if day_widths else 4.625
+
                 # 手动平移/调整合并单元格
                 from openpyxl.worksheet.cell_range import CellRange
                 ranges = list(ws.merged_cells.ranges)
@@ -537,12 +557,10 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
                     new_col = start_ins_col + i
                     new_day = template_days + 1 + i
                     
-                    # 复制列宽
-                    src_col = start_ins_col - 1
+                    # 设置新插入的日期列宽度为原有日期列的最小宽度（最窄）
                     import openpyxl
-                    src_col_letter = openpyxl.utils.get_column_letter(src_col)
                     dst_col_letter = openpyxl.utils.get_column_letter(new_col)
-                    ws.column_dimensions[dst_col_letter].width = ws.column_dimensions[src_col_letter].width
+                    ws.column_dimensions[dst_col_letter].width = target_width
                     
                     # 复制单元格样式
                     for row in range(1, ws.max_row + 1):
@@ -696,13 +714,27 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
                     if cell_fill:
                         ws.cell(row=row, column=c_idx).fill = cell_fill
                         
-        # 写入跨月智能穿透备注
-        if emp_id in computed_remarks:
-            if remark_col is not None:
-                ws.cell(row=row, column=remark_col).value = computed_remarks[emp_id]
-        else:
-            if remark_col is not None:
-                ws.cell(row=row, column=remark_col).value = None # 清空旧备注
+        # 写入跨月智能穿透备注并设置自动换行
+        if remark_col is not None:
+            remark_cell = ws.cell(row=row, column=remark_col)
+            if emp_id in computed_remarks:
+                remark_cell.value = computed_remarks[emp_id]
+            else:
+                remark_cell.value = None # 清空旧备注
+            
+            # 设置自动换行，同时保留原有的对齐属性（如居中对齐）
+            orig_align = remark_cell.alignment
+            if orig_align:
+                remark_cell.alignment = Alignment(
+                    horizontal=orig_align.horizontal,
+                    vertical=orig_align.vertical,
+                    text_rotation=orig_align.text_rotation,
+                    wrap_text=True,
+                    shrink_to_fit=orig_align.shrink_to_fit,
+                    indent=orig_align.indent
+                )
+            else:
+                remark_cell.alignment = Alignment(wrap_text=True, vertical='center')
             
         updated_count += 1
 
