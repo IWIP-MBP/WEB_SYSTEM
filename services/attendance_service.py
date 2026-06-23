@@ -563,6 +563,7 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
                     ws.column_dimensions[dst_col_letter].width = target_width
                     
                     # 复制单元格样式
+                    src_col = start_ins_col - 1
                     for row in range(1, ws.max_row + 1):
                         src_cell = ws.cell(row=row, column=src_col)
                         dst_cell = ws.cell(row=row, column=new_col)
