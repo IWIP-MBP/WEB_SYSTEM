@@ -7,6 +7,7 @@ from typing import List, Tuple
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment
+import openpyxl
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -424,18 +425,22 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
     ws = wb["排休"] if "排休" in wb.sheetnames else wb.active
     
     # 自动更正模板中的月份
-    for r in range(1, 6):
+    for r in range(1, 11):
         for c in range(1, ws.max_column + 1):
             val = ws.cell(row=r, column=c).value
             if val is not None:
                 val_str = str(val).strip()
                 is_month_cell = False
-                if "月份" in val_str:
-                    is_month_cell = True
-                elif re.search(r'\d{4}[-/年]\d{1,2}', val_str):
-                    is_month_cell = True
+                if isinstance(val, str):
+                    if "月份" in val_str:
+                        is_month_cell = True
+                    elif re.search(r'\d{4}[-/年]\d{1,2}', val_str):
+                        is_month_cell = True
                 elif isinstance(val, (datetime, date)):
                     is_month_cell = True
+                elif isinstance(val, (int, float)):
+                    if 35000 <= val <= 60000:
+                        is_month_cell = True
                 
                 if is_month_cell:
                     if "：" in val_str:
@@ -528,7 +533,6 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
                 # 计算原有日期列的最小宽度作为新插入列的宽度（保证最窄/和原有日期列一致）
                 day_widths = []
                 for day_c in range(day_1_col, day_1_col + template_days):
-                    import openpyxl
                     col_letter = openpyxl.utils.get_column_letter(day_c)
                     w = ws.column_dimensions[col_letter].width
                     if w is not None and w > 0:
@@ -558,7 +562,6 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
                     new_day = template_days + 1 + i
                     
                     # 设置新插入的日期列宽度为原有日期列的最小宽度（最窄）
-                    import openpyxl
                     dst_col_letter = openpyxl.utils.get_column_letter(new_col)
                     ws.column_dimensions[dst_col_letter].width = target_width
                     
@@ -585,6 +588,13 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
             wk_name = weekdays_zh[dt.weekday()]
             ws.cell(row=date_row_idx + 1, column=col).value = wk_name
         logger.info(f"已自动更正所有日期的周几显示（行 {date_row_idx + 1}）")
+
+        # 强制将所有数字日期列的列宽设置为 4
+        for d in range(1, target_days + 1):
+            col = day_1_col + d - 1
+            col_letter = openpyxl.utils.get_column_letter(col)
+            ws.column_dimensions[col_letter].width = 4.0
+        logger.info(f"已强制将所有日期列的宽度设置为 4")
     else:
         import calendar
         target_days = calendar.monthrange(current_year, current_month)[1]
