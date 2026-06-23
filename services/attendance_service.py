@@ -368,11 +368,11 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
             
             # 判断休息或休假班次
             if "全天休" in shift_name or shift_name == "休息":
-                if ot_hours > 0:
+                if ot_hours >= 4.0:
                     status_text = ""
                     if ot_hours >= 8.0:
                         cell_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid") # 加班≥8小时：明黄色
-                    elif ot_hours >= 4.0:
+                    else:
                         cell_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid") # 加班≥4小时：中绿色
                 else:
                     status_text = "全"
@@ -423,6 +423,153 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
     wb = load_workbook(io.BytesIO(template_bytes))
     ws = wb["排休"] if "排休" in wb.sheetnames else wb.active
     
+    # 自动更正模板中的月份
+    for r in range(1, 6):
+        for c in range(1, ws.max_column + 1):
+            val = ws.cell(row=r, column=c).value
+            if val and isinstance(val, str) and "月份" in val:
+                if "：" in val:
+                    ws.cell(row=r, column=c).value = f"月份：{current_year}年{current_month}月"
+                elif ":" in val:
+                    ws.cell(row=r, column=c).value = f"月份:{current_year}年{current_month}月"
+                else:
+                    ws.cell(row=r, column=c).value = f"月份：{current_year}年{current_month}月"
+                logger.info(f"已更正月份单元格 (行 {r}, 列 {c}) 为：{ws.cell(row=r, column=c).value}")
+
+    # 自动增加或删除 31日列，并更正周几
+    date_row_idx = None
+    day_1_col = None
+    for r in range(1, 6):
+        for c in range(1, ws.max_column + 1):
+            val = ws.cell(row=r, column=c).value
+            if val is not None:
+                try:
+                    val_int = int(str(val).strip())
+                    if val_int == 1:
+                        # 检查下一列以确认是日期行
+                        next_val = ws.cell(row=r, column=c+1).value
+                        if next_val is not None:
+                            try:
+                                next_val_int = int(str(next_val).strip())
+                                if next_val_int == 2:
+                                    date_row_idx = r
+                                    day_1_col = c
+                                    break
+                            except ValueError:
+                                pass
+                except ValueError:
+                    pass
+        if date_row_idx is not None:
+            break
+
+    if date_row_idx is not None and day_1_col is not None:
+        template_days = 0
+        c = day_1_col
+        while True:
+            val = ws.cell(row=date_row_idx, column=c).value
+            if val is not None:
+                try:
+                    val_int = int(str(val).strip())
+                    if val_int == template_days + 1:
+                        template_days = val_int
+                        c += 1
+                        continue
+                except ValueError:
+                    pass
+            break
+            
+        import calendar
+        target_days = calendar.monthrange(current_year, current_month)[1]
+        
+        if template_days > 0 and template_days != target_days:
+            if template_days > target_days:
+                # 删除多余列
+                start_del_col = day_1_col + target_days
+                num_to_delete = template_days - target_days
+                
+                # 手动平移/调整合并单元格
+                from openpyxl.worksheet.cell_range import CellRange
+                ranges = list(ws.merged_cells.ranges)
+                ws.merged_cells.ranges.clear()
+                for r in ranges:
+                    min_col, min_row, max_col, max_row = r.min_col, r.min_row, r.max_col, r.max_row
+                    if min_col >= start_del_col and max_col < start_del_col + num_to_delete:
+                        continue
+                    if min_col >= start_del_col + num_to_delete:
+                        min_col -= num_to_delete
+                        max_col -= num_to_delete
+                    elif min_col >= start_del_col:
+                        min_col = start_del_col
+                        max_col -= num_to_delete
+                    elif max_col >= start_del_col:
+                        max_col -= num_to_delete
+                    if min_col <= max_col:
+                        new_r = CellRange(min_col=min_col, min_row=min_row, max_col=max_col, max_row=max_row)
+                        ws.merged_cells.add(new_r)
+                
+                ws.delete_cols(start_del_col, num_to_delete)
+                logger.info(f"已自动删除模板中多余的 {num_to_delete} 天日期列（从第 {start_del_col} 列开始）")
+                
+            else:
+                # 插入缺少列
+                start_ins_col = day_1_col + template_days
+                num_to_insert = target_days - template_days
+                
+                # 手动平移/调整合并单元格
+                from openpyxl.worksheet.cell_range import CellRange
+                ranges = list(ws.merged_cells.ranges)
+                ws.merged_cells.ranges.clear()
+                for r in ranges:
+                    min_col, min_row, max_col, max_row = r.min_col, r.min_row, r.max_col, r.max_row
+                    if min_col >= start_ins_col:
+                        min_col += num_to_insert
+                        max_col += num_to_insert
+                    elif max_col >= start_ins_col:
+                        max_col += num_to_insert
+                    new_r = CellRange(min_col=min_col, min_row=min_row, max_col=max_col, max_row=max_row)
+                    ws.merged_cells.add(new_r)
+                    
+                ws.insert_cols(start_ins_col, num_to_insert)
+                logger.info(f"已自动插入模板中缺少的 {num_to_insert} 天日期列（从第 {start_ins_col} 列开始）")
+                
+                # 复制样式到新插入列
+                for i in range(num_to_insert):
+                    new_col = start_ins_col + i
+                    new_day = template_days + 1 + i
+                    
+                    # 复制列宽
+                    src_col = start_ins_col - 1
+                    import openpyxl
+                    src_col_letter = openpyxl.utils.get_column_letter(src_col)
+                    dst_col_letter = openpyxl.utils.get_column_letter(new_col)
+                    ws.column_dimensions[dst_col_letter].width = ws.column_dimensions[src_col_letter].width
+                    
+                    # 复制单元格样式
+                    for row in range(1, ws.max_row + 1):
+                        src_cell = ws.cell(row=row, column=src_col)
+                        dst_cell = ws.cell(row=row, column=new_col)
+                        if src_cell.has_style:
+                            dst_cell.font = copy.copy(src_cell.font)
+                            dst_cell.border = copy.copy(src_cell.border)
+                            dst_cell.fill = copy.copy(src_cell.fill)
+                            dst_cell.number_format = src_cell.number_format
+                            dst_cell.alignment = copy.copy(src_cell.alignment)
+                            
+                    # 填充日期数字
+                    ws.cell(row=date_row_idx, column=new_col).value = new_day
+
+        # 自动更正周几对应的行
+        weekdays_zh = ["一", "二", "三", "四", "五", "六", "日"]
+        for d in range(1, target_days + 1):
+            col = day_1_col + d - 1
+            dt = date(current_year, current_month, d)
+            wk_name = weekdays_zh[dt.weekday()]
+            ws.cell(row=date_row_idx + 1, column=col).value = wk_name
+        logger.info(f"已自动更正所有日期的周几显示（行 {date_row_idx + 1}）")
+    else:
+        import calendar
+        target_days = calendar.monthrange(current_year, current_month)[1]
+
     # 动态捕捉列坐标，杜绝排版错位风险
     day_to_col = {}
     id_col, remark_col = None, None
@@ -528,8 +675,8 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
     # 执行覆盖写入状态及备注
     updated_count = 0
     for row, emp_id in template_row_ids:
-        # 写入 1-31 号状态
-        for day in range(1, 32):
+        # 写入本月所有日期状态
+        for day in range(1, target_days + 1):
             if day in day_to_col:
                 c_idx = day_to_col[day]
                 # 全面洗刷模板上遗留的过往历史数据与背景色
