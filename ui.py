@@ -1416,14 +1416,14 @@ FIELD_LABELS = {
         "team_grup": "班组", "gender_jk": "性别", "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
         "nat_negara": "国籍", "rel_agama": "宗教", "status_status": "状态", "resign_date": "离职日期",
         "remark_ket": "原因/备注", "id_card": "身份证号", "hire_date": "入职日期", "contract_end": "合同到期日",
-        "company": "归属公司"
+        "company": "归属公司", "resign_operator": "操作人"
     },
     "id": {
         "id_nomor": "ID", "name_nama": "Nama", "ws_bengkel": "Bengkel",
         "team_grup": "Grup", "gender_jk": "JK", "pos_cn_jabatan": "Jabatan (CN)", "pos_id_jabatan": "Jabatan (ID)",
         "nat_negara": "Kewarganegaraan", "rel_agama": "Agama", "status_status": "Status", "resign_date": "Tgl Resign",
         "remark_ket": "Keterangan", "id_card": "Nomor KTP", "hire_date": "Tgl Masuk", "contract_end": "Kontrak Berakhir",
-        "company": "Perusahaan"
+        "company": "Perusahaan", "resign_operator": "Operator"
     }
 }
 
@@ -2260,10 +2260,10 @@ st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
 menu_options = [t("dashboard"), t("org_chart"), t("employees"), t("resigned"), t("labor"), t("logs")]
 if st.session_state.user_info.get("role") == "admin":
     menu_options.insert(4, t("transfer_records"))
-    menu_options.append(t("backup_management"))
     menu_options.append("📊 导出成本报表")
     menu_options.append(t("attendance_converter"))
 if st.session_state.user_info.get("username") == "admin":
+    menu_options.append(t("backup_management"))
     menu_options.append(t("settings"))
 menu = st.sidebar.radio("Menu", menu_options, key="menu_radio")
 
@@ -2302,6 +2302,7 @@ if st.sidebar.button(t("logout"), key="logout_btn"):
 
 # 权限变量
 is_admin = st.session_state.user_info.get("role") == "admin"
+is_admin_account = st.session_state.user_info.get("username") == "admin"
 can_write = is_admin
 
 # 在线用户已移至底部状态栏显示
@@ -2897,8 +2898,8 @@ elif menu == t("org_chart"):
                         for n in preview_nodes:
                             get_node_quota(n["key"])
 
-                    def build_label(n_data):
-                        """Build a node label with multiline nationality counts for leaf nodes, with quotas if set."""
+                    def build_label(n_data, force_details=False):
+                        """Build a node label with multiline nationality counts, with quotas if set."""
                         name = t_val(n_data["display_name"])
                         total = n_data.get("total", 0)
                         nations_data = n_data.get("nations") or {}
@@ -2912,10 +2913,10 @@ elif menu == t("org_chart"):
                         else:
                             total_str = f"{total}"
 
-                        if adj.get(k):  # non-leaf: just name + total
+                        if adj.get(k) and not force_details:  # non-leaf: just name + total
                             return f"<b>{name}</b><br>{total_str}"
 
-                        # Leaf node: 5 lines total (name + 4 stats lines)
+                        # Leaf node or hover tooltip: 5 lines total (name + 4 stats lines)
                         total_label = "合计" if lang == "zh" else "Total"
                         lines = [f"<b>{name}</b>", f"{total_label}: {total_str}"]
                         
@@ -2945,7 +2946,7 @@ elif menu == t("org_chart"):
                             plotly_nodes.append({
                                 "id": k,
                                 "label": build_label(n),
-                                "hover": build_label(n),
+                                "hover": build_label(n, force_details=True),
                                 "x": x_coords[k],
                                 "y": float(max_depth - depths[k]),
                                 "type": n.get("type", ""),
@@ -2997,6 +2998,7 @@ elif menu == t("org_chart"):
                         mode="markers+text",
                         hoverinfo="text",
                         text=node_text,
+                        hovertext=[n["hover"] for n in plotly_nodes],
                         textposition=["bottom center" if not adj.get(n["id"]) else "top center" for n in plotly_nodes],
                         marker=dict(
                             showscale=False,
@@ -3432,12 +3434,14 @@ elif menu == t("resigned"):
         data = api_get("/employees", {"status": t("status_inactive"), "page": 1, "page_size": 10000})
         if data and data.get("data"):
             df = pd.DataFrame(data["data"])
-            display_cols = ["resign_date", "id_nomor", "name_nama", "ws_bengkel", "team_grup", "nat_negara", "remark_ket"]
+            display_cols = ["resign_date", "id_nomor", "name_nama", "ws_bengkel", "team_grup", "nat_negara", "remark_ket", "resign_operator"]
             df_display = df[display_cols].copy()
             for c in ["ws_bengkel", "team_grup", "nat_negara"]:
                 if c in df_display.columns:
                     df_display[c] = df_display[c].apply(t_val)
-            df_display.columns = [t(col) for col in display_cols]
+            if "resign_operator" in df_display.columns:
+                df_display["resign_operator"] = df_display["resign_operator"].fillna("")
+            df_display.columns = [label(col) for col in display_cols]
             df_display = df_display.reset_index(drop=True)
             df_display.insert(0, t("seq_no"), range(1, len(df_display) + 1))
             st.dataframe(df_display, use_container_width=True, height=400, hide_index=True)
@@ -4012,7 +4016,7 @@ elif menu == t("logs"):
     first_res = api_get("/logs", {"page": 1, "page_size": 1}) or {}
     type_options = [t("log_all_types")] + first_res.get("types", [])
 
-    if is_admin:
+    if is_admin_account:
         st.markdown("---")
         with st.expander(t("delete_operation_logs"), expanded=False):
             st.markdown(t("delete_operation_logs_desc"))
@@ -4060,7 +4064,7 @@ elif menu == t("logs"):
             df_logs = pd.DataFrame(rows)
 
             # -------- 批量删除区域（仅管理员）--------
-            if is_admin:
+            if is_admin_account:
                 # 初始化勾选状态
                 if "log_checked_ids" not in st.session_state:
                     st.session_state.log_checked_ids = set()

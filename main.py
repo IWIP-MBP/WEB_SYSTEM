@@ -75,6 +75,7 @@ with engine.begin() as conn:
         ('contract_end', 'VARCHAR'),
         ('custom_fields', 'VARCHAR'),
         ('company', 'VARCHAR'),
+        ('resign_operator', 'VARCHAR'),
     ]:
         if col not in existing:
             conn.execute(text(f"ALTER TABLE employees ADD COLUMN {col} {col_type}"))

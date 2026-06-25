@@ -41,7 +41,7 @@ def get_backup_config(current_user=Depends(get_current_user)):
     """
     获取当前自动备份策略配置
     """
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "只有管理员可以查看备份配置")
     return load_backup_config()
 
@@ -52,7 +52,7 @@ def get_backups(current_user=Depends(get_current_user)):
     """
     列出所有现存备份文件（按创建时间倒序排序）
     """
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "只有管理员有权限查看备份列表")
         
     backups = []
@@ -79,7 +79,7 @@ def trigger_backup(request: Request, db=Depends(get_db), current_user=Depends(ge
     """
     立即手动触发一次异步/同步数据库备份
     """
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "只有管理员可以手动触发备份")
         
     try:
@@ -113,7 +113,7 @@ def restore_backup(
     """
     接收文件名，通过 FastAPI BackgroundTasks 在后台异步执行还原，保证高可用性
     """
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "只有管理员可以执行还原操作")
         
     filename = body.filename
@@ -137,7 +137,7 @@ def update_backup_config(
     """
     接收参数，保存新配置，并动态重置 APScheduler 中的任务，不重启服务即时生效
     """
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "只有管理员可以修改备份配置")
         
     config = {

@@ -169,7 +169,7 @@ def delete_logs(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "Only admin can delete logs")
     
     query = delete(log_audit)
@@ -192,7 +192,7 @@ def batch_delete_logs(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403, "Only admin can delete logs")
     ids = [int(i) for i in body.ids if str(i).isdigit()]
     if not ids:
@@ -208,7 +208,7 @@ def batch_delete_logs(
 # ---------- 数据库备份与恢复 ----------
 @router.get("/api/db/backup")
 def backup(current_user=Depends(get_current_user)):
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403)
     db_info = parse_db_url()
     backup_file = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
@@ -223,7 +223,7 @@ def backup(current_user=Depends(get_current_user)):
 
 @router.post("/api/db/restore")
 async def restore(file: UploadFile = File(...), current_user=Depends(get_current_user)):
-    if current_user.get("role") != "admin":
+    if current_user.get("username") != "admin":
         raise HTTPException(403)
     db_info = parse_db_url()
     path = os.path.join(settings.EXPORT_DIR, "restore_temp.sql")

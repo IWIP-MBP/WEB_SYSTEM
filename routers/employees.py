@@ -67,7 +67,7 @@ def restore_employee(request: Request, db=Depends(get_db), current_user=Depends(
     if "在职" in emp["status_status"]:
         raise HTTPException(400, "Employee is already active")
     db.execute(update(employees).where(employees.c.id_nomor == id_nomor).values(
-        status_status="在职 / Aktif", resign_date=None, remark_ket=None))
+        status_status="在职 / Aktif", resign_date=None, remark_ket=None, resign_operator=None))
     db.commit()
     write_audit(db, id_nomor, emp["name_nama"], "恢复在职",
                 old=json.dumps({"status": emp["status_status"], "resign_date": emp["resign_date"], "reason": emp["remark_ket"]}),
@@ -232,7 +232,7 @@ def resign(
             raise HTTPException(400, "Invalid date format, use YYYY-MM-DD")
     else:
         resign_date = datetime.now().strftime("%Y-%m-%d")
-    db.execute(update(employees).where(employees.c.id_nomor == id_nomor).values(status_status="离职 / Resign", resign_date=resign_date, remark_ket=reason))
+    db.execute(update(employees).where(employees.c.id_nomor == id_nomor).values(status_status="离职 / Resign", resign_date=resign_date, remark_ket=reason, resign_operator=current_user["username"]))
     db.commit()
     write_audit(db, id_nomor, emp["name_nama"], "离职",
                 old=json.dumps({"status": emp["status_status"]}),

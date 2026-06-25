@@ -57,8 +57,14 @@ graph TD
     *   [auth.py](file:///d:/WEB_SYSTEM/routers/auth.py)：用户身份验证、管理用户、实时 WebSocket 在线用户列表、ARP MAC/IP 心跳探测。
     *   [employees.py](file:///d:/WEB_SYSTEM/routers/employees.py)：花名册搜索、新增与批量导入Excel、岗位异动、彻底删除、花名册与财务成本分析 Excel 导出、组织架构图谱定义。
     *   [labor.py](file:///d:/WEB_SYSTEM/routers/labor.py)：劳保用品目录、出入库管理、领用分配发放、记录撤销与到期未换发自动提醒。
-    *   [logs.py](file:///d:/WEB_SYSTEM/routers/logs.py)：系统审计操作日志、通知历史大屏看板、数据库一键热备份与恢复。
+    *   [logs.py](file:///d:/WEB_SYSTEM/routers/logs.py)：系统审计操作日志、通知历史大屏看板、数据库一键热备份与恢复（注意：日志删除与数据库备份/还原菜单及接口仅限 admin 账号访问）。
 5.  **`services/`**：包含解耦出的无状态核心逻辑计算服务（例如身份证国籍智能清洗出生日期、组织架构拓扑树深度计算等）。
+
+---
+
+## 🛡️ 安全与权限控制 (Security & Permissions)
+*   **敏感管理功能限制**：系统审计操作日志的清空与批量删除、以及数据库备份与还原策略的配置和手动执行，仅允许系统超级管理员账户 (`username == "admin"`) 进行操作，防止越权日志篡改和关键备份数据泄露。其他管理员角色用户只具备常规的员工与劳保数据管理功能，无法删除系统操作日志或查看数据备份。
+*   **离职人员操作追踪**：离职名册中增加操作人 (`resign_operator`) 跟踪显示，并在员工离职登记时自动追踪记录办理离职的具体管理员。同时，离职名册中的表头通过多语言翻译引擎实现了中印双语的完整翻译展示，避免了字段名原始数据库键（如 `ws_bengkel`）的直接暴露。
 
 ---
 
