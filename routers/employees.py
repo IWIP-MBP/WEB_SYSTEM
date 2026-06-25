@@ -665,9 +665,13 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
     
     age_groups = {"<20":0, "20-30":0, "30-40":0, "40-50":0, ">50":0, "UNKNOWN":0}
     today = date.today()
-    rows = db.execute(apply_ws_filter(select(employees.c.id_card, employees.c.nat_negara).where(employees.c.status_status.contains("在职")))).fetchall()
+    rows = db.execute(apply_ws_filter(
+        select(employees.c.id_card, employees.c.nat_negara, employees.c.birth_date)
+        .where(employees.c.status_status.contains("在职"))
+    )).fetchall()
     for row in rows:
         birth = None
+        # 优先从 id_card 提取出生日期
         if row.id_card:
             birth_str = extract_birth_date_from_id_card(row.id_card, row.nat_negara or "")
             if birth_str:
@@ -675,6 +679,12 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
                     birth = datetime.strptime(birth_str, "%Y-%m-%d").date()
                 except:
                     pass
+        # 后备：id_card 无法解析时，使用 birth_date 字段
+        if not birth and row.birth_date:
+            try:
+                birth = datetime.strptime(str(row.birth_date)[:10], "%Y-%m-%d").date()
+            except:
+                pass
         if not birth:
             age_groups["UNKNOWN"] += 1
             continue

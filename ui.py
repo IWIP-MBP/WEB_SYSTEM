@@ -894,6 +894,64 @@ LANG = {
         "converting_msg": "程序正在全局检索出勤轨迹并重构矩阵，请稍候...",
         "conversion_success": "✨ 转换大功告成！已成功重构调休排班数据。",
         "download_attendance_result": "点击下载更新后的排休表 Excel 附件",
+        "id_nomor": "工号",
+        "name_nama": "姓名",
+        "select": "选择",
+        "delete_operation_logs": "🗑️ 删除操作日志",
+        "delete_operation_logs_desc": "您可以选择清空特定类别的操作日志。此操作为永久删除，不可恢复。",
+        "select_log_category_to_delete": "选择要删除的日志类别",
+        "confirm_delete_category_logs_btn": "🚨 确认删除该类别日志",
+        "confirm_delete_category_logs_warning": "⚠️ 确认要永久删除类别为 [{category}] 的所有操作日志吗？",
+        "confirm_delete_permanently_btn": "确认永久删除",
+        "select_all_page": "全选本页",
+        "deselect_all_page": "取消全选本页",
+        "selected_records_count": "已选 <b style='color:#0f766e'>{count}</b> 条",
+        "batch_delete_with_count": "🗑️ 批量删除 ({count})",
+        "confirm_batch_delete_warning": "⚠️ 确认要永久删除选中的 **{count}** 条日志记录吗？此操作不可恢复！",
+        "confirm_batch_delete_btn": "✅ 确认批量删除",
+        "batch_delete_success_format": "已删除 {count} 条日志",
+        "request_failed_format": "请求失败: {error}",
+        # 操作类型 / Log Types
+        "删除操作日志": "删除操作日志",
+        "批量删除操作日志": "批量删除操作日志",
+        "新增物品": "新增物品",
+        "修改物品": "修改物品",
+        "删除物品": "删除物品",
+        "入库": "入库",
+        "出库": "出库",
+        "发放劳保": "发放劳保",
+        "撤销发放": "撤销发放",
+        "编辑领用记录": "编辑领用记录",
+        "删除领用记录": "删除领用记录",
+        "恢复在职": "恢复在职",
+        "修改": "修改",
+        "入职": "入职",
+        "离职": "离职",
+        "彻底删除员工": "彻底删除员工",
+        "批量导入": "批量导入",
+        "Bulk delete transfer records": "批量删除异动记录",
+        "考勤排休转换": "考勤排休转换",
+        "手动备份数据库": "手动备份数据库",
+        "还原数据库": "还原数据库",
+        "触发还原数据库": "触发还原数据库",
+        "更新自动备份配置": "更新自动备份配置",
+        "登录": "登录",
+        "新增用户": "新增用户",
+        "修改用户角色和权限": "修改用户角色和权限",
+        "删除用户": "删除用户",
+        # 动态操作类型
+        "新增车间": "新增车间", "修改车间": "修改车间", "删除车间": "删除车间",
+        "新增班组": "新增班组", "修改班组": "修改班组", "删除班组": "删除班组",
+        "新增国籍": "新增国籍", "修改国籍": "修改国籍", "删除国籍": "删除国籍",
+        "新增宗教": "新增宗教", "修改宗教": "修改宗教", "删除宗教": "删除宗教",
+        "新增公司": "新增公司", "修改公司": "修改公司", "删除公司": "删除公司",
+        "新增性别": "新增性别", "修改性别": "修改性别", "删除性别": "删除性别",
+        # 常见日志原因
+        "用户登录成功": "用户登录成功",
+        "管理员手动触发数据库备份成功": "管理员手动触发数据库备份成功",
+        "管理员后台还原数据库成功": "管理员后台还原数据库成功",
+        "管理员触发数据库还原动作，提交后台异步执行": "管理员触发数据库还原动作，提交后台异步执行",
+        "管理员修改自动备份周期及保留天数": "管理员修改自动备份周期及保留天数",
     },
     "id": {
         "actions": "Aksi",
@@ -1241,6 +1299,64 @@ LANG = {
         "converting_msg": "Sistem sedang mencari riwayat kehadiran secara global dan merekonstruksi matriks, harap tunggu...",
         "conversion_success": "✨ Konversi berhasil! Data pengaturan libur dan jadwal kerja berhasil direkonstruksi.",
         "download_attendance_result": "Klik untuk mengunduh lampiran Excel tabel jadwal kerja yang diperbarui",
+        "id_nomor": "ID",
+        "name_nama": "Nama",
+        "select": "Pilih",
+        "delete_operation_logs": "🗑️ Hapus Log Aktivitas",
+        "delete_operation_logs_desc": "Anda dapat memilih untuk mengosongkan kategori log aktivitas tertentu. Tindakan ini bersifat permanen dan tidak dapat dibatalkan.",
+        "select_log_category_to_delete": "Pilih Kategori Log yang Akan Dihapus",
+        "confirm_delete_category_logs_btn": "🚨 Konfirmasi Hapus Log Kategori Ini",
+        "confirm_delete_category_logs_warning": "⚠️ Konfirmasi hapus permanen semua log aktivitas dengan kategori [{category}]?",
+        "confirm_delete_permanently_btn": "Konfirmasi Hapus Permanen",
+        "select_all_page": "Pilih Semua Halaman Ini",
+        "deselect_all_page": "Batal Pilih Semua Halaman Ini",
+        "selected_records_count": "Terpilih <b style='color:#0f766e'>{count}</b> baris",
+        "batch_delete_with_count": "🗑️ Hapus Massal ({count})",
+        "confirm_batch_delete_warning": "⚠️ Konfirmasi hapus permanen **{count}** log aktivitas terpilih? Tindakan ini tidak dapat dibatalkan!",
+        "confirm_batch_delete_btn": "✅ Konfirmasi Hapus Massal",
+        "batch_delete_success_format": "{count} log berhasil dihapus",
+        "request_failed_format": "Permintaan gagal: {error}",
+        # Operasi / Log Types
+        "删除操作日志": "Hapus log aktivitas",
+        "批量删除操作日志": "Hapus massal log aktivitas",
+        "新增物品": "Tambah barang APD",
+        "修改物品": "Ubah barang APD",
+        "删除物品": "Hapus barang APD",
+        "入库": "Stok Masuk",
+        "出库": "Stok Keluar",
+        "发放劳保": "Pemberian APD",
+        "撤销发放": "Pembatalan pemberian APD",
+        "编辑领用记录": "Edit rekaman APD",
+        "删除领用记录": "Hapus rekaman APD",
+        "恢复在职": "Pulihkan status aktif",
+        "修改": "Ubah data pegawai",
+        "入职": "Pegawai Baru",
+        "离职": "Pegawai Resign",
+        "彻底删除员工": "Hapus permanen pegawai",
+        "批量导入": "Impor massal",
+        "Bulk delete transfer records": "Hapus massal riwayat mutasi",
+        "考勤排休转换": "Konversi absensi",
+        "手动备份数据库": "Cadangkan database secara manual",
+        "还原数据库": "Pulihkan database",
+        "触发还原数据库": "Picu pemulihan database",
+        "更新自动备份配置": "Perbarui konfigurasi cadangan otomatis",
+        "登录": "Login",
+        "新增用户": "Tambah pengguna",
+        "修改用户角色和权限": "Ubah peran dan izin pengguna",
+        "删除用户": "Hapus pengguna",
+        # Kategori Dinamis
+        "新增车间": "Tambah bengkel", "修改车间": "Ubah bengkel", "删除车间": "Hapus bengkel",
+        "新增班组": "Tambah grup", "修改班组": "Ubah grup", "删除班组": "Hapus grup",
+        "新增国籍": "Tambah kewarganegaraan", "修改国籍": "Ubah kewarganegaraan", "删除国籍": "Hapus kewarganegaraan",
+        "新增宗教": "Tambah agama", "修改宗教": "Ubah agama", "删除宗教": "Hapus agama",
+        "新增公司": "Tambah perusahaan", "修改公司": "Ubah perusahaan", "删除公司": "Hapus perusahaan",
+        "新增性别": "Tambah jenis kelamin", "修改性别": "Ubah jenis kelamin", "删除性别": "Hapus jenis kelamin",
+        # Alasan Log Umum
+        "用户登录成功": "Login pengguna berhasil",
+        "管理员手动触发数据库备份成功": "Administrator berhasil memicu pencadangan database secara manual",
+        "管理员后台还原数据库成功": "Administrator berhasil memulihkan database di latar belakang",
+        "管理员触发数据库还原动作，提交后台异步执行": "Administrator memicu pemulihan database, dikirim untuk eksekusi asinkron",
+        "管理员修改自动备份周期及保留天数": "Administrator mengubah siklus pencadangan otomatis dan hari penyimpanan",
     }
 }
 
@@ -2166,7 +2282,7 @@ if st.session_state.get("show_history"):
                 if day.get('logs_detail'):
                     with st.expander(t("view_detail_logs").format(count=len(day['logs_detail']))):
                         for log in day['logs_detail']:
-                            st.markdown(f"**{log['time']}** | `{log['type']}` | {log['operator']} | {t('id_card') if st.session_state.lang=='id' else '工号'}:{log['id_nomor']} {log['name']}")
+                            st.markdown(f"**{log['time']}** | `{t(log['type'])}` | {log['operator']} | {t('id_nomor')}:{log['id_nomor']} {log['name']}")
                             st.caption(f"{t('change_arrow')}: {log['old']} → {log['new']}")
                             st.divider()
                 if day.get('birthday_reminders'):
@@ -3898,16 +4014,16 @@ elif menu == t("logs"):
 
     if is_admin:
         st.markdown("---")
-        with st.expander("🗑️ 删除操作日志", expanded=False):
-            st.markdown("您可以选择清空特定类别的操作日志。此操作为永久删除，不可恢复。")
-            delete_type = st.selectbox("选择要删除的日志类别", type_options, key="delete_log_category_select")
-            if st.button("🚨 确认删除该类别日志", key="delete_logs_confirm_btn", type="primary"):
+        with st.expander(t("delete_operation_logs"), expanded=False):
+            st.markdown(t("delete_operation_logs_desc"))
+            delete_type = st.selectbox(t("select_log_category_to_delete"), type_options, format_func=t, key="delete_log_category_select")
+            if st.button(t("confirm_delete_category_logs_btn"), key="delete_logs_confirm_btn", type="primary"):
                 st.session_state.show_log_delete_confirm = True
             
             if st.session_state.get("show_log_delete_confirm", False):
-                st.warning(f"⚠️ 确认要永久删除类别为 [{delete_type}] 的所有操作日志吗？")
+                st.warning(t("confirm_delete_category_logs_warning").format(category=t(delete_type)))
                 c_del1, c_del2 = st.columns(2)
-                if c_del1.button("确认永久删除", key="confirm_log_delete_action_final", type="primary"):
+                if c_del1.button(t("confirm_delete_permanently_btn"), key="confirm_log_delete_action_final", type="primary"):
                     resp = api_delete("/logs", params={"op_type": delete_type})
                     if resp and resp.get("status") == "success":
                         st.session_state.toast_message = (t("operation_success"), "✅")
@@ -3915,7 +4031,7 @@ elif menu == t("logs"):
                         st.rerun()
                     else:
                         st.toast(t("operation_failed"), icon="❌")
-                if c_del2.button("取消", key="cancel_log_delete_action_final"):
+                if c_del2.button(t("cancel"), key="cancel_log_delete_action_final"):
                     st.session_state.show_log_delete_confirm = False
                     st.rerun()
 
@@ -3923,7 +4039,7 @@ elif menu == t("logs"):
         f1, f2, f3, f4 = st.columns([1.2, 1.2, 1.4, 2])
         log_start = f1.date_input(t("start_date"), value=date.today() - timedelta(days=30), key="log_start")
         log_end = f2.date_input(t("end_date"), value=date.today(), key="log_end")
-        log_type = f3.selectbox(t("log_type_label"), type_options, key="log_type")
+        log_type = f3.selectbox(t("log_type_label"), type_options, format_func=t, key="log_type")
         log_search = f4.text_input(t("search"), placeholder=t("log_search_placeholder"), key="log_search")
     p = st.number_input(t("page"), 1, key="log_page")
     params = {
@@ -3957,7 +4073,7 @@ elif menu == t("logs"):
                 sel_col, btn_col1, btn_col2 = st.columns([2, 1.5, 1.5])
                 with sel_col:
                     toggle_all = st.checkbox(
-                        "全选本页" if not all_checked else "取消全选本页",
+                        t("select_all_page") if not all_checked else t("deselect_all_page"),
                         value=all_checked,
                         key="log_select_all_toggle"
                     )
@@ -3971,10 +4087,10 @@ elif menu == t("logs"):
 
                 checked_count = len(st.session_state.log_checked_ids)
                 with btn_col1:
-                    st.markdown(f"<div style='padding-top:6px;color:#64748b;font-size:13px'>已选 <b style='color:#0f766e'>{checked_count}</b> 条</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='padding-top:6px;color:#64748b;font-size:13px'>{t('selected_records_count').format(count=checked_count)}</div>", unsafe_allow_html=True)
                 with btn_col2:
                     batch_del_btn = st.button(
-                        f"🗑️ 批量删除 ({checked_count})",
+                        t("batch_delete_with_count").format(count=checked_count),
                         key="log_batch_delete_btn",
                         disabled=(checked_count == 0),
                         type="primary" if checked_count > 0 else "secondary"
@@ -3984,9 +4100,9 @@ elif menu == t("logs"):
 
                 # 二次确认弹窗
                 if st.session_state.get("show_log_batch_delete_confirm", False):
-                    st.warning(f"⚠️ 确认要永久删除选中的 **{checked_count}** 条日志记录吗？此操作不可恢复！")
+                    st.warning(t("confirm_batch_delete_warning").format(count=checked_count))
                     c_ok, c_cancel = st.columns(2)
-                    if c_ok.button("✅ 确认批量删除", key="log_batch_delete_confirm_ok", type="primary"):
+                    if c_ok.button(t("confirm_batch_delete_btn"), key="log_batch_delete_confirm_ok", type="primary"):
                         del_ids = list(st.session_state.log_checked_ids)
                         try:
                             resp = requests.post(
@@ -3998,13 +4114,13 @@ elif menu == t("logs"):
                             if resp.status_code == 200:
                                 st.session_state.log_checked_ids = set()
                                 st.session_state.show_log_batch_delete_confirm = False
-                                st.session_state.toast_message = (f"已删除 {len(del_ids)} 条日志", "✅")
+                                st.session_state.toast_message = (t("batch_delete_success_format").format(count=len(del_ids)), "✅")
                                 st.rerun()
                             else:
                                 st.toast(t("operation_failed"), icon="❌")
                         except Exception as e:
-                            st.toast(f"请求失败: {e}", icon="❌")
-                    if c_cancel.button("取消", key="log_batch_delete_confirm_cancel"):
+                            st.toast(t("request_failed_format").format(error=e), icon="❌")
+                    if c_cancel.button(t("cancel"), key="log_batch_delete_confirm_cancel"):
                         st.session_state.show_log_batch_delete_confirm = False
                         st.rerun()
 
@@ -4015,8 +4131,8 @@ elif menu == t("logs"):
                 hdr[0].markdown("**☑️**")
                 hdr[1].markdown(f"**{t('log_time')}**")
                 hdr[2].markdown(f"**{t('col_type')}**")
-                hdr[3].markdown("**工号**")
-                hdr[4].markdown("**姓名**")
+                hdr[3].markdown(f"**{t('id_nomor')}**")
+                hdr[4].markdown(f"**{t('name_nama')}**")
                 hdr[5].markdown(f"**{t('operator')}**")
                 hdr[6].markdown("**IP**")
                 hdr[7].markdown(f"**{t('reason_alasan')}**")
@@ -4027,7 +4143,7 @@ elif menu == t("logs"):
                     is_checked_row = rid in st.session_state.log_checked_ids
                     row_cols = st.columns([0.4, 1.8, 1.2, 1.0, 1.0, 1.0, 0.8, 1.5])
                     chk = row_cols[0].checkbox(
-                        "", value=is_checked_row,
+                        t("select"), value=is_checked_row,
                         key=f"log_chk_{rid}_{idx}",
                         label_visibility="collapsed"
                     )
@@ -4039,16 +4155,19 @@ elif menu == t("logs"):
                         st.rerun()
 
                     row_cols[1].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('op_date','')}</div>", unsafe_allow_html=True)
-                    row_cols[2].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('type_tipe','')}</div>", unsafe_allow_html=True)
+                    row_cols[2].markdown(f"<div style='font-size:12px;padding-top:6px'>{t(row.get('type_tipe',''))}</div>", unsafe_allow_html=True)
                     row_cols[3].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('id_nomor','')}</div>", unsafe_allow_html=True)
                     row_cols[4].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('name_nama','')}</div>", unsafe_allow_html=True)
                     row_cols[5].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('operator','')}</div>", unsafe_allow_html=True)
                     row_cols[6].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('ip_address','')}</div>", unsafe_allow_html=True)
-                    row_cols[7].markdown(f"<div style='font-size:12px;padding-top:6px'>{row.get('reason_alasan','')}</div>", unsafe_allow_html=True)
+                    row_cols[7].markdown(f"<div style='font-size:12px;padding-top:6px'>{t(row.get('reason_alasan',''))}</div>", unsafe_allow_html=True)
 
             else:
                 # 只读用户：直接展示 dataframe，无复选框
-                df_show = df_logs.rename(columns={
+                df_show = df_logs.copy()
+                df_show["type_tipe"] = df_show["type_tipe"].apply(t)
+                df_show["reason_alasan"] = df_show["reason_alasan"].apply(lambda x: t(x) if x else "")
+                df_show = df_show.rename(columns={
                     "op_date": t("log_time"),
                     "type_tipe": t("col_type"),
                     "id_nomor": t("id_nomor"),
@@ -4066,7 +4185,7 @@ elif menu == t("logs"):
 
             with st.expander(t("log_detail_title")):
                 for row in rows:
-                    title = f"{row.get('op_date', '')} | {row.get('type_tipe', '')} | {row.get('operator', '')}"
+                    title = f"{row.get('op_date', '')} | {t(row.get('type_tipe', ''))} | {row.get('operator', '')}"
                     st.markdown(f"**{title}**")
                     if row.get("id_nomor") or row.get("name_nama"):
                         st.caption(t("log_detail_object").format(id=row.get('id_nomor', ''), name=row.get('name_nama', '')))
@@ -4274,7 +4393,7 @@ elif menu == "📊 导出成本报表":
         if lbl_key not in st.session_state:
             st.session_state[lbl_key] = new_labels.get(fkey, default_cn)
 
-        checked = row_cols[0].checkbox("", key=chk_key, label_visibility="collapsed")
+        checked = row_cols[0].checkbox(t("select"), key=chk_key, label_visibility="collapsed")
         row_cols[1].markdown(f"<div style='padding-top:6px;text-align:center;font-weight:600'>{seq_display}</div>", unsafe_allow_html=True)
         row_cols[2].markdown(f"<div style='padding-top:6px; white-space: nowrap;'>{default_cn} <span style='color:#94a3b8;font-size:12px'>({fkey})</span></div>", unsafe_allow_html=True)
         custom_lbl = row_cols[3].text_area(

@@ -78,9 +78,15 @@ def get_employee(db, id_nomor):
 def clean_id_card(id_card):
     if not id_card:
         return None
-    id_str = str(id_card).strip().strip("'\"")
+    # 处理科学计数法（如 Excel 导入的 3.17e+15 → 3170000000000000）
+    raw = str(id_card).strip().strip("'\"")
+    try:
+        if 'e' in raw.lower() or 'E' in raw:
+            raw = str(int(float(raw)))
+    except:
+        pass
     # 移除非数字和非X字符
-    id_str = re.sub(r"[^0-9X]", "", id_str.upper())
+    id_str = re.sub(r"[^0-9X]", "", raw.upper())
     return id_str if id_str else None
 
 def extract_birth_date_from_id_card(id_card, nationality=None):
@@ -88,6 +94,7 @@ def extract_birth_date_from_id_card(id_card, nationality=None):
     从身份证号提取出生日期，仅根据长度判断：
     - 18位：中国身份证规则（前17位数字，末尾数字或X），取第7-14位 YYYYMMDD
     - 16位：印尼身份证规则（纯数字），出生日期在第7-12位 DDMMYY，动态推断世纪
+      ※ 印尼女性：出生日 DD 加 40 存储（如1日→41），提取时自动还原
     - 第二个参数 nationality 被忽略，仅保留用于兼容旧调用
     """
     if not id_card:
@@ -115,15 +122,20 @@ def extract_birth_date_from_id_card(id_card, nationality=None):
             dd = int(id_str[6:8])
             mm = int(id_str[8:10])
             yy = int(id_str[10:12])
+            # 印尼女性：出生日 dd 加 40（如1日 → 41），需还原为真实日期
+            if 41 <= dd <= 71:
+                dd -= 40
             if not (1 <= mm <= 12 and 1 <= dd <= 31):
                 return None
             current_year = datetime.now().year
             century_base = (current_year // 100) * 100
             year = century_base + yy
+            # 若推断年份超出当前年份，退回上一世纪
             if year > current_year:
                 year -= 100
+            # 兜底：结果仍不合理时，对 yy >= 50 使用 1900s，yy < 50 使用 2000s
             if year < 1900 or year > current_year:
-                year = 1900 + yy
+                year = (1900 if yy >= 50 else 2000) + yy
             return date(year, mm, dd).strftime("%Y-%m-%d")
         except:
             pass
