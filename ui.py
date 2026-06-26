@@ -818,6 +818,11 @@ LANG = {
         "total_employees": "总人数",
         "total_label": "合计",
         "total_resigned": "离职",
+        "total_quota": "总编制人数",
+        "quota_label": "编制",
+        "quota_num": "编制人数",
+        "col_quota": "编制人数",
+        "workshop_quota_comparison": "各车间在职与编制对比",
         "transfer_date": "异动日期",
         "transfer_records": "📋 异动记录",
         "transfer_records_note": "自动记录员工车间、班组等组织归属变化。",
@@ -1223,6 +1228,11 @@ LANG = {
         "total_employees": "Total Karyawan",
         "total_label": "Total",
         "total_resigned": "Resign",
+        "total_quota": "Total Kuota Staffing",
+        "quota_label": "Kuota",
+        "quota_num": "Jumlah Kuota",
+        "col_quota": "Kuota",
+        "workshop_quota_comparison": "Perbandingan Aktif vs Kuota per Bengkel",
         "transfer_date": "Tanggal Mutasi",
         "transfer_records": "📋 Riwayat Mutasi",
         "transfer_records_note": "Mencatat perubahan departemen, bengkel, atau grup pegawai secara otomatis.",
@@ -2324,10 +2334,11 @@ if menu == t("dashboard"):
     st.markdown(f'<div class="section-note">{t("dashboard_note")}</div>', unsafe_allow_html=True)
     dash = api_get("/dashboard")
     if dash:
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric(t("total_active"), dash["total_active"])
-        c2.metric(t("total_resigned"), dash["total_resigned"])
-        c3.metric(t("total_employees"), dash["total_active"] + dash["total_resigned"])
+        c2.metric(t("total_quota"), dash.get("total_quota", 0))
+        c3.metric(t("total_resigned"), dash["total_resigned"])
+        c4.metric(t("total_employees"), dash["total_active"] + dash["total_resigned"])
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             f"{t('workshop_dist')}/{t('nation_dist')}",
             f"{t('gender_dist')}/{t('age_dist')}",
@@ -2349,6 +2360,32 @@ if menu == t("dashboard"):
                 fig = px.bar(nat, x="name", y="count", title=t("nation_dist"), text="count")
                 fig.update_traces(textposition='outside')
                 col2.plotly_chart(fig, use_container_width=True)
+            
+            # Grouped bar chart comparing active vs quota for each workshop
+            comp_rows = []
+            translated_quota_by_ws = {t_val(k): v for k, v in dash.get("quota_by_ws", {}).items()}
+            for r in dash.get("workshop_distribution", []):
+                ws_name = t_val(r["name"])
+                active_cnt = r["count"]
+                quota_cnt = translated_quota_by_ws.get(ws_name, 0)
+                comp_rows.append({"workshop": ws_name, "type": t("total_active"), "count": active_cnt})
+                comp_rows.append({"workshop": ws_name, "type": t("quota_label"), "count": quota_cnt})
+                
+            comp_df = pd.DataFrame(comp_rows)
+            if not comp_df.empty:
+                st.markdown("---")
+                fig_comp = px.bar(
+                    comp_df, 
+                    x="workshop", 
+                    y="count", 
+                    color="type", 
+                    barmode="group",
+                    title=t("workshop_quota_comparison"), 
+                    text="count",
+                    color_discrete_map={t("total_active"): "#1f77b4", t("quota_label"): "#2ca02c"}
+                )
+                fig_comp.update_traces(textposition='outside')
+                st.plotly_chart(fig_comp, use_container_width=True)
         with tab2:
             col1, col2 = st.columns(2)
             gen = pd.DataFrame(dash.get("gender_distribution", []))
@@ -2424,6 +2461,8 @@ if menu == t("dashboard"):
                     df_emp["nat_negara"] = df_emp["nat_negara"].apply(t_val)
                     pivot = pd.pivot_table(df_emp, values="id_nomor", index="ws_bengkel", columns="nat_negara", aggfunc="count", fill_value=0)
                     pivot[t("total_label")] = pivot.sum(axis=1)
+                    translated_quota_by_ws = {t_val(k): v for k, v in dash.get("quota_by_ws", {}).items()}
+                    pivot[t("col_quota")] = pivot.index.map(lambda x: translated_quota_by_ws.get(x, 0))
                     total_row = pivot.sum(axis=0).to_frame().T
                     total_row.index = [t("total_label")]
                     pivot = pd.concat([pivot, total_row])
@@ -2772,15 +2811,76 @@ elif menu == t("org_chart"):
             st.warning(node["display_name"] + " " + t("parent_self_invalid"))
             has_error = True
 
+    # Build hierarchy adjacency list
+    adj = {n["key"]: [] for n in preview_nodes}
+    for n in preview_nodes:
+        p = n["parent"]
+        if p and p in adj:
+            adj[p].append(n["key"])
+
+    # Quota calculation and caching (moved to top level)
+    quota_data = api_get("/org_chart/quota") or {}
+    has_any_quota = len(quota_data) > 0
+    node_quota = {}
+    
+    def get_node_quota(key):
+        if key in node_quota:
+            return node_quota[key]
+        direct_quota = quota_data.get(key, {})
+        parsed_direct = {nat: int(v) for nat, v in direct_quota.items() if int(v) > 0}
+        
+        children = adj.get(key, [])
+        if not children:
+            node_quota[key] = parsed_direct
+            return parsed_direct
+        
+        aggregated = {}
+        for child in children:
+            child_q = get_node_quota(child)
+            for nat, val in child_q.items():
+                aggregated[nat] = aggregated.get(nat, 0) + val
+        node_quota[key] = aggregated
+        return aggregated
+
+    if has_any_quota:
+        for n in preview_nodes:
+            get_node_quota(n["key"])
+
+    def make_hover(row):
+        key = row["key"]
+        q_dict = node_quota.get(key, {}) if has_any_quota else {}
+        q_total = sum(q_dict.values())
+        
+        if has_any_quota and q_total > 0:
+            total_str = f"{int(row['total'])}/{q_total}"
+        else:
+            total_str = f"{int(row['total'])}"
+            
+        nations_data = row.get("nations") or {}
+        nat_lines = []
+        for nat, cnt in nations_data.items():
+            q_val = q_dict.get(nat, 0)
+            if has_any_quota and q_val > 0:
+                nat_lines.append(f"{t_val(nat)}: {cnt}/{q_val}")
+            else:
+                nat_lines.append(f"{t_val(nat)}: {cnt}")
+        
+        if has_any_quota:
+            for nat, q_val in q_dict.items():
+                if nat not in nations_data and q_val > 0:
+                    nat_lines.append(f"{t_val(nat)}: 0/{q_val}")
+                    
+        nat_str = "<br>".join(nat_lines) or t("no_nationality_detail")
+        
+        return "{0}: {1}<br>{2}: {3}<br>{4}".format(
+            t("col_type"), row["type"],
+            t("col_total") if not has_any_quota or q_total == 0 else f"{t('col_total')}/{t('quota_label')}",
+            total_str,
+            nat_str
+        )
+
     chart_df = pd.DataFrame(sorted(preview_nodes, key=lambda n: (n["sort"], n["display_name"])))
-    chart_df["hover"] = chart_df.apply(
-        lambda r: "{0}: {1}<br>{2}: {3}<br>{4}".format(
-            t("col_type"), r["type"],
-            t("col_total"), int(r["total"]),
-            "<br>".join([f"{nat}: {cnt}" for nat, cnt in (r.get("nations") or {}).items()]) or t("no_nationality_detail")
-        ),
-        axis=1
-    )
+    chart_df["hover"] = chart_df.apply(make_hover, axis=1)
 
     with tab_chart:
         if chart_df.empty:
@@ -2824,13 +2924,7 @@ elif menu == t("org_chart"):
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 # ── COMPACT MIND MAP WITH BEZIER ARCS ──────────────────────────────
-                adj = {}
-                for n in preview_nodes:
-                    adj[n["key"]] = []
-                for n in preview_nodes:
-                    p = n["parent"]
-                    if p and p in adj:
-                        adj[p].append(n["key"])
+                # (adj is defined globally)
 
                 # Find root
                 root_candidates = [n["key"] for n in preview_nodes if not n["parent"] or n["key"] == "root"]
@@ -2869,34 +2963,7 @@ elif menu == t("org_chart"):
 
                     lang = st.session_state.get("lang", "zh")
                     nat_short = NAT_LABELS_ZH if lang == "zh" else NAT_LABELS_ID
-
-                    # Quota calculation and caching
-                    quota_data = api_get("/org_chart/quota") or {}
-                    has_any_quota = len(quota_data) > 0
-                    node_quota = {}
-                    
-                    def get_node_quota(key):
-                        if key in node_quota:
-                            return node_quota[key]
-                        direct_quota = quota_data.get(key, {})
-                        parsed_direct = {nat: int(v) for nat, v in direct_quota.items() if int(v) > 0}
-                        
-                        children = adj.get(key, [])
-                        if not children:
-                            node_quota[key] = parsed_direct
-                            return parsed_direct
-                        
-                        aggregated = {}
-                        for child in children:
-                            child_q = get_node_quota(child)
-                            for nat, val in child_q.items():
-                                aggregated[nat] = aggregated.get(nat, 0) + val
-                        node_quota[key] = aggregated
-                        return aggregated
-
-                    if has_any_quota:
-                        for n in preview_nodes:
-                            get_node_quota(n["key"])
+                    # (quota_data, has_any_quota, and node_quota are defined globally)
 
                     def build_label(n_data, force_details=False):
                         """Build a node label with multiline nationality counts, with quotas if set."""
@@ -3072,13 +3139,23 @@ elif menu == t("org_chart"):
             # Detail table placed at the bottom, hidden under expander by default
             st.markdown("---")
             with st.expander(t("view_detail_data"), expanded=False):
-                compact = chart_df[["display_name", "type", "total"]].copy()
+                compact = chart_df[["key", "display_name", "type", "total"]].copy()
                 compact["display_name"] = compact["display_name"].apply(t_val)
-                compact = compact.rename(
-                    columns={"display_name": t("col_display_name"), "type": t("col_type"), "total": t("col_total")}
-                )
-                compact = compact.reset_index(drop=True)
-                st.dataframe(compact, use_container_width=True, hide_index=True)
+                if has_any_quota:
+                    compact["quota"] = compact.apply(lambda r: sum(node_quota.get(r["key"], {}).values()), axis=1)
+                
+                rename_cols = {
+                    "display_name": t("col_display_name"), 
+                    "type": t("col_type"), 
+                    "total": t("col_total")
+                }
+                if has_any_quota:
+                    rename_cols["quota"] = t("quota_num")
+                    compact = compact.rename(columns=rename_cols)
+                    st.dataframe(compact[[t("col_display_name"), t("col_type"), t("col_total"), t("quota_num")]], use_container_width=True, hide_index=True)
+                else:
+                    compact = compact.rename(columns=rename_cols)
+                    st.dataframe(compact[[t("col_display_name"), t("col_type"), t("col_total")]], use_container_width=True, hide_index=True)
 
     with tab_manage:
         save_col, reset_col = st.columns(2)
@@ -3108,18 +3185,43 @@ elif menu == t("org_chart"):
     with tab_detail:
         detail_rows = []
         for node in preview_nodes:
-            for nat, count in (node.get("nations") or {}).items():
+            node_key = node["key"]
+            nations_data = node.get("nations") or {}
+            q_dict = node_quota.get(node_key, {}) if has_any_quota else {}
+            
+            all_nats = set(nations_data.keys()) | set(q_dict.keys())
+            for nat in all_nats:
+                count = nations_data.get(nat, 0)
+                q_val = q_dict.get(nat, 0)
                 detail_rows.append({
-                    t("col_display_name"): node["display_name"],
-                    t("col_type"): node["type"],
-                    t("nationality"): nat,
-                    t("col_total"): int(count),
+                    "display_name": node["display_name"],
+                    "type": node["type"],
+                    "nationality": nat,
+                    "count": int(count),
+                    "quota": int(q_val)
                 })
         if detail_rows:
             detail_df = pd.DataFrame(detail_rows)
+            detail_df["display_name"] = detail_df["display_name"].apply(t_val)
+            detail_df["nationality"] = detail_df["nationality"].apply(t_val)
+            
+            rename_cols = {
+                "display_name": t("col_display_name"),
+                "type": t("col_type"),
+                "nationality": t("nationality"),
+                "count": t("col_total")
+            }
+            if has_any_quota:
+                rename_cols["quota"] = t("quota_num")
+                detail_df = detail_df.rename(columns=rename_cols)
+                cols_to_show = [t("col_display_name"), t("col_type"), t("nationality"), t("col_total"), t("quota_num")]
+            else:
+                detail_df = detail_df.rename(columns=rename_cols)
+                cols_to_show = [t("col_display_name"), t("col_type"), t("nationality"), t("col_total")]
+                
             detail_df = detail_df.reset_index(drop=True)
             detail_df.insert(0, t("seq_no"), range(1, len(detail_df) + 1))
-            st.dataframe(detail_df, use_container_width=True, hide_index=True)
+            st.dataframe(detail_df[[t("seq_no")] + cols_to_show], use_container_width=True, hide_index=True)
         else:
             st.info(t("no_nationality_detail"))
 

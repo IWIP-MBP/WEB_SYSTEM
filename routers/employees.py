@@ -737,9 +737,28 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
             .group_by(employees.c.team_grup)
         )
     ).fetchall()
-    
+    # Load and filter quota for the dashboard
+    quota_raw = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "org_quota")).scalar()
+    quota_total = 0
+    quota_by_ws = {}
+    if quota_raw:
+        try:
+            quota_data = json.loads(quota_raw)
+            for k, v in quota_data.items():
+                parts = k.split("::")
+                if len(parts) >= 2:
+                    ws = parts[1]
+                    if not allowed or ws in allowed:
+                        sum_val = sum(int(x) for x in v.values())
+                        quota_total += sum_val
+                        quota_by_ws[ws] = quota_by_ws.get(ws, 0) + sum_val
+        except Exception as e:
+            logger.error(f"Dashboard quota calculation failed: {e}")
+
     return {
         "total_active": active, "total_resigned": resigned,
+        "total_quota": quota_total,
+        "quota_by_ws": quota_by_ws,
         "workshop_distribution": [{"name": r[0] or "未知", "count": r[1]} for r in ws_dist],
         "nation_distribution": [{"name": r[0] or "未知", "count": r[1]} for r in nation_dist],
         "gender_distribution": [{"name": r[0] or "未知", "count": r[1]} for r in gender_dist],
@@ -924,19 +943,69 @@ def reset_org_layout(db=Depends(get_db), current_user=Depends(get_current_user))
     return {"status": "success"}
 
 @router.get("/api/org_chart/quota")
-def get_org_quota(db=Depends(get_db)):
+def get_org_quota(db=Depends(get_db), current_user=Depends(get_current_user)):
     raw = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "org_quota")).scalar()
     if not raw:
         return {}
     try:
-        return json.loads(raw)
+        quota_data = json.loads(raw)
     except:
         return {}
+    
+    ws_scope_str = current_user.get("ws_scope")
+    if ws_scope_str:
+        try:
+            allowed = json.loads(ws_scope_str)
+            if isinstance(allowed, list) and len(allowed) > 0:
+                filtered_quota = {}
+                for k, v in quota_data.items():
+                    parts = k.split("::")
+                    if len(parts) >= 2:
+                        ws = parts[1]
+                        if ws in allowed:
+                            filtered_quota[k] = v
+                return filtered_quota
+        except Exception as e:
+            logger.error(f"Error filtering quota: {e}")
+    return quota_data
 
 @router.post("/api/org_chart/quota")
 def save_org_quota(data: dict, db=Depends(get_db), current_user=Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(403, "Only admin can save quota")
+    
+    ws_scope_str = current_user.get("ws_scope")
+    if ws_scope_str:
+        try:
+            allowed = json.loads(ws_scope_str)
+            if isinstance(allowed, list) and len(allowed) > 0:
+                existing = db.execute(select(config_meta).where(config_meta.c.meta_type == "org_quota")).first()
+                existing_data = {}
+                if existing and existing.meta_value:
+                    existing_data = json.loads(existing.meta_value)
+                
+                final_quota = {}
+                # Keep keys outside the user's allowed scope
+                for k, v in existing_data.items():
+                    parts = k.split("::")
+                    if len(parts) >= 2:
+                        ws = parts[1]
+                        if ws not in allowed:
+                            final_quota[k] = v
+                            
+                # Merge user's updated keys within their allowed scope
+                for k, v in data.items():
+                    parts = k.split("::")
+                    if len(parts) >= 2:
+                        ws = parts[1]
+                        if ws in allowed:
+                            if any(int(val) > 0 for val in v.values()):
+                                final_quota[k] = {nat: int(val) for nat, val in v.items() if int(val) > 0}
+                data = final_quota
+        except Exception as e:
+            logger.error(f"Error merging quota on save: {e}")
+            raise HTTPException(400, f"Error saving quota: {str(e)}")
+
     existing = db.execute(select(config_meta).where(config_meta.c.meta_type == "org_quota")).first()
     if existing:
         db.execute(update(config_meta).where(config_meta.c.id == existing.id).values(meta_value=json.dumps(data, ensure_ascii=False)))
