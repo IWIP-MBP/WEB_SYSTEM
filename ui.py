@@ -63,31 +63,37 @@ st.markdown("""
         --app-accent: #2563eb;
         
         /* Light Mode Glassmorphism Tokens */
-        --app-bg: #f4f5f7;
-        --app-panel: rgba(255, 255, 255, 0.45);
-        --app-border: rgba(255, 255, 255, 0.65);
+        --app-bg: #e6ebf4;
+        --app-panel: rgba(255, 255, 255, 0.65);
+        --app-border: rgba(255, 255, 255, 0.5);
         --app-text: #0f172a;
-        --input-bg: rgba(255, 255, 255, 0.85);
+        --input-bg: rgba(255, 255, 255, 0.75);
         --input-border: rgba(15, 118, 110, 0.35);
         --dropdown-bg: #ffffff;
-        --app-bg-radial: radial-gradient(circle at 10% 20%, rgba(15, 118, 110, 0.12) 0%, transparent 45%),
-                         radial-gradient(circle at 90% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 45%),
-                         radial-gradient(circle at 50% 50%, rgba(219, 39, 119, 0.04) 0%, transparent 50%);
+        --app-bg-radial: radial-gradient(circle at 10% 20%, rgba(244, 63, 94, 0.22) 0%, transparent 40%),
+                         radial-gradient(circle at 90% 15%, rgba(14, 165, 233, 0.25) 0%, transparent 40%),
+                         radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.22) 0%, transparent 45%),
+                         radial-gradient(circle at 15% 80%, rgba(139, 92, 246, 0.25) 0%, transparent 45%),
+                         radial-gradient(circle at 50% 50%, rgba(249, 115, 22, 0.12) 0%, transparent 40%);
+        --app-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
     }
 
     @media (prefers-color-scheme: dark) {
         :root {
             /* Dark Mode Glassmorphism Tokens */
-            --app-bg: #0b0f19;
-            --app-panel: rgba(15, 23, 42, 0.45);
-            --app-border: rgba(255, 255, 255, 0.2);
+            --app-bg: #080b11;
+            --app-panel: rgba(28, 28, 30, 0.65);
+            --app-border: rgba(255, 255, 255, 0.15);
             --app-text: #f1f5f9;
-            --input-bg: rgba(15, 23, 42, 0.8);
-            --input-border: rgba(255, 255, 255, 0.25);
+            --input-bg: rgba(28, 28, 30, 0.85);
+            --input-border: rgba(255, 255, 255, 0.18);
             --dropdown-bg: #1e293b;
-            --app-bg-radial: radial-gradient(circle at 10% 20%, rgba(20, 184, 166, 0.15) 0%, transparent 50%),
-                             radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
-                             radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.05) 0%, transparent 50%);
+            --app-bg-radial: radial-gradient(circle at 10% 20%, rgba(244, 63, 94, 0.28) 0%, transparent 45%),
+                             radial-gradient(circle at 90% 15%, rgba(99, 102, 241, 0.28) 0%, transparent 45%),
+                             radial-gradient(circle at 85% 85%, rgba(37, 99, 235, 0.28) 0%, transparent 50%),
+                             radial-gradient(circle at 15% 80%, rgba(124, 58, 237, 0.28) 0%, transparent 45%),
+                             radial-gradient(circle at 50% 50%, rgba(20, 184, 166, 0.15) 0%, transparent 40%);
+            --app-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
         }
     }
 
@@ -193,9 +199,10 @@ st.markdown("""
         width: 280px !important;
         min-width: 220px !important;
         background: var(--app-panel) !important;
-        backdrop-filter: blur(20px) saturate(190%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+        backdrop-filter: blur(24px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
         border-right: 1px solid var(--app-border) !important;
+        box-shadow: var(--app-shadow) !important;
     }
     section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
     section[data-testid="stSidebar"] label {
@@ -282,17 +289,17 @@ st.markdown("""
         background: var(--app-panel) !important;
         border: 1px solid var(--app-border) !important;
         border-left: 5px solid var(--app-primary) !important;
-        border-radius: 12px !important;
+        border-radius: 16px !important;
         padding: 1.1rem 1.3rem !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
-        backdrop-filter: blur(16px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        box-shadow: var(--app-shadow) !important;
+        backdrop-filter: blur(24px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     [data-testid="stMetric"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08) !important;
-        border-color: rgba(15, 118, 110, 0.3) !important;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.4) !important;
+        border-color: rgba(15, 118, 110, 0.45) !important;
     }
     [data-testid="stMetricLabel"] {
         color: var(--app-text) !important;
@@ -311,19 +318,19 @@ st.markdown("""
     div[data-testid="stDataEditor"] {
         background: var(--app-panel) !important;
         border: 1px solid var(--app-border) !important;
-        backdrop-filter: blur(16px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-        border-radius: 12px;
+        backdrop-filter: blur(24px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
+        border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
+        box-shadow: var(--app-shadow) !important;
     }
     div[data-testid="stExpander"] {
         border: 1px solid var(--app-border) !important;
-        border-radius: 10px !important;
+        border-radius: 14px !important;
         background: var(--app-panel) !important;
-        backdrop-filter: blur(16px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
+        backdrop-filter: blur(24px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
+        box-shadow: var(--app-shadow) !important;
         margin-bottom: 0.75rem;
     }
     div[data-testid="stTabs"] button[role="tab"] {
@@ -353,17 +360,18 @@ st.markdown("""
     
     /* 登录面板毛玻璃样式 */
     .login-brand {
-        background:
-            linear-gradient(135deg, rgba(15,118,110,0.95), rgba(37,99,235,0.92)),
-            linear-gradient(180deg, #0f766e, #2563eb);
-        color: white;
+        background: var(--app-panel) !important;
+        backdrop-filter: blur(24px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
+        border: 1px solid var(--app-border) !important;
+        color: var(--app-text) !important;
         padding: 3.5rem 3rem;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         min-height: 480px;
-        border-radius: 16px;
-        box-shadow: 0 24px 70px rgba(15,23,42,0.16);
+        border-radius: 20px !important;
+        box-shadow: var(--app-shadow) !important;
         position: relative;
         overflow: hidden;
     }
@@ -374,21 +382,22 @@ st.markdown("""
         width: 300px;
         height: 300px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 75%);
+        background: radial-gradient(circle, rgba(15, 118, 110, 0.15) 0%, transparent 75%);
         top: -100px;
         right: -100px;
         pointer-events: none;
     }
     
     .login-brand h1 {
-        color: white !important;
+        color: var(--app-text) !important;
         font-size: 2.5rem !important;
         line-height: 1.2;
         margin: 0 0 1.2rem 0;
         font-weight: 800 !important;
     }
     .login-brand p {
-        color: rgba(255,255,255,0.9);
+        color: var(--app-text) !important;
+        opacity: 0.85;
         font-size: 1.05rem;
         line-height: 1.7;
         margin: 0;
@@ -400,13 +409,14 @@ st.markdown("""
         margin-top: 2.5rem;
     }
     .login-badge {
-        border: 1px solid rgba(255,255,255,0.22);
-        border-radius: 10px;
+        border: 1px solid var(--app-border) !important;
+        border-radius: 12px !important;
         padding: 0.8rem 1.2rem;
-        background: rgba(255,255,255,0.08);
-        color: white;
+        background: var(--input-bg) !important;
+        color: var(--app-text) !important;
         font-weight: 500;
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(12px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
@@ -414,23 +424,23 @@ st.markdown("""
     }
     .login-badge::before {
         content: '✓';
-        color: #4ade80;
+        color: #10b981;
         font-weight: bold;
     }
     .login-badge:hover {
-        background: rgba(255,255,255,0.15);
-        border-color: rgba(255,255,255,0.35);
+        background: var(--app-panel) !important;
+        border-color: var(--app-primary) !important;
         transform: translateX(5px);
     }
     a.login-badge {
         text-decoration: none !important;
-        color: white !important;
+        color: var(--app-text) !important;
     }
     a.login-badge:hover {
         text-decoration: none !important;
-        color: white !important;
-        background: rgba(255,255,255,0.15) !important;
-        border-color: rgba(255,255,255,0.35) !important;
+        color: var(--app-text) !important;
+        background: var(--app-panel) !important;
+        border-color: var(--app-primary) !important;
         transform: translateX(5px) !important;
     }
     .login-heading {
@@ -448,11 +458,11 @@ st.markdown("""
     div[data-testid="stForm"] {
         background: var(--app-panel) !important;
         border: 1px solid var(--app-border) !important;
-        border-radius: 16px;
+        border-radius: 20px !important;
         padding: 1.75rem 1.75rem 2rem 1.75rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08) !important;
-        backdrop-filter: blur(16px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        box-shadow: var(--app-shadow) !important;
+        backdrop-filter: blur(24px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
         overflow: visible !important;
     }
     .login-heading h2 {
@@ -485,8 +495,9 @@ st.markdown("""
         left: 0 !important;
         width: 100vw !important;
         height: 100vh !important;
-        background-color: rgba(15, 23, 42, 0.45) !important;
-        backdrop-filter: blur(5px) !important;
+        background-color: rgba(15, 23, 42, 0.3) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
         z-index: 999998 !important;
     }
 
@@ -498,11 +509,11 @@ st.markdown("""
         transform: translate(-50%, -50%) !important;
         z-index: 999999 !important;
         background: var(--app-panel) !important;
-        backdrop-filter: blur(25px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+        backdrop-filter: blur(28px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
         padding: 30px !important;
-        border-radius: 16px !important;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+        border-radius: 20px !important;
+        box-shadow: var(--app-shadow), 0 20px 50px rgba(0, 0, 0, 0.15) !important;
         border: 1px solid var(--app-border) !important;
         max-width: 420px !important;
         width: 90% !important;
@@ -602,6 +613,40 @@ LANG = {
         "confirm_issue_required": "请先勾选确认发放信息，避免误操作",
         "confirm_issue_text": "确认发放",
         "confirm_password": "确认密码",
+        "cost_report_menu": "📊 导出成本报表",
+        "cost_report_desc": "按日期范围筛选员工（含离职员工），自定义导出字段、字段顺序和列名，导出Excel成本报表。",
+        "cost_report_template": "📋 方案模板",
+        "cost_report_select_solution": "选择已保存的方案",
+        "cost_report_please_select": "-- 请选择 --",
+        "cost_report_load_btn": "加载方案",
+        "cost_report_load_success": "方案「{name}」已加载！",
+        "cost_report_delete_btn": "删除方案",
+        "cost_report_delete_success": "方案「{name}」已删除！",
+        "cost_report_delete_failed": "删除方案失败",
+        "cost_report_save_input": "保存当前配置为新方案",
+        "cost_report_save_input_placeholder": "输入方案名称...",
+        "cost_report_save_btn": "💾 保存方案",
+        "cost_report_save_empty": "无法保存空方案：请至少勾选一个导出字段！",
+        "cost_report_save_success": "方案「{name}」已成功保存！",
+        "cost_report_save_failed": "保存方案失败",
+        "cost_report_date_range": "📅 日期范围",
+        "cost_report_start_date": "开始日期（入职/在职起点）",
+        "cost_report_end_date": "结束日期（入职/离职终点）",
+        "cost_report_filter_logic": "筛选逻辑：入职日期 ≤ 结束日期，且（仍在职 或 离职日期 ≥ 开始日期）。留空开始日期则不限制起始时间。",
+        "cost_report_fields_order": "📋 字段选择与排序",
+        "cost_report_fields_order_desc": "勾选要导出的字段，使用 ↑↓ 调整顺序，并可自定义列名（留空则使用默认名称）。",
+        "cost_report_col_select": "选择",
+        "cost_report_col_seq": "顺序",
+        "cost_report_col_field": "字段",
+        "cost_report_col_custom": "自定义列名",
+        "cost_report_col_up": "上移",
+        "cost_report_col_down": "下移",
+        "cost_report_at_least_one": "请至少选择一个导出字段。",
+        "cost_report_export_summary": "将导出 {count} 个字段：",
+        "cost_report_export_btn": "📥 生成并下载报表",
+        "cost_report_generating": "生成报表中，请稍候...",
+        "cost_report_success": "✅ 报表生成成功！共筛选到符合条件的员工数据。",
+        "cost_report_download_btn": "📥 点击下载成本报表 Excel",
         "create_user_failed": "创建失败",
         "current_stock": "库存",
         "current_stock_and_cycle_format": "当前库存：{stock}；默认周期：{cycle} 天。若同员工同物品再次发放，旧有效记录会自动标记为已换发。",
@@ -1012,6 +1057,40 @@ LANG = {
         "confirm_issue_required": "Centang konfirmasi pemberian terlebih dahulu untuk menghindari kesalahan.",
         "confirm_issue_text": "Konfirmasi pemberian",
         "confirm_password": "Konfirmasi Kata Sandi",
+        "cost_report_menu": "📊 Ekspor Laporan Biaya",
+        "cost_report_desc": "Filter karyawan berdasarkan rentang tanggal (termasuk karyawan yang mengundurkan diri), sesuaikan kolom ekspor, urutan kolom, dan nama kolom, lalu ekspor laporan biaya Excel.",
+        "cost_report_template": "📋 Templat Solusi",
+        "cost_report_select_solution": "Pilih Solusi yang Disimpan",
+        "cost_report_please_select": "-- Silakan Pilih --",
+        "cost_report_load_btn": "Muat Solusi",
+        "cost_report_load_success": "Solusi 「{name}」 berhasil dimuat!",
+        "cost_report_delete_btn": "Hapus Solusi",
+        "cost_report_delete_success": "Solusi 「{name}」 berhasil dihapus!",
+        "cost_report_delete_failed": "Gagal menghapus solusi",
+        "cost_report_save_input": "Simpan konfigurasi saat ini sebagai solusi baru",
+        "cost_report_save_input_placeholder": "Masukkan nama solusi...",
+        "cost_report_save_btn": "💾 Simpan Solusi",
+        "cost_report_save_empty": "Tidak dapat menyimpan solusi kosong: Silakan pilih minimal satu kolom ekspor!",
+        "cost_report_save_success": "Solusi 「{name}」 berhasil disimpan!",
+        "cost_report_save_failed": "Gagal menyimpan solusi",
+        "cost_report_date_range": "📅 Rentang Tanggal",
+        "cost_report_start_date": "Tanggal Mulai (Titik masuk/bekerja)",
+        "cost_report_end_date": "Tanggal Selesai (Titik masuk/resign)",
+        "cost_report_filter_logic": "Logika filter: Tanggal Masuk ≤ Tanggal Selesai, dan (Masih Bekerja atau Tanggal Resign ≥ Tanggal Mulai). Kosongkan Tanggal Mulai untuk tidak membatasi waktu mulai.",
+        "cost_report_fields_order": "📋 Pemilihan & Urutan Kolom",
+        "cost_report_fields_order_desc": "Centang kolom yang ingin diekspor, gunakan ↑↓ untuk menyesuaikan urutan, dan sesuaikan nama kolom (kosongkan untuk menggunakan nama default).",
+        "cost_report_col_select": "Pilih",
+        "cost_report_col_seq": "Urut",
+        "cost_report_col_field": "Kolom",
+        "cost_report_col_custom": "Nama Kolom Kustom",
+        "cost_report_col_up": "Ke Atas",
+        "cost_report_col_down": "Ke Bawah",
+        "cost_report_at_least_one": "Silakan pilih minimal satu kolom ekspor.",
+        "cost_report_export_summary": "Akan mengekspor {count} kolom:",
+        "cost_report_export_btn": "📥 Buat & Unduh Laporan",
+        "cost_report_generating": "Membuat laporan, silakan tunggu...",
+        "cost_report_success": "✅ Laporan berhasil dibuat! Menemukan data pegawai yang sesuai.",
+        "cost_report_download_btn": "📥 Klik untuk Mengunduh Excel Laporan Biaya",
         "create_user_failed": "Gagal membuat pengguna",
         "current_stock": "Stok",
         "current_stock_and_cycle_format": "Stok saat ini: {stock}; Siklus default: {cycle} hari. Jika APD yang sama diberikan lagi kepada pegawai yang sama, riwayat lama akan ditandai diganti.",
@@ -1691,8 +1770,8 @@ components.html(
                 right: 0;
                 height: 48px;
                 background: var(--app-panel) !important;
-                backdrop-filter: blur(20px) saturate(180%) !important;
-                -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+                backdrop-filter: blur(24px) saturate(210%) !important;
+                -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
                 border-top: 1px solid var(--app-border) !important;
                 z-index: 999990;
                 display: none;
@@ -1703,7 +1782,7 @@ components.html(
                 color: var(--app-text) !important;
                 box-sizing: border-box;
                 user-select: none;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+                box-shadow: var(--app-shadow) !important;
             }}
             .taskbar-left {{
                 display: flex;
@@ -1785,11 +1864,11 @@ components.html(
                 width: 340px;
                 max-height: 420px;
                 background: var(--app-panel) !important;
-                backdrop-filter: blur(25px) saturate(180%) !important;
-                -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+                backdrop-filter: blur(28px) saturate(210%) !important;
+                -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
                 border: 1px solid var(--app-border) !important;
-                border-radius: 12px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+                border-radius: 16px;
+                box-shadow: var(--app-shadow), 0 10px 30px rgba(0, 0, 0, 0.15) !important;
                 z-index: 1000000;
                 display: none;
                 flex-direction: column;
@@ -2270,7 +2349,7 @@ st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
 menu_options = [t("dashboard"), t("org_chart"), t("employees"), t("resigned"), t("labor"), t("logs")]
 if st.session_state.user_info.get("role") == "admin":
     menu_options.insert(4, t("transfer_records"))
-    menu_options.append("📊 导出成本报表")
+    menu_options.append(t("cost_report_menu"))
     menu_options.append(t("attendance_converter"))
 if st.session_state.user_info.get("username") == "admin":
     menu_options.append(t("backup_management"))
@@ -2620,7 +2699,7 @@ if menu == t("dashboard"):
                         shapes.append(dict(
                             type="path",
                             path=path,
-                            line=dict(color="#ccc", width=1.5),
+                            line=dict(color="#0d9488", width=2.5),
                             fillcolor="rgba(0,0,0,0)",
                             layer="below"
                         ))
@@ -3038,7 +3117,7 @@ elif menu == t("org_chart"):
                             shapes.append(dict(
                                 type="path",
                                 path=path,
-                                line=dict(color="#aaa", width=1.5),
+                                line=dict(color="#0d9488", width=2.5),
                                 fillcolor="rgba(0,0,0,0)",
                                 layer="below"
                             ))
@@ -4308,9 +4387,9 @@ elif menu == t("logs"):
         st.info(t("no_data"))
 
 # ==================== 导出成本报表 ====================
-elif menu == "📊 导出成本报表":
-    st.header("📊 导出成本报表")
-    st.markdown('<div class="section-note">按日期范围筛选员工（含离职员工），自定义导出字段、字段顺序和列名，导出Excel成本报表。</div>', unsafe_allow_html=True)
+elif menu == t("cost_report_menu"):
+    st.header(t("cost_report_menu"))
+    st.markdown(f'<div class="section-note">{t("cost_report_desc")}</div>', unsafe_allow_html=True)
 
     # 所有可导出字段及默认列名
     ALL_COST_FIELDS = [
@@ -4341,7 +4420,7 @@ elif menu == "📊 导出成本报表":
         st.session_state.cost_report_labels = {f[0]: f[default_label_idx] for f in ALL_COST_FIELDS}
 
     # ---------- 方案模板 ----------
-    st.subheader("📋 方案模板")
+    st.subheader(t("cost_report_template"))
     template_file = "uploads/cost_report_templates.json"
     templates = {}
     if os.path.exists(template_file):
@@ -4358,18 +4437,18 @@ elif menu == "📊 导出成本报表":
     with col_tpl_sel:
         tpl_options = list(templates.keys())
         selected_tpl_name = st.selectbox(
-            "选择已保存的方案",
-            options=["-- 请选择 --"] + tpl_options,
+            t("cost_report_select_solution"),
+            options=[t("cost_report_please_select")] + tpl_options,
             key="cost_tpl_select"
         )
 
     with col_tpl_btn:
         st.write("<div style='height: 28px;'></div>", unsafe_allow_html=True)
         col_load, col_del = st.columns(2)
-        has_selected = (selected_tpl_name != "-- 请选择 --")
+        has_selected = (selected_tpl_name != t("cost_report_please_select"))
         
         # 1. 加载方案
-        if col_load.button("加载方案", key="cost_tpl_load_btn", disabled=not has_selected, use_container_width=True):
+        if col_load.button(t("cost_report_load_btn"), key="cost_tpl_load_btn", disabled=not has_selected, use_container_width=True):
             tpl_data = templates[selected_tpl_name]
             st.session_state.cost_report_fields = list(tpl_data["fields"])
             st.session_state.cost_report_labels = dict(tpl_data["labels"])
@@ -4378,9 +4457,9 @@ elif menu == "📊 导出成本报表":
             for fkey in ALL_COST_FIELDS:
                 k = fkey[0]
                 st.session_state[f"cf_check_{k}"] = (k in tpl_data["fields"])
-                st.session_state[f"cf_label_{k}"] = tpl_data["labels"].get(k, fkey[1])
+                st.session_state[f"cf_label_{k}"] = tpl_data["labels"].get(k, fkey[default_label_idx])
                 
-            st.toast(f"方案「{selected_tpl_name}」已加载！", icon="✅")
+            st.toast(t("cost_report_load_success").format(name=selected_tpl_name), icon="✅")
             st.rerun()
 
         # 2. 删除方案（防越权：仅创建者或管理员可删）
@@ -4390,29 +4469,29 @@ elif menu == "📊 导出成本报表":
             if current_role == "admin" or tpl_owner == current_username:
                 is_delete_disabled = False
                 
-        if col_del.button("删除方案", key="cost_tpl_del_btn", disabled=is_delete_disabled, use_container_width=True):
+        if col_del.button(t("cost_report_delete_btn"), key="cost_tpl_del_btn", disabled=is_delete_disabled, use_container_width=True):
             del templates[selected_tpl_name]
             try:
                 os.makedirs(os.path.dirname(template_file), exist_ok=True)
                 with open(template_file, "w", encoding="utf-8") as f:
                     json.dump(templates, f, ensure_ascii=False, indent=4)
-                st.toast(f"方案「{selected_tpl_name}」已删除！", icon="✅")
+                st.toast(t("cost_report_delete_success").format(name=selected_tpl_name), icon="✅")
                 st.rerun()
             except Exception as e:
-                st.error(f"删除方案失败: {e}")
+                st.error(f"{t('cost_report_delete_failed')}: {e}")
 
     with col_tpl_save:
-        save_name = st.text_input("保存当前配置为新方案", placeholder="输入方案名称...", key="cost_tpl_name_input")
+        save_name = st.text_input(t("cost_report_save_input"), placeholder=t("cost_report_save_input_placeholder"), key="cost_tpl_name_input")
         st.write("<div style='height: 4px;'></div>", unsafe_allow_html=True)
         
         # 3. 保存方案
-        if st.button("💾 保存方案", key="cost_tpl_save_btn", disabled=not save_name.strip(), use_container_width=True):
+        if st.button(t("cost_report_save_btn"), key="cost_tpl_save_btn", disabled=not save_name.strip(), use_container_width=True):
             clean_name = save_name.strip()
             current_fields = st.session_state.cost_report_fields
             current_labels = st.session_state.cost_report_labels
             
             if not current_fields:
-                st.error("无法保存空方案：请至少勾选一个导出字段！")
+                st.error(t("cost_report_save_empty"))
             else:
                 templates[clean_name] = {
                     "created_by": current_username,
@@ -4424,28 +4503,28 @@ elif menu == "📊 导出成本报表":
                     os.makedirs(os.path.dirname(template_file), exist_ok=True)
                     with open(template_file, "w", encoding="utf-8") as f:
                         json.dump(templates, f, ensure_ascii=False, indent=4)
-                    st.toast(f"方案「{clean_name}」已成功保存！", icon="✅")
+                    st.toast(t("cost_report_save_success").format(name=clean_name), icon="✅")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"保存方案失败: {e}")
+                    st.error(f"{t('cost_report_save_failed')}: {e}")
 
     st.divider()
 
     # ---------- 日期范围 ----------
-    st.subheader("📅 日期范围")
+    st.subheader(t("cost_report_date_range"))
     col_s, col_e = st.columns(2)
     with col_s:
-        start_date_val = st.date_input("开始日期（入职/在职起点）", value=None, key="cost_start_date", format="YYYY-MM-DD")
+        start_date_val = st.date_input(t("cost_report_start_date"), value=None, key="cost_start_date", format="YYYY-MM-DD")
     with col_e:
-        end_date_val = st.date_input("结束日期（入职/离职终点）", value=date.today(), key="cost_end_date", format="YYYY-MM-DD")
+        end_date_val = st.date_input(t("cost_report_end_date"), value=date.today(), key="cost_end_date", format="YYYY-MM-DD")
 
-    st.info("筛选逻辑：入职日期 ≤ 结束日期，且（仍在职 或 离职日期 ≥ 开始日期）。留空开始日期则不限制起始时间。")
+    st.info(t("cost_report_filter_logic"))
 
     st.divider()
 
     # ---------- 字段选择与排序 ----------
-    st.subheader("📋 字段选择与排序")
-    st.caption("勾选要导出的字段，使用 ↑↓ 调整顺序，并可自定义列名（留空则使用默认名称）。")
+    st.subheader(t("cost_report_fields_order"))
+    st.caption(t("cost_report_fields_order_desc"))
 
     field_key_set = set(st.session_state.cost_report_fields)
     # 用于暂存本次的勾选和标签
@@ -4454,12 +4533,12 @@ elif menu == "📊 导出成本报表":
 
     # 构建字段配置表
     header_cols = st.columns([0.4, 0.4, 3, 3, 1, 1])
-    header_cols[0].markdown("<div style='white-space: nowrap; font-weight: bold;'>选择</div>", unsafe_allow_html=True)
-    header_cols[1].markdown("<div style='white-space: nowrap; font-weight: bold;'>顺序</div>", unsafe_allow_html=True)
-    header_cols[2].markdown("<div style='white-space: nowrap; font-weight: bold;'>字段</div>", unsafe_allow_html=True)
-    header_cols[3].markdown("<div style='white-space: nowrap; font-weight: bold;'>自定义列名</div>", unsafe_allow_html=True)
-    header_cols[4].markdown("<div style='white-space: nowrap; font-weight: bold;'>上移</div>", unsafe_allow_html=True)
-    header_cols[5].markdown("<div style='white-space: nowrap; font-weight: bold;'>下移</div>", unsafe_allow_html=True)
+    header_cols[0].markdown(f"<div style='white-space: nowrap; font-weight: bold;'>{t('cost_report_col_select')}</div>", unsafe_allow_html=True)
+    header_cols[1].markdown(f"<div style='white-space: nowrap; font-weight: bold;'>{t('cost_report_col_seq')}</div>", unsafe_allow_html=True)
+    header_cols[2].markdown(f"<div style='white-space: nowrap; font-weight: bold;'>{t('cost_report_col_field')}</div>", unsafe_allow_html=True)
+    header_cols[3].markdown(f"<div style='white-space: nowrap; font-weight: bold;'>{t('cost_report_col_custom')}</div>", unsafe_allow_html=True)
+    header_cols[4].markdown(f"<div style='white-space: nowrap; font-weight: bold;'>{t('cost_report_col_up')}</div>", unsafe_allow_html=True)
+    header_cols[5].markdown(f"<div style='white-space: nowrap; font-weight: bold;'>{t('cost_report_col_down')}</div>", unsafe_allow_html=True)
 
     # 操作按钮处理（先于渲染执行，避免冲突）
     if "cost_move_up" in st.session_state:
@@ -4490,7 +4569,7 @@ elif menu == "📊 导出成本报表":
         finfo = next((f for f in ALL_COST_FIELDS if f[0] == fkey), None)
         if not finfo:
             continue
-        default_cn = finfo[1]
+        default_name = finfo[default_label_idx]
         is_checked = fkey in field_key_set
         seq_display = str(ordered_fields.index(fkey) + 1) if is_checked else "-"
 
@@ -4500,17 +4579,17 @@ elif menu == "📊 导出成本报表":
             st.session_state[chk_key] = is_checked
         lbl_key = f"cf_label_{fkey}"
         if lbl_key not in st.session_state:
-            st.session_state[lbl_key] = new_labels.get(fkey, default_cn)
+            st.session_state[lbl_key] = new_labels.get(fkey, default_name)
 
         checked = row_cols[0].checkbox(t("select"), key=chk_key, label_visibility="collapsed")
         row_cols[1].markdown(f"<div style='padding-top:6px;text-align:center;font-weight:600'>{seq_display}</div>", unsafe_allow_html=True)
-        row_cols[2].markdown(f"<div style='padding-top:6px; white-space: nowrap;'>{default_cn} <span style='color:#94a3b8;font-size:12px'>({fkey})</span></div>", unsafe_allow_html=True)
+        row_cols[2].markdown(f"<div style='padding-top:6px; white-space: nowrap;'>{default_name} <span style='color:#94a3b8;font-size:12px'>({fkey})</span></div>", unsafe_allow_html=True)
         custom_lbl = row_cols[3].text_area(
-            "列名",
+            t("cost_report_col_custom"),
             key=lbl_key, label_visibility="collapsed",
             height=60
         )
-        label_this_run[fkey] = custom_lbl or default_cn
+        label_this_run[fkey] = custom_lbl or default_name
 
         if checked:
             checked_this_run.append(fkey)
@@ -4541,21 +4620,21 @@ elif menu == "📊 导出成本报表":
     labels_final = st.session_state.cost_report_labels
 
     if not selected_fields_final:
-        st.warning("请至少选择一个导出字段。")
+        st.warning(t("cost_report_at_least_one"))
     else:
         col_info, col_btn = st.columns([3, 1])
         with col_info:
             preview_cols = [labels_final.get(f, f) for f in selected_fields_final]
-            st.markdown(f"**将导出 {len(selected_fields_final)} 个字段：** " + " → ".join(f"`{c}`" for c in preview_cols))
+            st.markdown(f"**{t('cost_report_export_summary').format(count=len(selected_fields_final))}** " + " → ".join(f"`{c}`" for c in preview_cols))
         with col_btn:
-            do_export = st.button("📥 生成并下载报表", key="cost_export_btn", type="primary", use_container_width=True)
+            do_export = st.button(t("cost_report_export_btn"), key="cost_export_btn", type="primary", use_container_width=True)
 
         if do_export:
             start_str = start_date_val.strftime("%Y-%m-%d") if start_date_val else ""
             end_str = end_date_val.strftime("%Y-%m-%d") if end_date_val else ""
             fields_str = ",".join(selected_fields_final)
             labels_json = json.dumps(labels_final, ensure_ascii=False)
-            with st.spinner("生成报表中，请稍候..."):
+            with st.spinner(t("cost_report_generating")):
                 try:
                     r = requests.get(
                         "/api/employees/cost_report_export",
@@ -4569,9 +4648,9 @@ elif menu == "📊 导出成本报表":
                         timeout=60
                     )
                     if r.status_code == 200:
-                        st.success(f"✅ 报表生成成功！共筛选到符合条件的员工数据。")
+                        st.success(t("cost_report_success"))
                         st.download_button(
-                            label="📥 点击下载成本报表 Excel",
+                            label=t("cost_report_download_btn"),
                             data=r.content,
                             file_name=f"cost_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -4582,28 +4661,26 @@ elif menu == "📊 导出成本报表":
                             err = r.json().get("detail", r.text)
                         except:
                             err = r.text
-                        st.error(f"导出失败：{err}")
+                        st.error(f"{t('operation_failed')}：{err}")
                 except Exception as ex:
-                    st.error(f"请求失败：{ex}")
-
+                    st.error(f"{t('operation_failed')}：{ex}")
 # ==================== 数据备份与还原 ====================
 elif menu == t("backup_management"):
     st.header(t("backup_management"))
     st.markdown(f'<div class="section-note">{t("settings_note")}</div>', unsafe_allow_html=True)
     
-    # CSS 注入 - 深色宝石绿毛玻璃特效 (Deep Gemstone Green Glassmorphism)
+    # CSS 注入 - 统一毛玻璃特效 (Unified Glassmorphism)
     st.markdown("""
     <style>
-        /* 宝石绿毛玻璃容器样式 - 使用 border wrapper 使得卡片包裹紧凑且正确 */
+        /* 统一毛玻璃容器样式 - 使用 border wrapper 使得卡片包裹紧凑且正确 */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) {
-            background: linear-gradient(135deg, rgba(2, 48, 40, 0.5), rgba(0, 80, 65, 0.35)) !important;
-            backdrop-filter: blur(16px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-            border: 1.5px solid rgba(0, 200, 150, 0.45) !important;
+            background: var(--app-panel) !important;
+            backdrop-filter: blur(24px) saturate(210%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
+            border: 1px solid var(--app-border) !important;
             border-radius: 16px !important;
             padding: 24px !important;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 
-                        0 8px 32px 0 rgba(0, 40, 30, 0.35) !important;
+            box-shadow: var(--app-shadow) !important;
             margin-bottom: 24px !important;
         }
 
@@ -4615,69 +4692,14 @@ elif menu == t("backup_management"):
             box-shadow: none !important;
         }
         
-        /* 深度毛玻璃 Dialog 弹窗样式 */
+        /* 深度毛玻璃 Dialog 弹窗样式 - 与全局毛玻璃保持一致 */
         div[role="dialog"], div[data-testid="stDialog"] {
-            background: linear-gradient(135deg, rgba(2, 60, 50, 0.85), rgba(0, 80, 60, 0.8)) !important;
-            backdrop-filter: blur(25px) !important;
-            -webkit-backdrop-filter: blur(25px) !important;
-            border: 1.5px solid rgba(0, 200, 150, 0.5) !important;
-            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 
-                        0 24px 64px rgba(0, 30, 20, 0.6) !important;
+            background: var(--app-panel) !important;
+            backdrop-filter: blur(28px) saturate(210%) !important;
+            -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
+            border: 1px solid var(--app-border) !important;
+            box-shadow: var(--app-shadow) !important;
             border-radius: 16px !important;
-        }
-        
-        div[role="dialog"] h2, 
-        div[role="dialog"] p,
-        div[role="dialog"] span,
-        div[data-testid="stDialog"] h2,
-        div[data-testid="stDialog"] p,
-        div[data-testid="stDialog"] span {
-            color: #f8fafc !important;
-        }
-        
-        /* 强制卡片内部的文本颜色，防止在深色背景下看不清 */
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) p,
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) h4,
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) label,
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) span {
-            color: #f1f5f9 !important;
-        }
-
-        /* 高对比度边框输入框 */
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) input, 
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) select, 
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) div[data-baseweb="select"] > div {
-            border: 1.5px solid rgba(0, 200, 150, 0.6) !important;
-            background-color: rgba(2, 40, 35, 0.75) !important;
-            color: #ffffff !important;
-            border-radius: 10px !important;
-            transition: all 0.2s ease !important;
-        }
-        
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) input:focus, 
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) div[data-baseweb="select"] > div:focus-within {
-            border-color: #00ffcc !important;
-            box-shadow: 0 0 0 3px rgba(0, 255, 204, 0.3) !important;
-        }
-
-        /* 高级毛玻璃微立体按钮 */
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) button {
-            background: linear-gradient(135deg, rgba(0, 150, 120, 0.45), rgba(0, 100, 80, 0.3)) !important;
-            border: 1px solid rgba(0, 255, 200, 0.4) !important;
-            color: #ffffff !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            transition: all 0.2s ease !important;
-            box-shadow: 0 2px 8px rgba(0, 40, 30, 0.2) !important;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) button:hover {
-            background: linear-gradient(135deg, rgba(0, 180, 140, 0.55), rgba(0, 120, 90, 0.4)) !important;
-            border-color: #00ffcc !important;
-            box-shadow: 0 4px 12px rgba(0, 255, 204, 0.35) !important;
-            transform: translateY(-1px) !important;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.gemstone-card-anchor) button:active {
-            transform: translateY(1px) !important;
         }
     </style>
     """, unsafe_allow_html=True)
