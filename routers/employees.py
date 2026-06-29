@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import get_db, settings
-from models import employees, config_meta, users, employee_transfers, labor_assignments
+from models import employees, config_meta, users, employee_transfers, labor_assignments, log_audit
 from services.auth import get_current_user
 from services.audit import write_audit
 from services.org_chart import build_org_chart, validate_org_nodes
@@ -134,7 +134,8 @@ def save_employee(
     db=Depends(get_db),
     current_user=Depends(get_current_user),
     data: EmployeeSave = None,
-    is_update: bool = False
+    is_update: bool = False,
+    original_id: Optional[str] = Query(None)
 ):
     if current_user["role"] != "admin":
         raise HTTPException(403, "Only admin can modify employee data")
@@ -142,7 +143,9 @@ def save_employee(
         payload = data.dict(exclude_unset=True)
         if payload.get("id_card"):
             payload["id_card"] = clean_id_card(payload["id_card"])
-        emp = get_employee(db, payload["id_nomor"])
+            
+        old_id = original_id if original_id else payload.get("id_nomor")
+        emp = get_employee(db, old_id)
         
         ws_scope_str = current_user.get("ws_scope")
         if ws_scope_str:
@@ -183,9 +186,24 @@ def save_employee(
                 
         if is_update:
             if not emp: raise HTTPException(404, "Employee not found")
+            
+            # Check if id_nomor is being modified and new ID already exists
+            if payload.get("id_nomor") and payload["id_nomor"] != old_id:
+                existing_new = get_employee(db, payload["id_nomor"])
+                if existing_new:
+                    raise HTTPException(400, "New employee ID already exists / 新工号已存在")
+                    
             old = json.dumps({k: emp.get(k) for k in payload.keys()}, default=str)
-            db.execute(update(employees).where(employees.c.id_nomor == payload["id_nomor"]).values(**payload, updated_at=now))
+            db.execute(update(employees).where(employees.c.id_nomor == old_id).values(**payload, updated_at=now))
             db.commit()
+            
+            # Cascade updates to other tables
+            if payload.get("id_nomor") and payload["id_nomor"] != old_id:
+                db.execute(update(labor_assignments).where(labor_assignments.c.id_nomor == old_id).values(id_nomor=payload["id_nomor"]))
+                db.execute(update(employee_transfers).where(employee_transfers.c.id_nomor == old_id).values(id_nomor=payload["id_nomor"]))
+                db.execute(update(log_audit).where(log_audit.c.id_nomor == old_id).values(id_nomor=payload["id_nomor"]))
+                db.commit()
+                
             write_audit(db, payload["id_nomor"], payload.get("name_nama", emp["name_nama"]), "修改", old=old, new=json.dumps(payload, default=str), operator=current_user["username"], ip=request.client.host)
             return {"status": "success"}
         else:

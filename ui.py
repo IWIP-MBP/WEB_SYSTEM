@@ -3331,7 +3331,7 @@ elif menu == t("employees"):
         if emp_data:
             with st.form("edit_employee_form"):
                 st.subheader(f"{t('edit_employee')} - {emp_data['id_nomor']} {emp_data['name_nama']}")
-                f_id = st.text_input(label("id_nomor"), value=emp_data["id_nomor"], disabled=True)
+                f_id = st.text_input(label("id_nomor"), value=emp_data["id_nomor"])
                 f_name = st.text_input(label("name_nama"), value=emp_data["name_nama"])
                 col1, col2 = st.columns(2)
                 ws_options = [""] + ws_list
@@ -3368,7 +3368,7 @@ elif menu == t("employees"):
                         "hire_date": f_hire.strftime("%Y-%m-%d") if f_hire else "",
                         "contract_end": f_contract.strftime("%Y-%m-%d") if f_contract else ""
                     }
-                    save_res = api_post("/employees/save", params={"is_update": True}, json_data=payload)
+                    save_res = api_post("/employees/save", params={"is_update": True, "original_id": st.session_state.edit_employee_id}, json_data=payload)
                     if save_res and save_res.get("status") == "success":
                         st.session_state.toast_message = (t("operation_success"), "✅")
                         st.session_state.edit_employee_id = None
@@ -3494,7 +3494,10 @@ elif menu == t("employees"):
                             "hire_date": f_hire.strftime("%Y-%m-%d") if f_hire else "",
                             "contract_end": f_contract.strftime("%Y-%m-%d") if f_contract else ""
                         }
-                        save_res = api_post("/employees/save", params={"is_update": mode == t("mode_edit")}, json_data=payload)
+                        orig_id = None
+                        if mode == t("mode_edit") and selected:
+                            orig_id = selected.split(" | ")[0]
+                        save_res = api_post("/employees/save", params={"is_update": mode == t("mode_edit"), "original_id": orig_id}, json_data=payload)
                         if save_res and save_res.get("status") == "success":
                             st.session_state.toast_message = (t("operation_success"), "✅")
                             st.rerun()
@@ -4031,7 +4034,7 @@ elif menu == t("transfer_records"):
                                     "ws_bengkel": new_ws,
                                     "team_grup": new_team
                                 }
-                                resp = api_post("/employees/save", params={"is_update": True}, json_data=payload)
+                                resp = api_post("/employees/save", params={"is_update": True, "original_id": emp_id}, json_data=payload)
                                 if resp and resp.get("status") == "success":
                                     st.session_state.toast_message = (t("operation_success"), "✅")
                                     st.rerun()
