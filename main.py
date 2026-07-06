@@ -76,9 +76,30 @@ with engine.begin() as conn:
         ('custom_fields', 'VARCHAR'),
         ('company', 'VARCHAR'),
         ('resign_operator', 'VARCHAR'),
+        ('resign_op_date', 'VARCHAR'),
     ]:
         if col not in existing:
             conn.execute(text(f"ALTER TABLE employees ADD COLUMN {col} {col_type}"))
+
+with engine.begin() as conn:
+    try:
+        conn.execute(text("""
+            UPDATE employees e
+            SET resign_op_date = COALESCE(
+                (
+                    SELECT LEFT(la.op_date, 10)
+                    FROM log_audit la
+                    WHERE la.id_nomor = e.id_nomor AND la.type_tipe = '离职'
+                    ORDER BY la.id DESC
+                    LIMIT 1
+                ),
+                e.resign_date
+            )
+            WHERE e.status_status LIKE '%离职%' AND e.resign_op_date IS NULL
+        """))
+        logger.info("Backfilled resign_op_date for existing resigned employees")
+    except Exception as ex:
+        logger.warning(f"Error backfilling resign_op_date: {ex}")
 
 with engine.begin() as conn:
     existing_users = [row[0] for row in conn.execute(text(

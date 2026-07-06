@@ -25,6 +25,7 @@ employees = Table("employees", metadata,
     Column("custom_fields", String, default="{}"),
     Column("company", String),
     Column("resign_operator", String),
+    Column("resign_op_date", String),
 )
 
 # 配置表

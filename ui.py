@@ -736,6 +736,7 @@ LANG = {
         "login_hint": "请选择语言并输入账号密码",
         "login_title": "后勤三部人事管理系统",
         "login_welcome": "欢迎登录",
+        "localization_rate": "本土化率",
         "logo_empty": "暂无 Logo",
         "logo_get_failed": "无法获取 Logo",
         "logo_select_file": "选择图片文件",
@@ -778,6 +779,8 @@ LANG = {
         "operation_success": "操作成功",
         "operator": "操作人",
         "org_chart": "📊 组织架构图",
+        "query_history_org": "查询历史组织架构",
+        "select_date": "选择日期",
         "org_manage_caption": "可调整显示名称、类型、上级和排序；人数来自员工花名册自动统计，不能手动修改。",
         "org_reset": "已恢复默认组织架构",
         "org_saved": "组织架构已保存",
@@ -813,6 +816,9 @@ LANG = {
         "resign_reason": "离职原因",
         "resign_team_dist": "离职班组分布",
         "resign_trend": "离职趋势",
+        "hire_resign_trend": "入职与离职趋势",
+        "trend_hire": "入职人数",
+        "trend_resign": "离职人数",
         "resign_workshop_dist": "离职车间分布",
         "resigned": "🚫 离职名册",
         "resigned_note": "集中查看离职员工，并支持恢复在职或办理离职。",
@@ -1180,6 +1186,7 @@ LANG = {
         "login_hint": "Silakan pilih bahasa dan masukkan nama pengguna & kata sandi",
         "login_title": "Sistem Manajemen SDM ACC Departemen 3",
         "login_welcome": "Selamat Datang",
+        "localization_rate": "Tingkat Lokalisasi",
         "logo_empty": "Belum ada logo",
         "logo_get_failed": "Gagal mendapatkan logo",
         "logo_select_file": "Pilih file gambar",
@@ -1222,6 +1229,8 @@ LANG = {
         "operation_success": "Operasi berhasil",
         "operator": "Operator",
         "org_chart": "📊 Bagan Organisasi",
+        "query_history_org": "Cari Bagan Organisasi Historis",
+        "select_date": "Pilih Tanggal",
         "org_manage_caption": "Dapat menyesuaikan nama tampilan, tipe, atasan, dan urutan; Jumlah orang dihitung otomatis dari arsip pegawai dan tidak dapat diubah manual.",
         "org_reset": "Hirarki bagan organisasi diatur ulang",
         "org_saved": "Bagan organisasi berhasil disimpan",
@@ -1257,6 +1266,9 @@ LANG = {
         "resign_reason": "Alasan Resign",
         "resign_team_dist": "Distribusi Resign per Grup",
         "resign_trend": "Tren Resign",
+        "hire_resign_trend": "Tren Karyawan Baru & Resign",
+        "trend_hire": "Jumlah Karyawan Baru",
+        "trend_resign": "Jumlah Resign",
         "resign_workshop_dist": "Distribusi Resign per Bengkel",
         "resigned": "🚫 Daftar Resign",
         "resigned_note": "Melihat pegawai yang resign secara terpusat, mendukung pemulihan atau pemrosesan resign.",
@@ -1505,14 +1517,14 @@ FIELD_LABELS = {
         "team_grup": "班组", "gender_jk": "性别", "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
         "nat_negara": "国籍", "rel_agama": "宗教", "status_status": "状态", "resign_date": "离职日期",
         "remark_ket": "原因/备注", "id_card": "身份证号", "hire_date": "入职日期", "contract_end": "合同到期日",
-        "company": "归属公司", "resign_operator": "操作人"
+        "company": "归属公司", "resign_operator": "操作人", "resign_op_date": "操作日期"
     },
     "id": {
         "id_nomor": "ID", "name_nama": "Nama", "ws_bengkel": "Bengkel",
         "team_grup": "Grup", "gender_jk": "JK", "pos_cn_jabatan": "Jabatan (CN)", "pos_id_jabatan": "Jabatan (ID)",
         "nat_negara": "Kewarganegaraan", "rel_agama": "Agama", "status_status": "Status", "resign_date": "Tgl Resign",
         "remark_ket": "Keterangan", "id_card": "Nomor KTP", "hire_date": "Tgl Masuk", "contract_end": "Kontrak Berakhir",
-        "company": "Perusahaan", "resign_operator": "Operator"
+        "company": "Perusahaan", "resign_operator": "Operator", "resign_op_date": "Tanggal Operasi"
     }
 }
 
@@ -2413,11 +2425,12 @@ if menu == t("dashboard"):
     st.markdown(f'<div class="section-note">{t("dashboard_note")}</div>', unsafe_allow_html=True)
     dash = api_get("/dashboard")
     if dash:
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric(t("total_active"), dash["total_active"])
         c2.metric(t("total_quota"), dash.get("total_quota", 0))
         c3.metric(t("total_resigned"), dash["total_resigned"])
         c4.metric(t("total_employees"), dash["total_active"] + dash["total_resigned"])
+        c5.metric(t("localization_rate"), dash.get("localization_rate", "N/A"))
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             f"{t('workshop_dist')}/{t('nation_dist')}",
             f"{t('gender_dist')}/{t('age_dist')}",
@@ -2481,8 +2494,18 @@ if menu == t("dashboard"):
         with tab3:
             resign = pd.DataFrame(dash.get("monthly_resign", []))
             if not resign.empty:
-                # Add text labels displaying numbers on the line chart points
-                fig = px.line(resign, x="month", y="count", title=t("resign_trend"), markers=True, text="count")
+                resign_col = t("trend_resign")
+                hire_col = t("trend_hire")
+                resign = resign.rename(columns={
+                    "resign_count": resign_col,
+                    "hire_count": hire_col
+                })
+                # Plot both lines: hire and resign
+                fig = px.line(resign, x="month", y=[hire_col, resign_col], title=t("hire_resign_trend"), markers=True)
+                fig.update_layout(
+                    yaxis_title=t("quantity"),
+                    legend_title=""
+                )
                 fig.update_traces(textposition='top center', texttemplate='%{y}', mode='lines+markers+text')
                 st.plotly_chart(fig, use_container_width=True)
             
@@ -2791,7 +2814,22 @@ if menu == t("dashboard"):
 elif menu == t("org_chart"):
     st.header(t("org_chart"))
 
-    org_data = api_get("/org_chart_data")
+    # ─── HISTORICAL ORG CHART CONTROLS ───
+    c_hist1, c_hist2 = st.columns([1, 2])
+    with c_hist1:
+        use_history = st.checkbox(t("query_history_org"), value=False, key="org_use_history")
+    
+    query_date_str = None
+    if use_history:
+        with c_hist2:
+            hist_date = st.date_input(t("select_date"), value=date.today() - timedelta(days=1), max_value=date.today())
+            query_date_str = hist_date.strftime("%Y-%m-%d")
+
+    if query_date_str:
+        org_data = api_get(f"/org_chart_data?query_date={query_date_str}")
+    else:
+        org_data = api_get("/org_chart_data")
+
     if not org_data or "nodes" not in org_data:
         st.info(t("no_data"))
         st.stop()
@@ -2803,11 +2841,13 @@ elif menu == t("org_chart"):
     workshop_count = sum(1 for node in nodes if node.get("level") == 1)
     team_count = sum(1 for node in nodes if node.get("level") == 2)
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric(t("metric_active_total"), total_people)
-    m2.metric(t("metric_workshop_count"), workshop_count)
-    m3.metric(t("metric_team_count"), team_count)
-    m4.metric(t("metric_nation_count"), len(nations))
+    overall_loc_rate = node_by_key.get("root", {}).get("localization_rate", "N/A")
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric(t("localization_rate"), overall_loc_rate)
+    m2.metric(t("metric_active_total"), total_people)
+    m3.metric(t("metric_workshop_count"), workshop_count)
+    m4.metric(t("metric_team_count"), team_count)
+    m5.metric(t("metric_nation_count"), len(nations))
 
     def parent_option(node):
         return t("top_level") if not node.get("key") else f"{node.get('display_name') or node.get('name')} [{node.get('key')}]"
@@ -2838,47 +2878,57 @@ elif menu == t("org_chart"):
         st.session_state.org_editor_df = build_editor_df(nodes)
 
     editor_df = st.session_state.get("org_editor_df", build_editor_df(nodes))
-    tab_chart, tab_manage, tab_detail, tab_quota = st.tabs([t("tab_overview"), t("tab_hierarchy"), t("tab_nationality_detail"), t("tab_quota_settings")])
+    if query_date_str:
+        tab_chart, tab_detail = st.tabs([t("tab_overview"), t("tab_nationality_detail")])
+        tab_manage = None
+        tab_quota = None
+    else:
+        tab_chart, tab_manage, tab_detail, tab_quota = st.tabs([t("tab_overview"), t("tab_hierarchy"), t("tab_nationality_detail"), t("tab_quota_settings")])
 
-    with tab_manage:
-        st.caption(t("org_manage_caption"))
-        edited_df = st.data_editor(
-            editor_df,
-            column_config={
-                "sort": st.column_config.NumberColumn(t("col_sort"), min_value=0, step=1),
-                "key": st.column_config.TextColumn(t("col_node_id"), disabled=True),
-                "source_name": st.column_config.TextColumn(t("col_source"), disabled=True),
-                "display_name": st.column_config.TextColumn(t("col_display_name"), required=True),
-                "type": st.column_config.SelectboxColumn(
-                    t("col_type"),
-                    options=["部门", "经理", "高级主任", "主任", "副主任", "车间", "班组", "其他"]
-                ),
-                "parent_display": st.column_config.SelectboxColumn(t("col_parent"), options=parent_options),
-                "total": st.column_config.NumberColumn(t("col_total"), disabled=True),
-            },
-            use_container_width=True,
-            hide_index=True,
-            key="org_editor",
-            disabled=["key", "source_name", "total"],
-            column_order=["sort", "display_name", "type", "parent_display", "total", "source_name", "key"]
-        )
+    if not query_date_str:
+        with tab_manage:
+            st.caption(t("org_manage_caption"))
+            edited_df = st.data_editor(
+                editor_df,
+                column_config={
+                    "sort": st.column_config.NumberColumn(t("col_sort"), min_value=0, step=1),
+                    "key": st.column_config.TextColumn(t("col_node_id"), disabled=True),
+                    "source_name": st.column_config.TextColumn(t("col_source"), disabled=True),
+                    "display_name": st.column_config.TextColumn(t("col_display_name"), required=True),
+                    "type": st.column_config.SelectboxColumn(
+                        t("col_type"),
+                        options=["部门", "经理", "高级主任", "主任", "副主任", "车间", "班组", "其他"]
+                    ),
+                    "parent_display": st.column_config.SelectboxColumn(t("col_parent"), options=parent_options),
+                    "total": st.column_config.NumberColumn(t("col_total"), disabled=True),
+                },
+                use_container_width=True,
+                hide_index=True,
+                key="org_editor",
+                disabled=["key", "source_name", "total"],
+                column_order=["sort", "display_name", "type", "parent_display", "total", "source_name", "key"]
+            )
 
-    preview_nodes = []
-    for idx, row in edited_df.iterrows():
-        base = node_by_key.get(row["key"], {})
-        parent_key = option_to_key.get(row.get("parent_display"), "")
-        if row["key"] == "root":
-            parent_key = ""
-        preview_nodes.append({
-            "key": row["key"],
-            "name": base.get("name") or row["display_name"],
-            "display_name": str(row["display_name"]).strip() or base.get("name") or row["key"],
-            "type": row.get("type") or base.get("type") or "",
-            "parent": parent_key,
-            "total": int(base.get("total") or 0),
-            "nations": base.get("nations") or {},
-            "sort": int(row.get("sort") or 0),
-        })
+    if query_date_str:
+        preview_nodes = nodes
+    else:
+        preview_nodes = []
+        for idx, row in edited_df.iterrows():
+            base = node_by_key.get(row["key"], {})
+            parent_key = option_to_key.get(row.get("parent_display"), "")
+            if row["key"] == "root":
+                parent_key = ""
+            preview_nodes.append({
+                "key": row["key"],
+                "name": base.get("name") or row["display_name"],
+                "display_name": str(row["display_name"]).strip() or base.get("name") or row["key"],
+                "type": row.get("type") or base.get("type") or "",
+                "parent": parent_key,
+                "total": int(base.get("total") or 0),
+                "nations": base.get("nations") or {},
+                "localization_rate": base.get("localization_rate", "N/A"),
+                "sort": int(row.get("sort") or 0),
+            })
 
     preview_keys = {node["key"] for node in preview_nodes}
     has_error = False
@@ -3236,30 +3286,31 @@ elif menu == t("org_chart"):
                     compact = compact.rename(columns=rename_cols)
                     st.dataframe(compact[[t("col_display_name"), t("col_type"), t("col_total")]], use_container_width=True, hide_index=True)
 
-    with tab_manage:
-        save_col, reset_col = st.columns(2)
-        with save_col:
-            if st.button(t("save_org"), key="save_org_btn", use_container_width=True, disabled=has_error or not is_admin):
-                payload = {"nodes": preview_nodes}
-                resp = api_post("/org_chart/save_layout", json_data=payload)
-                if resp and resp.get("status") == "success":
-                    st.session_state.org_editor_df = edited_df.copy()
-                    st.session_state.toast_message = (t("org_saved"), "✅")
-                    st.rerun()
-                else:
-                    st.toast(t("operation_failed"), icon="❌")
-        with reset_col:
-            if st.button(t("reset_org"), key="reset_org_btn", use_container_width=True, disabled=not is_admin):
-                resp = api_post("/org_chart/reset_layout")
-                if resp and resp.get("status") == "success":
-                    if "org_editor_df" in st.session_state:
-                        del st.session_state.org_editor_df
-                    st.session_state.toast_message = (t("org_reset"), "✅")
-                    st.rerun()
-                else:
-                    st.toast(t("operation_failed"), icon="❌")
-        if not is_admin:
-            st.info(t("readonly_org_msg"))
+    if tab_manage is not None:
+        with tab_manage:
+            save_col, reset_col = st.columns(2)
+            with save_col:
+                if st.button(t("save_org"), key="save_org_btn", use_container_width=True, disabled=has_error or not is_admin):
+                    payload = {"nodes": preview_nodes}
+                    resp = api_post("/org_chart/save_layout", json_data=payload)
+                    if resp and resp.get("status") == "success":
+                        st.session_state.org_editor_df = edited_df.copy()
+                        st.session_state.toast_message = (t("org_saved"), "✅")
+                        st.rerun()
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
+            with reset_col:
+                if st.button(t("reset_org"), key="reset_org_btn", use_container_width=True, disabled=not is_admin):
+                    resp = api_post("/org_chart/reset_layout")
+                    if resp and resp.get("status") == "success":
+                        if "org_editor_df" in st.session_state:
+                            del st.session_state.org_editor_df
+                        st.session_state.toast_message = (t("org_reset"), "✅")
+                        st.rerun()
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
+            if not is_admin:
+                st.info(t("readonly_org_msg"))
 
     with tab_detail:
         detail_rows = []
@@ -3304,60 +3355,61 @@ elif menu == t("org_chart"):
         else:
             st.info(t("no_nationality_detail"))
 
-    with tab_quota:
-        st.subheader(t("tab_quota_settings"))
-        quota_data = api_get("/org_chart/quota") or {}
-        teams_list = [node for node in preview_nodes if node.get("type") == "班组"]
-        if not teams_list:
-            st.info(t("no_teams_found"))
-        else:
-            quota_rows = []
-            for team in teams_list:
-                team_key = team["key"]
-                team_quota = quota_data.get(team_key, {})
-                row = {
-                    "key": team_key,
-                    "workshop": t_val(team.get("parent_name") or team.get("parent") or ""),
-                    "team_name": t_val(team["display_name"]),
+    if tab_quota is not None:
+        with tab_quota:
+            st.subheader(t("tab_quota_settings"))
+            quota_data = api_get("/org_chart/quota") or {}
+            teams_list = [node for node in preview_nodes if node.get("type") == "班组"]
+            if not teams_list:
+                st.info(t("no_teams_found"))
+            else:
+                quota_rows = []
+                for team in teams_list:
+                    team_key = team["key"]
+                    team_quota = quota_data.get(team_key, {})
+                    row = {
+                        "key": team_key,
+                        "workshop": t_val(team.get("parent_name") or team.get("parent") or ""),
+                        "team_name": t_val(team["display_name"]),
+                    }
+                    for nat in nations:
+                        row[nat] = int(team_quota.get(nat, 0))
+                    quota_rows.append(row)
+                    
+                quota_df = pd.DataFrame(quota_rows)
+                column_config = {
+                    "key": st.column_config.TextColumn("Key", disabled=True),
+                    "workshop": st.column_config.TextColumn(t("workshop"), disabled=True),
+                    "team_name": st.column_config.TextColumn(t("team"), disabled=True),
                 }
                 for nat in nations:
-                    row[nat] = int(team_quota.get(nat, 0))
-                quota_rows.append(row)
+                    column_config[nat] = st.column_config.NumberColumn(t_val(nat), min_value=0, step=1)
+                    
+                edited_quota_df = st.data_editor(
+                    quota_df,
+                    column_config=column_config,
+                    use_container_width=True,
+                    hide_index=True,
+                    disabled=["key", "workshop", "team_name"],
+                    key="quota_editor"
+                )
                 
-            quota_df = pd.DataFrame(quota_rows)
-            column_config = {
-                "key": st.column_config.TextColumn("Key", disabled=True),
-                "workshop": st.column_config.TextColumn(t("workshop"), disabled=True),
-                "team_name": st.column_config.TextColumn(t("team"), disabled=True),
-            }
-            for nat in nations:
-                column_config[nat] = st.column_config.NumberColumn(t_val(nat), min_value=0, step=1)
-                
-            edited_quota_df = st.data_editor(
-                quota_df,
-                column_config=column_config,
-                use_container_width=True,
-                hide_index=True,
-                disabled=["key", "workshop", "team_name"],
-                key="quota_editor"
-            )
-            
-            if st.button(t("save_quota"), key="save_quota_btn", disabled=not is_admin, use_container_width=True):
-                new_quota = {}
-                for idx, row in edited_quota_df.iterrows():
-                    team_key = row["key"]
-                    new_quota[team_key] = {}
-                    for nat in nations:
-                        val = int(row.get(nat, 0))
-                        if val > 0:
-                            new_quota[team_key][nat] = val
-                
-                resp = api_post("/org_chart/quota", json_data=new_quota)
-                if resp and resp.get("status") == "success":
-                    st.session_state.toast_message = (t("quota_saved"), "✅")
-                    st.rerun()
-                else:
-                    st.toast(t("operation_failed"), icon="❌")
+                if st.button(t("save_quota"), key="save_quota_btn", disabled=not is_admin, use_container_width=True):
+                    new_quota = {}
+                    for idx, row in edited_quota_df.iterrows():
+                        team_key = row["key"]
+                        new_quota[team_key] = {}
+                        for nat in nations:
+                            val = int(row.get(nat, 0))
+                            if val > 0:
+                                new_quota[team_key][nat] = val
+                    
+                    resp = api_post("/org_chart/quota", json_data=new_quota)
+                    if resp and resp.get("status") == "success":
+                        st.session_state.toast_message = (t("quota_saved"), "✅")
+                        st.rerun()
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
         # ==================== 员工花名册 ====================
 elif menu == t("employees"):
     st.header(t("employees"))
@@ -3618,13 +3670,15 @@ elif menu == t("resigned"):
         data = api_get("/employees", {"status": t("status_inactive"), "page": 1, "page_size": 10000})
         if data and data.get("data"):
             df = pd.DataFrame(data["data"])
-            display_cols = ["resign_date", "id_nomor", "name_nama", "ws_bengkel", "team_grup", "nat_negara", "remark_ket", "resign_operator"]
+            display_cols = ["resign_date", "resign_op_date", "id_nomor", "name_nama", "ws_bengkel", "team_grup", "nat_negara", "remark_ket", "resign_operator"]
             df_display = df[display_cols].copy()
             for c in ["ws_bengkel", "team_grup", "nat_negara"]:
                 if c in df_display.columns:
                     df_display[c] = df_display[c].apply(t_val)
             if "resign_operator" in df_display.columns:
                 df_display["resign_operator"] = df_display["resign_operator"].fillna("")
+            if "resign_op_date" in df_display.columns:
+                df_display["resign_op_date"] = df_display["resign_op_date"].fillna("")
             df_display.columns = [label(col) for col in display_cols]
             df_display = df_display.reset_index(drop=True)
             df_display.insert(0, t("seq_no"), range(1, len(df_display) + 1))

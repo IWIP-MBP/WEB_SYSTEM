@@ -2,7 +2,7 @@ import json
 import logging
 from sqlalchemy import select, func
 from fastapi import HTTPException
-from models import employees, config_meta
+from models import employees, config_meta, employee_transfers
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +31,113 @@ def load_org_layout(db):
         }
     return result
 
-def build_org_chart(db, current_user=None):
-    stmt = select(
-        employees.c.ws_bengkel,
-        employees.c.team_grup,
-        employees.c.nat_negara,
-        func.count().label("cnt")
-    ).where(employees.c.status_status.contains("在职"))
-    
-    if current_user:
-        ws_scope_str = current_user.get("ws_scope")
-        if ws_scope_str:
-            try:
-                allowed = json.loads(ws_scope_str)
-                if isinstance(allowed, list) and len(allowed) > 0:
-                    stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
-            except:
-                pass
-    rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
+def build_org_chart(db, current_user=None, query_date=None):
+    if query_date:
+        try:
+            from datetime import datetime
+            datetime.strptime(query_date, "%Y-%m-%d")
+        except Exception:
+            raise HTTPException(400, "Invalid query date format. Use YYYY-MM-DD.")
+        
+        query_datetime = query_date + " 23:59:59"
+        from sqlalchemy import or_
+        
+        hired_before = or_(employees.c.hire_date == None, employees.c.hire_date <= query_date)
+        not_resigned_yet = or_(~employees.c.status_status.contains("离职"), employees.c.resign_date > query_date)
+        
+        emp_stmt = select(
+            employees.c.id_nomor,
+            employees.c.name_nama,
+            employees.c.ws_bengkel,
+            employees.c.team_grup,
+            employees.c.nat_negara
+        ).where(hired_before).where(not_resigned_yet)
+        
+        emp_rows = db.execute(emp_stmt).fetchall()
+        active_emps = [dict(r._mapping) for r in emp_rows]
+        
+        # Get transfers after query_datetime
+        transfer_stmt = select(employee_transfers).where(employee_transfers.c.transfer_date > query_datetime)
+        transfer_rows = db.execute(transfer_stmt).fetchall()
+        
+        # Sort ascending by transfer_date
+        transfers = sorted([dict(r._mapping) for r in transfer_rows], key=lambda x: x["transfer_date"])
+        
+        earliest_ws_transfer = {}
+        earliest_team_transfer = {}
+        for t in transfers:
+            id_num = t["id_nomor"]
+            change_type = t["change_type"]
+            old_val = t["old_value"]
+            if change_type == "车间变更":
+                if id_num not in earliest_ws_transfer:
+                    earliest_ws_transfer[id_num] = old_val
+            elif change_type == "班组变更":
+                if id_num not in earliest_team_transfer:
+                    earliest_team_transfer[id_num] = old_val
+                    
+        resolved_emps = []
+        allowed_workshops = None
+        if current_user:
+            ws_scope_str = current_user.get("ws_scope")
+            if ws_scope_str:
+                try:
+                    allowed_workshops = json.loads(ws_scope_str)
+                    if not isinstance(allowed_workshops, list):
+                        allowed_workshops = None
+                except:
+                    pass
+                    
+        for emp in active_emps:
+            id_num = emp["id_nomor"]
+            ws = earliest_ws_transfer.get(id_num, emp["ws_bengkel"])
+            team = earliest_team_transfer.get(id_num, emp["team_grup"])
+            
+            # Apply ws_scope filter if configured
+            if allowed_workshops is not None:
+                if ws not in allowed_workshops:
+                    continue
+                    
+            resolved_emps.append({
+                "ws_bengkel": ws,
+                "team_grup": team,
+                "nat_negara": emp["nat_negara"]
+            })
+            
+        counts = {}
+        for emp in resolved_emps:
+            ws = (emp["ws_bengkel"] or "未分配车间").strip() or "未分配车间"
+            team = (emp["team_grup"] or "未分配班组").strip() or "未分配班组"
+            nat = (emp["nat_negara"] or "未知").strip() or "未知"
+            key = (ws, team, nat)
+            counts[key] = counts.get(key, 0) + 1
+            
+        class PythonRow:
+            def __init__(self, ws_bengkel, team_grup, nat_negara, cnt):
+                self.ws_bengkel = ws_bengkel
+                self.team_grup = team_grup
+                self.nat_negara = nat_negara
+                self.cnt = cnt
+                
+        rows = [PythonRow(k[0], k[1], k[2], v) for k, v in counts.items()]
+    else:
+        stmt = select(
+            employees.c.ws_bengkel,
+            employees.c.team_grup,
+            employees.c.nat_negara,
+            func.count().label("cnt")
+        ).where(employees.c.status_status.contains("在职"))
+        
+        if current_user:
+            ws_scope_str = current_user.get("ws_scope")
+            if ws_scope_str:
+                try:
+                    allowed = json.loads(ws_scope_str)
+                    if isinstance(allowed, list) and len(allowed) > 0:
+                        stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
+                except:
+                    pass
+        rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
 
     nodes = {
         "root": {
@@ -96,6 +185,24 @@ def build_org_chart(db, current_user=None):
         nodes[key]["type"] = override.get("type") or nodes[key]["type"]
         nodes[key]["parent"] = parent
         nodes[key]["sort"] = override.get("sort", nodes[key]["sort"])
+
+    for node in nodes.values():
+        china_count = 0
+        non_china_count = 0
+        for nat, cnt in node.get("nations", {}).items():
+            is_cn = any(x in nat.lower() for x in ["中国籍", "china", "cn"])
+            if is_cn:
+                china_count += cnt
+            else:
+                non_china_count += cnt
+        if china_count > 0:
+            val = non_china_count / china_count
+            if val.is_integer():
+                node["localization_rate"] = f"1:{int(val)}"
+            else:
+                node["localization_rate"] = f"1:{val:.1f}"
+        else:
+            node["localization_rate"] = "N/A"
 
     ordered = sorted(nodes.values(), key=lambda n: (n.get("level", 9), n.get("sort", 0), n["display_name"]))
     name_map = {n["key"]: n["display_name"] for n in ordered}

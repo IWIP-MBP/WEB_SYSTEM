@@ -67,7 +67,7 @@ def restore_employee(request: Request, db=Depends(get_db), current_user=Depends(
     if "在职" in emp["status_status"]:
         raise HTTPException(400, "Employee is already active")
     db.execute(update(employees).where(employees.c.id_nomor == id_nomor).values(
-        status_status="在职 / Aktif", resign_date=None, remark_ket=None, resign_operator=None))
+        status_status="在职 / Aktif", resign_date=None, remark_ket=None, resign_operator=None, resign_op_date=None))
     db.commit()
     write_audit(db, id_nomor, emp["name_nama"], "恢复在职",
                 old=json.dumps({"status": emp["status_status"], "resign_date": emp["resign_date"], "reason": emp["remark_ket"]}),
@@ -108,7 +108,8 @@ def get_employees(
             pass
 
     total = db.execute(select(func.count()).select_from(query.subquery())).scalar()
-    rows = db.execute(query.order_by(desc(employees.c.id)).offset((page-1)*page_size).limit(page_size)).fetchall()
+    order_by_col = desc(employees.c.resign_date) if status and ("离职" in status or "resign" in status.lower()) else desc(employees.c.id)
+    rows = db.execute(query.order_by(order_by_col, desc(employees.c.id)).offset((page-1)*page_size).limit(page_size)).fetchall()
     return {"data": [dict(r._mapping) for r in rows], "total": total}
 
 @router.get("/api/employees/query")
@@ -250,7 +251,13 @@ def resign(
             raise HTTPException(400, "Invalid date format, use YYYY-MM-DD")
     else:
         resign_date = datetime.now().strftime("%Y-%m-%d")
-    db.execute(update(employees).where(employees.c.id_nomor == id_nomor).values(status_status="离职 / Resign", resign_date=resign_date, remark_ket=reason, resign_operator=current_user["username"]))
+    db.execute(update(employees).where(employees.c.id_nomor == id_nomor).values(
+        status_status="离职 / Resign",
+        resign_date=resign_date,
+        remark_ket=reason,
+        resign_operator=current_user["username"],
+        resign_op_date=datetime.now().strftime("%Y-%m-%d")
+    ))
     db.commit()
     write_audit(db, id_nomor, emp["name_nama"], "离职",
                 old=json.dumps({"status": emp["status_status"]}),
@@ -347,14 +354,14 @@ def export_employees(
         "gender_jk": "性别", "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
         "nat_negara": "国籍", "rel_agama": "宗教", "id_card": "身份证号",
         "hire_date": "入职日期", "contract_end": "合同到期日", "status_status": "状态",
-        "resign_date": "离职日期", "remark_ket": "备注"
+        "resign_date": "离职日期", "remark_ket": "备注", "resign_operator": "操作人", "resign_op_date": "操作日期"
     }
     rename_id = {
         "id_nomor": "ID", "name_nama": "Nama", "company": "Perusahaan", "ws_bengkel": "Bengkel", "team_grup": "Grup",
         "gender_jk": "JK", "pos_cn_jabatan": "Jabatan (CN)", "pos_id_jabatan": "Jabatan (ID)",
         "nat_negara": "Kewarganegaraan", "rel_agama": "Agama", "id_card": "Nomor KTP",
         "hire_date": "Tgl Masuk", "contract_end": "Kontrak Berakhir", "status_status": "Status",
-        "resign_date": "Tgl Resign", "remark_ket": "Keterangan"
+        "resign_date": "Tgl Resign", "remark_ket": "Keterangan", "resign_operator": "Operator", "resign_op_date": "Tanggal Operasi"
     }
     rename = rename_id if lang == "id" else rename_zh
     df.rename(columns=rename, inplace=True)
@@ -422,7 +429,7 @@ def cost_report_export(
         "id_nomor", "name_nama", "company", "ws_bengkel", "team_grup",
         "gender_jk", "pos_cn_jabatan", "pos_id_jabatan", "nat_negara",
         "rel_agama", "id_card", "hire_date", "contract_end",
-        "status_status", "resign_date", "remark_ket"
+        "status_status", "resign_date", "remark_ket", "resign_operator", "resign_op_date"
     ]
     if fields:
         selected_fields = [f.strip() for f in fields.split(",") if f.strip() in all_available]
@@ -440,7 +447,8 @@ def cost_report_export(
         "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
         "nat_negara": "国籍", "rel_agama": "宗教", "id_card": "身份证号",
         "hire_date": "入职日期", "contract_end": "合同到期日",
-        "status_status": "状态", "resign_date": "离职日期", "remark_ket": "备注"
+        "status_status": "状态", "resign_date": "离职日期", "remark_ket": "备注",
+        "resign_operator": "操作人", "resign_op_date": "操作日期"
     }
 
     # 获取自定义列名（保留换行符）
@@ -574,6 +582,14 @@ def import_excel(
                         continue
 
             existing = get_employee(db, id_num)
+            status_val = clean_data.get("status_status")
+            if status_val and ("离职" in status_val or "resign" in status_val.lower()):
+                if existing and existing.get("resign_op_date"):
+                    clean_data["resign_op_date"] = existing["resign_op_date"]
+                else:
+                    clean_data["resign_op_date"] = clean_data.get("resign_date") or now[:10]
+            else:
+                clean_data["resign_op_date"] = None
             if existing:
                 clean_data.pop('updated_at', None)
                 clean_data.pop('created_at', None)
@@ -687,7 +703,15 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
         select(employees.c.id_card, employees.c.nat_negara, employees.c.birth_date)
         .where(employees.c.status_status.contains("在职"))
     )).fetchall()
+    china_count = 0
+    non_china_count = 0
     for row in rows:
+        nat = (row.nat_negara or "").strip()
+        is_cn = any(x in nat.lower() for x in ["中国籍", "china", "cn"])
+        if is_cn:
+            china_count += 1
+        else:
+            non_china_count += 1
         birth = None
         # 优先从 id_card 提取出生日期
         if row.id_card:
@@ -729,8 +753,14 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
     monthly_resign = []
     for i in range(11, -1, -1):
         month = (datetime.now().replace(day=1) - timedelta(days=i*30)).strftime("%Y-%m")
-        cnt = db.execute(apply_ws_filter(select(func.count()).where(employees.c.status_status.contains("离职"), employees.c.resign_date.like(f"{month}%")))).scalar()
-        monthly_resign.append({"month": month, "count": cnt})
+        resign_cnt = db.execute(apply_ws_filter(select(func.count()).where(employees.c.status_status.contains("离职"), employees.c.resign_date.like(f"{month}%")))).scalar()
+        hire_cnt = db.execute(apply_ws_filter(select(func.count()).where(employees.c.hire_date.like(f"{month}%")))).scalar()
+        monthly_resign.append({
+            "month": month,
+            "count": resign_cnt or 0,
+            "resign_count": resign_cnt or 0,
+            "hire_count": hire_cnt or 0
+        })
     
     resign_ws_dist = db.execute(
         apply_ws_filter(
@@ -773,10 +803,20 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
         except Exception as e:
             logger.error(f"Dashboard quota calculation failed: {e}")
 
+    if china_count > 0:
+        val = non_china_count / china_count
+        if val.is_integer():
+            localization_rate = f"1:{int(val)}"
+        else:
+            localization_rate = f"1:{val:.1f}"
+    else:
+        localization_rate = "N/A"
+
     return {
         "total_active": active, "total_resigned": resigned,
         "total_quota": quota_total,
         "quota_by_ws": quota_by_ws,
+        "localization_rate": localization_rate,
         "workshop_distribution": [{"name": r[0] or "未知", "count": r[1]} for r in ws_dist],
         "nation_distribution": [{"name": r[0] or "未知", "count": r[1]} for r in nation_dist],
         "gender_distribution": [{"name": r[0] or "未知", "count": r[1]} for r in gender_dist],
@@ -827,9 +867,9 @@ def get_birthday_reminders(days: int = 7, db=Depends(get_db), current_user=Depen
 
 # ---------- 组织架构接口 ----------
 @router.get("/api/org_chart_data")
-def get_org_chart_data(db=Depends(get_db), current_user=Depends(get_current_user)):
-    """获取组织架构数据，人数始终来自在职员工实时统计。"""
-    return build_org_chart(db, current_user)
+def get_org_chart_data(query_date: Optional[str] = None, db=Depends(get_db), current_user=Depends(get_current_user)):
+    """获取组织架构数据，支持查询历史快照。"""
+    return build_org_chart(db, current_user, query_date=query_date)
 
 @router.get("/api/org_chart_editable")
 def get_org_chart_editable(db=Depends(get_db), current_user=Depends(get_current_user)):
