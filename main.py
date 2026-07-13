@@ -3,6 +3,7 @@
 # ============================================
 import os
 import logging
+import secrets
 import bcrypt
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -153,7 +154,15 @@ def init_admin():
     with SessionLocal() as db:
         user = db.execute(select(users).where(users.c.username == "admin")).first()
         if not user:
-            hashed = bcrypt.hashpw(b"iwip123", bcrypt.gensalt()).decode('utf-8')
+            admin_password = os.getenv("ADMIN_INITIAL_PASSWORD")
+            if not admin_password:
+                admin_password = secrets.token_urlsafe(16)
+                logger.warning(
+                    "ADMIN_INITIAL_PASSWORD not set. Generated a random initial admin "
+                    "password (shown once): %s -- change it after first login.",
+                    admin_password,
+                )
+            hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             db.execute(insert(users).values(username="admin", hashed_password=hashed, role="admin"))
             db.commit()
 init_admin()
@@ -161,10 +170,19 @@ init_admin()
 app = FastAPI(title="后勤三部人事管理系统")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# A wildcard origin cannot be combined with credentials (browsers reject it and
+# it is insecure). Only enable credentials when explicit origins are configured.
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS if o.strip()]
+_allow_credentials = "*" not in _cors_origins
+if not _allow_credentials:
+    logger.warning(
+        "CORS_ORIGINS is set to '*'; credentialed cross-origin requests are disabled. "
+        "Configure explicit origins for production."
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"]
 )

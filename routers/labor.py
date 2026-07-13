@@ -23,7 +23,7 @@ class AssignmentUpdate(BaseModel):
 
 # ========== 劳保用品 API ==========
 @router.get("/api/labor/items")
-def get_labor_items(db=Depends(get_db)):
+def get_labor_items(db=Depends(get_db), current_user=Depends(get_current_user)):
     return [dict(r._mapping) for r in db.execute(select(labor_items)).fetchall()]
 
 @router.post("/api/labor/items")
@@ -86,7 +86,7 @@ def delete_labor_item(
     return {"status": "success"}
 
 @router.get("/api/labor/inventory")
-def get_inventory(db=Depends(get_db), item_id: int = None):
+def get_inventory(db=Depends(get_db), item_id: int = None, current_user=Depends(get_current_user)):
     items = db.execute(select(labor_items)).fetchall()
     result = []
     for item in items:

@@ -105,6 +105,11 @@ pythonenv*/
 *.swp
 *.swo
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
 # Project specific
 uploads/
 exports/

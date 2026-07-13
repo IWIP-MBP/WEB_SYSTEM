@@ -117,6 +117,9 @@ def restore_backup(
         raise HTTPException(403, "只有管理员可以执行还原操作")
         
     filename = body.filename
+    # Prevent path traversal: only allow a bare backup filename within BACKUP_DIR.
+    if filename != os.path.basename(filename) or not (filename.startswith("backup_") and filename.endswith(".dump")):
+        raise HTTPException(400, "非法的备份文件名")
     filepath = os.path.join(BACKUP_DIR, filename)
     if not os.path.exists(filepath):
         raise HTTPException(404, "未找到指定的备份文件")

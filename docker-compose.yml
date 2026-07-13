@@ -4,16 +4,16 @@ services:
     container_name: hr_db
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: iwip123
-      POSTGRES_DB: hr_system
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-hr_system}
       TZ: Asia/Tokyo
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d hr_system"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,9 +28,10 @@ services:
       db:
         condition: service_healthy     # 等待数据库健康检查通过
     environment:
-      DATABASE_URL: postgresql://admin:iwip123@db:5432/hr_system   # 注意主机名是 db
-      SECRET_KEY: iwip-secret-key-change-in-production
-      CORS_ORIGINS: "*"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-hr_system}   # 注意主机名是 db
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS must be set (comma-separated origins, do not use *)}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
       TZ: Asia/Tokyo
     ports:
       - "8000:8000"
