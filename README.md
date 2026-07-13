@@ -91,9 +91,12 @@ graph TD
 ## 🚀 部署与运行 (Quick Start)
 
 ### 1. 配置环境变量 (Environment Variables)
-在 `docker-compose.yml` 中或宿主机环境变量中设置：
-*   `DATABASE_URL`：数据库连接串，例如：`postgresql://admin:iwip123@db:5432/hr_system`
-*   `SECRET_KEY`：JWT 签名私钥，生产环境请务必更改。
+复制 `.env.example` 为 `.env` 并填入真实值（`.env` 已被 Git 忽略，请勿提交）。`docker-compose.yml` 会从中读取以下变量：
+*   `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`：数据库账号、密码与库名（必填）。
+*   `SECRET_KEY`：JWT 签名私钥，必填，生产环境务必使用长随机值（`python -c "import secrets; print(secrets.token_urlsafe(48))"`）。
+*   `CORS_ORIGINS`：允许的跨域来源列表（逗号分隔），生产环境请勿使用 `*`。
+*   `ADMIN_INITIAL_PASSWORD`：首次创建 admin 账号时使用的初始密码；留空则启动时随机生成并在日志中打印一次。
+*   `DATABASE_URL`：由上述变量自动拼接，也可直接覆盖。
 
 ### 2. 启动服务 (Launch)
 在项目根目录下，执行一条命令编译并启动所有容器服务：

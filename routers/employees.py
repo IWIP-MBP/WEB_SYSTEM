@@ -1074,7 +1074,7 @@ def save_org_quota(data: dict, db=Depends(get_db), current_user=Depends(get_curr
 
 # ---------- 元数据维护接口 ----------
 @router.get("/api/meta/国籍")
-def get_nationalities(db=Depends(get_db)):
+def get_nationalities(db=Depends(get_db), current_user=Depends(get_current_user)):
     rows = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "国籍")).fetchall()
     if rows:
         return [r[0] for r in rows]
@@ -1082,17 +1082,17 @@ def get_nationalities(db=Depends(get_db)):
     return [r[0] for r in rows if r[0] and r[0].strip()]
 
 @router.get("/api/meta/性别")
-def get_genders(db=Depends(get_db)):
+def get_genders(db=Depends(get_db), current_user=Depends(get_current_user)):
     rows = db.execute(select(employees.c.gender_jk).distinct()).fetchall()
     return [r[0] for r in rows if r[0] and r[0].strip()]
 
 @router.get("/api/meta/宗教")
-def get_religions(db=Depends(get_db)):
+def get_religions(db=Depends(get_db), current_user=Depends(get_current_user)):
     rows = db.execute(select(employees.c.rel_agama).distinct()).fetchall()
     return [r[0] for r in rows if r[0] and r[0].strip()]
 
 @router.get("/api/meta/{m_type}")
-def get_meta(m_type: str, db=Depends(get_db)):
+def get_meta(m_type: str, db=Depends(get_db), current_user=Depends(get_current_user)):
     return [v[0] for v in db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == m_type)).fetchall()]
 
 @router.post("/api/meta/add")

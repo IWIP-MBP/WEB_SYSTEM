@@ -88,6 +88,9 @@ def restore_db_backup(filename: str):
     """
     使用 pg_restore 结合 --clean 清除原库结构后，还原数据库。
     """
+    # Defense in depth: reject any path component to avoid traversal outside BACKUP_DIR.
+    if filename != os.path.basename(filename):
+        raise ValueError(f"非法的备份文件名: {filename}")
     filepath = os.path.join(BACKUP_DIR, filename)
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"未找到指定的备份文件: {filename}")
