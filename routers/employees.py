@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from database import get_db, settings
 from models import employees, config_meta, users, employee_transfers, labor_assignments, log_audit
-from services.auth import get_current_user
+from services.auth import get_current_user, ensure_admin
 from services.audit import write_audit
 from services.org_chart import build_org_chart, validate_org_nodes
 from services.utils import (
@@ -22,7 +22,17 @@ from services.utils import (
     clean_id_card,
     extract_birth_date_from_id_card,
     add_meta_if_not_exists,
-    record_transfer
+    record_transfer,
+    is_chinese_nationality,
+    compute_localization_rate,
+)
+from services.permissions import parse_ws_scope, apply_ws_scope_filter, ensure_workshop_in_scope
+from services.export_utils import (
+    EMPLOYEE_LABELS_ZH,
+    EMPLOYEE_LABELS_ID,
+    dataframe_to_xlsx_bytes,
+    xlsx_response,
+    timestamped_filename,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,22 +57,12 @@ class EmployeeSave(BaseModel):
 # ---------- 员工恢复 ----------
 @router.post("/api/employees/restore")
 def restore_employee(request: Request, db=Depends(get_db), current_user=Depends(get_current_user), id_nomor: str = ""):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can restore employees")
+    ensure_admin(current_user, "Only admin can restore employees")
     emp = get_employee(db, id_nomor)
     if not emp:
         raise HTTPException(404, "Employee not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and emp.get("ws_bengkel") not in allowed:
-                raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
             
     if "在职" in emp["status_status"]:
         raise HTTPException(400, "Employee is already active")
@@ -96,16 +96,7 @@ def get_employees(
     if nation: query = query.where(employees.c.nat_negara == nation)
     if gender: query = query.where(employees.c.gender_jk == gender)
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.where(employees.c.ws_bengkel.in_(allowed))
-            else:
-                query = query.where(employees.c.ws_bengkel == "__NONE__")
-        except:
-            pass
+    query = apply_ws_scope_filter(query, employees.c.ws_bengkel, current_user, restrict_when_empty=True)
 
     total = db.execute(select(func.count()).select_from(query.subquery())).scalar()
     order_by_col = desc(employees.c.resign_date) if status and ("离职" in status or "resign" in status.lower()) else desc(employees.c.id)
@@ -117,16 +108,7 @@ def get_employee_by_id(id_nomor: str, db=Depends(get_db), current_user=Depends(g
     emp = get_employee(db, id_nomor)
     if not emp: raise HTTPException(404, "Employee not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and emp.get("ws_bengkel") not in allowed:
-                raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
     return emp
 
 @router.post("/api/employees/save")
@@ -138,8 +120,7 @@ def save_employee(
     is_update: bool = False,
     original_id: Optional[str] = Query(None)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can modify employee data")
+    ensure_admin(current_user, "Only admin can modify employee data")
     try:
         payload = data.dict(exclude_unset=True)
         if payload.get("id_card"):
@@ -148,21 +129,13 @@ def save_employee(
         old_id = original_id if original_id else payload.get("id_nomor")
         emp = get_employee(db, old_id)
         
-        ws_scope_str = current_user.get("ws_scope")
-        if ws_scope_str:
-            try:
-                allowed = json.loads(ws_scope_str)
-                if isinstance(allowed, list):
-                    target_ws = payload.get("ws_bengkel")
-                    if target_ws not in allowed:
-                        raise HTTPException(403, f"Permission denied: Workshop '{target_ws}' is not in your allowed workshops")
-                    if is_update and emp:
-                        if emp.get("ws_bengkel") not in allowed:
-                            raise HTTPException(403, f"Permission denied: Employee is currently in restricted workshop '{emp.get('ws_bengkel')}'")
-            except HTTPException:
-                raise
-            except Exception as e:
-                raise HTTPException(400, f"Permission verification failed: {str(e)}")
+        allowed = parse_ws_scope(current_user)
+        if allowed is not None:
+            target_ws = payload.get("ws_bengkel")
+            if target_ws not in allowed:
+                raise HTTPException(403, f"Permission denied: Workshop '{target_ws}' is not in your allowed workshops")
+            if is_update and emp and emp.get("ws_bengkel") not in allowed:
+                raise HTTPException(403, f"Permission denied: Employee is currently in restricted workshop '{emp.get('ws_bengkel')}'")
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if is_update and emp:
@@ -229,21 +202,11 @@ def resign(
     reason: str = "",
     resign_date: str = None
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can resign employees")
+    ensure_admin(current_user, "Only admin can resign employees")
     emp = get_employee(db, id_nomor)
     if not emp: raise HTTPException(404, "Employee not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and emp.get("ws_bengkel") not in allowed:
-                raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
     if resign_date:
         try:
             datetime.strptime(resign_date, "%Y-%m-%d")
@@ -273,8 +236,7 @@ def permanent_delete_employee(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can permanently delete employees")
+    ensure_admin(current_user, "Only admin can permanently delete employees")
     
     # 验证管理员密码 (支持大小写容错)
     user_db = db.execute(select(users).where(users.c.username == current_user["username"])).first()
@@ -296,16 +258,7 @@ def permanent_delete_employee(
     if "离职" not in emp["status_status"]:
         raise HTTPException(400, "Only resigned employees can be permanently deleted")
         
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and emp.get("ws_bengkel") not in allowed:
-                raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
             
     db.execute(delete(employees).where(employees.c.id_nomor == id_nomor))
     db.execute(delete(labor_assignments).where(labor_assignments.c.id_nomor == id_nomor))
@@ -328,54 +281,22 @@ def export_employees(
     nation: str = "",
     lang: str = "zh"
 ):
-    if current_user.get("role") != "admin":
-        raise HTTPException(403, "Only admin can export data")
+    ensure_admin(current_user, "Only admin can export data")
     query = select(employees).where(employees.c.status_status.contains(status))
     if ws: query = query.where(employees.c.ws_bengkel == ws)
     if team: query = query.where(employees.c.team_grup == team)
     if nation: query = query.where(employees.c.nat_negara == nation)
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.where(employees.c.ws_bengkel.in_(allowed))
-            else:
-                query = query.where(employees.c.ws_bengkel == "__NONE__")
-        except:
-            pass
+    query = apply_ws_scope_filter(query, employees.c.ws_bengkel, current_user, restrict_when_empty=True)
 
     rows = db.execute(query).fetchall()
     df = pd.DataFrame([dict(r._mapping) for r in rows])
     
-    rename_zh = {
-        "id_nomor": "工号", "name_nama": "姓名", "company": "归属公司", "ws_bengkel": "车间", "team_grup": "班组",
-        "gender_jk": "性别", "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
-        "nat_negara": "国籍", "rel_agama": "宗教", "id_card": "身份证号",
-        "hire_date": "入职日期", "contract_end": "合同到期日", "status_status": "状态",
-        "resign_date": "离职日期", "remark_ket": "备注", "resign_operator": "操作人", "resign_op_date": "操作日期"
-    }
-    rename_id = {
-        "id_nomor": "ID", "name_nama": "Nama", "company": "Perusahaan", "ws_bengkel": "Bengkel", "team_grup": "Grup",
-        "gender_jk": "JK", "pos_cn_jabatan": "Jabatan (CN)", "pos_id_jabatan": "Jabatan (ID)",
-        "nat_negara": "Kewarganegaraan", "rel_agama": "Agama", "id_card": "Nomor KTP",
-        "hire_date": "Tgl Masuk", "contract_end": "Kontrak Berakhir", "status_status": "Status",
-        "resign_date": "Tgl Resign", "remark_ket": "Keterangan", "resign_operator": "Operator", "resign_op_date": "Tanggal Operasi"
-    }
-    rename = rename_id if lang == "id" else rename_zh
+    rename = EMPLOYEE_LABELS_ID if lang == "id" else EMPLOYEE_LABELS_ZH
     df.rename(columns=rename, inplace=True)
     if "出生日期" in df.columns:
         df.drop(columns=["出生日期"], inplace=True)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    output.seek(0)
-    return Response(
-        content=output.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"}
-    )
+    return xlsx_response(dataframe_to_xlsx_bytes(df), timestamped_filename("employees"))
 
 # ---------- 成本报表导出 ----------
 @router.get("/api/employees/cost_report_export")
@@ -387,8 +308,7 @@ def cost_report_export(
     fields: str = "",
     field_labels: str = "{}"
 ):
-    if current_user.get("role") != "admin":
-        raise HTTPException(403, "Only admin can export data")
+    ensure_admin(current_user, "Only admin can export data")
     try:
         if start_date:
             datetime.strptime(start_date, "%Y-%m-%d")
@@ -411,16 +331,7 @@ def cost_report_export(
             )
         )
 
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.where(employees.c.ws_bengkel.in_(allowed))
-            else:
-                query = query.where(employees.c.ws_bengkel == "__NONE__")
-        except:
-            pass
+    query = apply_ws_scope_filter(query, employees.c.ws_bengkel, current_user, restrict_when_empty=True)
 
     rows = db.execute(query.order_by(employees.c.hire_date, employees.c.id_nomor)).fetchall()
     df = pd.DataFrame([dict(r._mapping) for r in rows])
@@ -441,15 +352,7 @@ def cost_report_export(
     except:
         custom_labels = {}
 
-    default_labels = {
-        "id_nomor": "工号", "name_nama": "姓名", "company": "归属公司",
-        "ws_bengkel": "车间", "team_grup": "班组", "gender_jk": "性别",
-        "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
-        "nat_negara": "国籍", "rel_agama": "宗教", "id_card": "身份证号",
-        "hire_date": "入职日期", "contract_end": "合同到期日",
-        "status_status": "状态", "resign_date": "离职日期", "remark_ket": "备注",
-        "resign_operator": "操作人", "resign_op_date": "操作日期"
-    }
+    default_labels = EMPLOYEE_LABELS_ZH
 
     # 获取自定义列名（保留换行符）
     headers = []
@@ -485,12 +388,7 @@ def cost_report_export(
             for cell in worksheet[1]:
                 cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
     output.seek(0)
-    filename = f"cost_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    return Response(
-        content=output.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    return xlsx_response(output.getvalue(), timestamped_filename("cost_report"))
 
 @router.post("/api/employees/import")
 def import_excel(
@@ -499,8 +397,7 @@ def import_excel(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can import data")
+    ensure_admin(current_user, "Only admin can import data")
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(400, "Excel file required")
     df = pd.read_excel(io.BytesIO(file.file.read()))
@@ -568,18 +465,16 @@ def import_excel(
         try:
             clean_data = {k: (None if pd.isna(v) else str(v)) for k, v in data.items()}
             
-            ws_scope_str = current_user.get("ws_scope")
-            if ws_scope_str:
-                allowed = json.loads(ws_scope_str)
-                if isinstance(allowed, list) and len(allowed) > 0:
-                    ws_val = clean_data.get("ws_bengkel")
-                    if ws_val not in allowed:
-                        errors.append(f"第{idx+2}行 (工号={id_num}): 车间 '{ws_val}' 不在您允许的操作范围内")
-                        continue
-                    existing_check = get_employee(db, id_num)
-                    if existing_check and existing_check.get("ws_bengkel") not in allowed:
-                        errors.append(f"第{idx+2}行 (工号={id_num}): 员工当前属于受限车间 '{existing_check.get('ws_bengkel')}'，无权修改")
-                        continue
+            allowed = parse_ws_scope(current_user)
+            if allowed:
+                ws_val = clean_data.get("ws_bengkel")
+                if ws_val not in allowed:
+                    errors.append(f"第{idx+2}行 (工号={id_num}): 车间 '{ws_val}' 不在您允许的操作范围内")
+                    continue
+                existing_check = get_employee(db, id_num)
+                if existing_check and existing_check.get("ws_bengkel") not in allowed:
+                    errors.append(f"第{idx+2}行 (工号={id_num}): 员工当前属于受限车间 '{existing_check.get('ws_bengkel')}'，无权修改")
+                    continue
 
             existing = get_employee(db, id_num)
             status_val = clean_data.get("status_status")
@@ -627,43 +522,30 @@ def import_excel(
 @router.get("/api/employee/transfers")
 def get_transfers(db=Depends(get_db), current_user=Depends(get_current_user)):
     stmt = select(employee_transfers)
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                stmt = stmt.select_from(
-                    employee_transfers.join(employees, employee_transfers.c.id_nomor == employees.c.id_nomor)
-                ).where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        stmt = stmt.select_from(
+            employee_transfers.join(employees, employee_transfers.c.id_nomor == employees.c.id_nomor)
+        ).where(employees.c.ws_bengkel.in_(allowed))
     rows = db.execute(stmt.order_by(desc(employee_transfers.c.id))).fetchall()
     return [dict(r._mapping) for r in rows]
 
 @router.delete("/api/employee/transfers")
 def delete_transfers(ids: List[int] = Query([]), db=Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Permission denied")
+    ensure_admin(current_user, "Permission denied")
     if not ids:
         raise HTTPException(status_code=400, detail="No IDs provided")
 
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                records = db.execute(
-                    select(employee_transfers.c.id, employees.c.ws_bengkel)
-                    .select_from(employee_transfers.outerjoin(employees, employee_transfers.c.id_nomor == employees.c.id_nomor))
-                    .where(employee_transfers.c.id.in_(ids))
-                ).fetchall()
-                for r in records:
-                    if r.ws_bengkel not in allowed:
-                        raise HTTPException(status_code=403, detail="Permission denied: transfer record is for a workshop not in your scope")
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Permission check failed: {str(e)}")
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        records = db.execute(
+            select(employee_transfers.c.id, employees.c.ws_bengkel)
+            .select_from(employee_transfers.outerjoin(employees, employee_transfers.c.id_nomor == employees.c.id_nomor))
+            .where(employee_transfers.c.id.in_(ids))
+        ).fetchall()
+        for r in records:
+            if r.ws_bengkel not in allowed:
+                raise HTTPException(status_code=403, detail="Permission denied: transfer record is for a workshop not in your scope")
 
     try:
         del_stmt = delete(employee_transfers).where(employee_transfers.c.id.in_(ids))
@@ -678,13 +560,7 @@ def delete_transfers(ids: List[int] = Query([]), db=Depends(get_db), current_use
 # 仪表盘
 @router.get("/api/dashboard")
 def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
-    ws_scope_str = current_user.get("ws_scope")
-    allowed = []
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-        except:
-            pass
+    allowed = parse_ws_scope(current_user) or []
 
     def apply_ws_filter(stmt, col=employees.c.ws_bengkel):
         if allowed:
@@ -706,8 +582,7 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
     china_count = 0
     non_china_count = 0
     for row in rows:
-        nat = (row.nat_negara or "").strip()
-        is_cn = any(x in nat.lower() for x in ["中国籍", "china", "cn"])
+        is_cn = is_chinese_nationality(row.nat_negara)
         if is_cn:
             china_count += 1
         else:
@@ -803,14 +678,7 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
         except Exception as e:
             logger.error(f"Dashboard quota calculation failed: {e}")
 
-    if china_count > 0:
-        val = non_china_count / china_count
-        if val.is_integer():
-            localization_rate = f"1:{int(val)}"
-        else:
-            localization_rate = f"1:{val:.1f}"
-    else:
-        localization_rate = "N/A"
+    localization_rate = compute_localization_rate(china_count, non_china_count)
 
     return {
         "total_active": active, "total_resigned": resigned,
@@ -836,16 +704,7 @@ def get_birthday_reminders(days: int = 7, db=Depends(get_db), current_user=Depen
     today = date.today()
     reminders = []
     stmt = select(employees).where(employees.c.status_status.contains("在职"))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
-            else:
-                stmt = stmt.where(employees.c.ws_bengkel == "__NONE__")
-        except:
-            pass
+    stmt = apply_ws_scope_filter(stmt, employees.c.ws_bengkel, current_user, restrict_when_empty=True)
     rows = db.execute(stmt).fetchall()
     for row in rows:
         emp = dict(row._mapping)
@@ -880,14 +739,7 @@ def get_org_chart_editable(db=Depends(get_db), current_user=Depends(get_current_
         func.count().label("cnt")
     ).where(employees.c.status_status.contains("在职"))
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    stmt = apply_ws_scope_filter(stmt, employees.c.ws_bengkel, current_user)
             
     rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
     
@@ -925,14 +777,7 @@ def get_org_graph(db=Depends(get_db), current_user=Depends(get_current_user)):
         func.count().label("cnt")
     ).where(employees.c.status_status.contains("在职"))
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    stmt = apply_ws_scope_filter(stmt, employees.c.ws_bengkel, current_user)
             
     rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
     
@@ -971,8 +816,7 @@ def get_org_graph(db=Depends(get_db), current_user=Depends(get_current_user)):
 
 @router.post("/org_chart/save_layout")
 def save_org_layout(data: dict, db=Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can save layout")
+    ensure_admin(current_user, "Only admin can save layout")
     nodes = data.get("nodes", [])
     validate_org_nodes(nodes)
     payload = []
@@ -994,8 +838,7 @@ def save_org_layout(data: dict, db=Depends(get_db), current_user=Depends(get_cur
 
 @router.post("/api/org_chart/reset_layout")
 def reset_org_layout(db=Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can reset layout")
+    ensure_admin(current_user, "Only admin can reset layout")
     db.execute(delete(config_meta).where(config_meta.c.meta_type == "org_layout"))
     db.commit()
     return {"status": "success"}
@@ -1010,56 +853,48 @@ def get_org_quota(db=Depends(get_db), current_user=Depends(get_current_user)):
     except:
         return {}
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                filtered_quota = {}
-                for k, v in quota_data.items():
-                    parts = k.split("::")
-                    if len(parts) >= 2:
-                        ws = parts[1]
-                        if ws in allowed:
-                            filtered_quota[k] = v
-                return filtered_quota
-        except Exception as e:
-            logger.error(f"Error filtering quota: {e}")
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        filtered_quota = {}
+        for k, v in quota_data.items():
+            parts = k.split("::")
+            if len(parts) >= 2:
+                ws = parts[1]
+                if ws in allowed:
+                    filtered_quota[k] = v
+        return filtered_quota
     return quota_data
 
 @router.post("/api/org_chart/quota")
 def save_org_quota(data: dict, db=Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can save quota")
+    ensure_admin(current_user, "Only admin can save quota")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
+    allowed = parse_ws_scope(current_user)
+    if allowed:
         try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                existing = db.execute(select(config_meta).where(config_meta.c.meta_type == "org_quota")).first()
-                existing_data = {}
-                if existing and existing.meta_value:
-                    existing_data = json.loads(existing.meta_value)
-                
-                final_quota = {}
-                # Keep keys outside the user's allowed scope
-                for k, v in existing_data.items():
-                    parts = k.split("::")
-                    if len(parts) >= 2:
-                        ws = parts[1]
-                        if ws not in allowed:
-                            final_quota[k] = v
-                            
-                # Merge user's updated keys within their allowed scope
-                for k, v in data.items():
-                    parts = k.split("::")
-                    if len(parts) >= 2:
-                        ws = parts[1]
-                        if ws in allowed:
-                            if any(int(val) > 0 for val in v.values()):
-                                final_quota[k] = {nat: int(val) for nat, val in v.items() if int(val) > 0}
-                data = final_quota
+            existing = db.execute(select(config_meta).where(config_meta.c.meta_type == "org_quota")).first()
+            existing_data = {}
+            if existing and existing.meta_value:
+                existing_data = json.loads(existing.meta_value)
+
+            final_quota = {}
+            # Keep keys outside the user's allowed scope
+            for k, v in existing_data.items():
+                parts = k.split("::")
+                if len(parts) >= 2:
+                    ws = parts[1]
+                    if ws not in allowed:
+                        final_quota[k] = v
+
+            # Merge user's updated keys within their allowed scope
+            for k, v in data.items():
+                parts = k.split("::")
+                if len(parts) >= 2:
+                    ws = parts[1]
+                    if ws in allowed:
+                        if any(int(val) > 0 for val in v.values()):
+                            final_quota[k] = {nat: int(val) for nat, val in v.items() if int(val) > 0}
+            data = final_quota
         except Exception as e:
             logger.error(f"Error merging quota on save: {e}")
             raise HTTPException(400, f"Error saving quota: {str(e)}")
@@ -1103,20 +938,11 @@ def add_meta(
     m_type: str = "",
     value: str = ""
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can modify metadata")
+    ensure_admin(current_user, "Only admin can modify metadata")
 
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                if m_type == "车间" and value.strip() not in allowed:
-                    raise HTTPException(403, "Permission denied: you can only add workshops within your scope")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed and m_type == "车间" and value.strip() not in allowed:
+        raise HTTPException(403, "Permission denied: you can only add workshops within your scope")
 
     if not value.strip(): raise HTTPException(400)
     db.execute(insert(config_meta).values(meta_type=m_type, meta_value=value.strip()))
@@ -1133,20 +959,11 @@ def update_meta(
     old_val: str = "",
     new_val: str = ""
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can modify metadata")
+    ensure_admin(current_user, "Only admin can modify metadata")
 
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                if m_type == "车间" and old_val.strip() not in allowed:
-                    raise HTTPException(403, "Permission denied: you can only update workshops within your scope")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed and m_type == "车间" and old_val.strip() not in allowed:
+        raise HTTPException(403, "Permission denied: you can only update workshops within your scope")
 
     if not new_val.strip(): raise HTTPException(400)
     db.execute(update(config_meta).where(config_meta.c.meta_type==m_type, config_meta.c.meta_value==old_val).values(meta_value=new_val.strip()))
@@ -1166,20 +983,11 @@ def delete_meta(
     m_type: str = "",
     value: str = ""
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can modify metadata")
+    ensure_admin(current_user, "Only admin can modify metadata")
 
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                if m_type == "车间" and value.strip() not in allowed:
-                    raise HTTPException(403, "Permission denied: you can only delete workshops within your scope")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed and m_type == "车间" and value.strip() not in allowed:
+        raise HTTPException(403, "Permission denied: you can only delete workshops within your scope")
     if m_type == "车间":
         ref = db.execute(select(func.count()).where(employees.c.ws_bengkel == value)).scalar()
     elif m_type == "班组":
@@ -1196,8 +1004,7 @@ def delete_meta(
 # ---------- Logo ----------
 @router.post("/api/settings/logo")
 async def upload_logo(file: UploadFile = File(...), current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can upload logo")
+    ensure_admin(current_user, "Only admin can upload logo")
     if not file or not file.filename:
         raise HTTPException(400, "No file uploaded")
     ext = os.path.splitext(file.filename)[1].lower()

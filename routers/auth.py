@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSo
 from sqlalchemy import select, insert, update, delete, text
 from database import get_db, SessionLocal
 from models import users, active_sessions
-from services.auth import create_token, get_current_user, verify_token
+from services.auth import create_token, get_current_user, verify_token, ensure_admin
 from services.audit import write_audit
-from services.utils import get_mac_address_from_arp, clean_sessions, is_real_ip
+from services.utils import get_mac_address_from_arp, clean_sessions, is_real_ip, get_client_ip
 from services.websocket_manager import manager, broadcast_online_users
 from services.limiter import limiter
 from pydantic import BaseModel
@@ -35,8 +35,7 @@ def login(username: str, password: str, request: Request, db=Depends(get_db)):
 
 @router.get("/api/users")
 def get_users(db=Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can list users")
+    ensure_admin(current_user, "Only admin can list users")
     rows = db.execute(select(users.c.id, users.c.username, users.c.role, users.c.ws_scope)).fetchall()
     return {"users": [{"id": r.id, "username": r.username, "role": r.role, "ws_scope": r.ws_scope} for r in rows]}
 
@@ -47,8 +46,7 @@ def create_user(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can create users")
+    ensure_admin(current_user, "Only admin can create users")
     existing = db.execute(select(users).where(users.c.username == user.username)).first()
     if existing:
         raise HTTPException(400, "Username already exists")
@@ -67,8 +65,7 @@ def update_user_role(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can change roles/permissions")
+    ensure_admin(current_user, "Only admin can change roles/permissions")
     if role not in ["viewer", "admin"]:
         raise HTTPException(400, "Invalid role")
     target = db.execute(select(users).where(users.c.id == user_id)).first()
@@ -90,8 +87,7 @@ def delete_user(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can delete users")
+    ensure_admin(current_user, "Only admin can delete users")
     target = db.execute(select(users).where(users.c.id == user_id)).first()
     if not target:
         raise HTTPException(404, "User not found")
@@ -104,15 +100,7 @@ def delete_user(
 
 @router.post("/api/sessions/heartbeat")
 def heartbeat(request: Request, mac: Optional[str] = None, db=Depends(get_db), current_user=Depends(get_current_user)):
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-    else:
-        real_ip = request.headers.get("X-Real-IP")
-        if real_ip:
-            client_ip = real_ip
-        else:
-            client_ip = request.client.host
+    client_ip = get_client_ip(request)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     detected_mac = get_mac_address_from_arp(client_ip)
@@ -141,16 +129,7 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         return
     
     username = payload.get("sub")
-    
-    forwarded = websocket.headers.get("X-Forwarded-For")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-    else:
-        real_ip = websocket.headers.get("X-Real-IP")
-        if real_ip:
-            client_ip = real_ip
-        else:
-            client_ip = websocket.client.host if websocket.client else "unknown"
+    client_ip = get_client_ip(websocket)
 
     user_key = f"{username}@{client_ip}"
     await manager.connect(websocket, user_key)

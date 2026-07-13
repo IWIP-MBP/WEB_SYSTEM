@@ -5,7 +5,7 @@ import subprocess
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from services.utils import parse_db_url
+from services.utils import parse_db_url, pg_env, pg_conn_args, decode_pg_error
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -60,27 +60,15 @@ def create_db_backup() -> str:
     filepath = os.path.join(BACKUP_DIR, filename)
     
     # pg_dump 命令参数，使用 -F c 输出自定义压缩包，利于 pg_restore 高效还原
-    args = [
-        "pg_dump",
-        "-h", db_info["host"],
-        "-p", str(db_info["port"]),
-        "-U", db_info["user"],
-        "-F", "c",
-        "-f", filepath,
-        db_info["dbname"]
-    ]
-    
-    env = os.environ.copy()
-    if db_info.get("password"):
-        env["PGPASSWORD"] = db_info["password"]
-        
+    args = ["pg_dump", *pg_conn_args(db_info), "-F", "c", "-f", filepath, db_info["dbname"]]
+
     try:
         logger.info(f"正在启动数据库自动/手动备份至 {filepath}...")
-        subprocess.run(args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(args, env=pg_env(db_info), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         logger.info(f"数据库备份创建成功: {filename}")
         return filepath
     except subprocess.CalledProcessError as e:
-        stderr_msg = e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e)
+        stderr_msg = decode_pg_error(e)
         logger.error(f"数据库备份失败: {stderr_msg}")
         raise RuntimeError(f"数据库备份失败: {stderr_msg}")
 
@@ -95,26 +83,14 @@ def restore_db_backup(filename: str):
     db_info = parse_db_url()
     
     # pg_restore 参数：使用 --clean (-c) 清除已有对象，确保还原干净
-    args = [
-        "pg_restore",
-        "-h", db_info["host"],
-        "-p", str(db_info["port"]),
-        "-U", db_info["user"],
-        "-d", db_info["dbname"],
-        "-c",
-        filepath
-    ]
-    
-    env = os.environ.copy()
-    if db_info.get("password"):
-        env["PGPASSWORD"] = db_info["password"]
-        
+    args = ["pg_restore", *pg_conn_args(db_info), "-d", db_info["dbname"], "-c", filepath]
+
     try:
         logger.info(f"正在从备份文件 {filename} 还原数据库...")
-        subprocess.run(args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(args, env=pg_env(db_info), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         logger.info(f"数据库已成功从备份 {filename} 还原！")
     except subprocess.CalledProcessError as e:
-        stderr_msg = e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e)
+        stderr_msg = decode_pg_error(e)
         logger.error(f"数据库还原失败: {stderr_msg}")
         raise RuntimeError(f"数据库还原失败: {stderr_msg}")
 

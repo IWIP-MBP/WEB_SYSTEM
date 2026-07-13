@@ -10,6 +10,49 @@ from database import settings
 
 logger = logging.getLogger(__name__)
 
+def get_client_ip(source, default: str = "unknown") -> str:
+    """从 Request 或 WebSocket 中解析真实客户端 IP。
+
+    优先级：X-Forwarded-For（取首个）> X-Real-IP > 直连 client.host。
+    """
+    forwarded = source.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = source.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+    return source.client.host if source.client else default
+
+def is_chinese_nationality(nationality) -> bool:
+    """根据国籍字段判断是否为中国籍（兼容中英文写法）。"""
+    nat = (nationality or "").strip().lower()
+    return any(x in nat for x in ["中国籍", "china", "cn"])
+
+def compute_localization_rate(china_count: int, non_china_count: int) -> str:
+    """计算本土化率，返回形如 "1:2" / "1:2.5" 的字符串，无中国籍时返回 "N/A"。"""
+    if china_count > 0:
+        val = non_china_count / china_count
+        if val.is_integer():
+            return f"1:{int(val)}"
+        return f"1:{val:.1f}"
+    return "N/A"
+
+def pg_env(db_info):
+    """构造包含 PGPASSWORD 的 PostgreSQL 命令行环境变量。"""
+    env = os.environ.copy()
+    if db_info.get("password"):
+        env["PGPASSWORD"] = db_info["password"]
+    return env
+
+def pg_conn_args(db_info):
+    """构造 PostgreSQL 客户端通用连接参数 (-h/-p/-U)。"""
+    return ["-h", db_info["host"], "-p", str(db_info["port"]), "-U", db_info["user"]]
+
+def decode_pg_error(exc) -> str:
+    """将 subprocess 抛出的 PostgreSQL 命令错误解码为可读字符串。"""
+    stderr = exc.stderr.decode("utf-8", errors="replace") if getattr(exc, "stderr", None) else str(exc)
+    return stderr.strip() or str(exc)
+
 def is_real_ip(ip: str) -> bool:
     if not ip:
         return False

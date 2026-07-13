@@ -8,10 +8,11 @@ from pydantic import BaseModel
 
 from database import get_db
 from models import labor_items, labor_inventory, labor_assignments, employees
-from services.auth import get_current_user
+from services.auth import get_current_user, ensure_admin
 from services.audit import write_audit
 from services.labor_service import get_item_stock
 from services.utils import get_employee
+from services.permissions import parse_ws_scope, apply_ws_scope_filter, ensure_workshop_in_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,8 +38,7 @@ def add_labor_item(
     default_cycle_days: int = 90,
     safety_stock: int = 0
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can add items")
+    ensure_admin(current_user, "Only admin can add items")
     db.execute(insert(labor_items).values(item_name=item_name, item_spec=spec, unit=unit, default_cycle_days=default_cycle_days, safety_stock=safety_stock))
     db.commit()
     write_audit(db, "", "", "新增物品", old="", new=f"{item_name} (周期:{default_cycle_days},安全库存:{safety_stock})", operator=current_user["username"], ip=request.client.host)
@@ -56,8 +56,7 @@ def update_labor_item(
     default_cycle_days: int = 90,
     safety_stock: int = 0
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can update items")
+    ensure_admin(current_user, "Only admin can update items")
     old = db.execute(select(labor_items).where(labor_items.c.id==item_id)).first()
     db.execute(update(labor_items).where(labor_items.c.id==item_id).values(item_name=item_name, item_spec=spec, unit=unit, default_cycle_days=default_cycle_days, safety_stock=safety_stock))
     db.commit()
@@ -71,8 +70,7 @@ def delete_labor_item(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can delete items")
+    ensure_admin(current_user, "Only admin can delete items")
     assign_cnt = db.execute(select(func.count()).where(labor_assignments.c.item_id == item_id)).scalar()
     if assign_cnt > 0:
         raise HTTPException(400, f"该物品有 {assign_cnt} 条领用记录，请先删除相关领用记录")
@@ -103,8 +101,7 @@ def stock_in(
     quantity: int = 1,
     remark: str = ""
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can adjust inventory")
+    ensure_admin(current_user, "Only admin can adjust inventory")
     db.execute(insert(labor_inventory).values(item_id=item_id, change_type="in", quantity=quantity, change_date=datetime.now().strftime("%Y-%m-%d"), remark=remark))
     db.commit()
     write_audit(db, "", "", "入库", old="", new=f"物品ID:{item_id},数量:{quantity},备注:{remark}", operator=current_user["username"], ip=request.client.host)
@@ -119,8 +116,7 @@ def stock_out(
     quantity: int = 1,
     remark: str = ""
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can adjust inventory")
+    ensure_admin(current_user, "Only admin can adjust inventory")
     if quantity <= 0:
         raise HTTPException(400, "数量必须大于 0")
     stock = get_item_stock(db, item_id)
@@ -136,16 +132,11 @@ def get_assignments(db=Depends(get_db), id_nomor: str = "", current_user=Depends
     query = select(labor_assignments)
     if id_nomor: query = query.where(labor_assignments.c.id_nomor == id_nomor)
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
-                ).where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        query = query.select_from(
+            labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
+        ).where(employees.c.ws_bengkel.in_(allowed))
 
     rows = db.execute(query).fetchall()
     result = []
@@ -183,14 +174,7 @@ def get_assignments_report(
         .join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
         .join(labor_items, labor_assignments.c.item_id == labor_items.c.id)
     )
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    query = apply_ws_scope_filter(query, employees.c.ws_bengkel, current_user)
     if start_date:
         try:
             datetime.strptime(start_date, "%Y-%m-%d")
@@ -238,8 +222,7 @@ def issue_item(
     cycle_days: Optional[int] = None,
     issue_date: Optional[str] = None
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can issue items")
+    ensure_admin(current_user, "Only admin can issue items")
     if quantity <= 0:
         raise HTTPException(400, "发放数量必须大于 0")
 
@@ -247,16 +230,7 @@ def issue_item(
     if not emp:
         raise HTTPException(404, "Employee not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and emp.get("ws_bengkel") not in allowed:
-                raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
 
     item = db.execute(select(labor_items).where(labor_items.c.id == item_id)).first()
     if not item:
@@ -316,24 +290,14 @@ def cancel_assignment(
     current_user=Depends(get_current_user),
     reason: str = ""
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can cancel assignments")
+    ensure_admin(current_user, "Only admin can cancel assignments")
     assign = db.execute(select(labor_assignments).where(labor_assignments.c.id == assignment_id)).first()
     if not assign:
         raise HTTPException(404, "Assignment not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list):
-                emp = get_employee(db, assign.id_nomor)
-                if emp and emp.get("ws_bengkel") not in allowed:
-                    raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    emp = get_employee(db, assign.id_nomor)
+    if emp:
+        ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
     if assign.status == "已撤销":
         raise HTTPException(400, "该记录已经撤销")
     qty = int(assign.quantity or 1)
@@ -363,23 +327,13 @@ def update_assignment(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can update assignments")
+    ensure_admin(current_user, "Only admin can update assignments")
     assign = db.execute(select(labor_assignments).where(labor_assignments.c.id == assignment_id)).first()
     if not assign: raise HTTPException(404, "Assignment not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list):
-                emp = get_employee(db, assign.id_nomor)
-                if emp and emp.get("ws_bengkel") not in allowed:
-                    raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    emp = get_employee(db, assign.id_nomor)
+    if emp:
+        ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
     update_data = {}
     if data.last_issue_date is not None:
         try:
@@ -412,23 +366,13 @@ def delete_assignment(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can delete assignments")
+    ensure_admin(current_user, "Only admin can delete assignments")
     assign = db.execute(select(labor_assignments).where(labor_assignments.c.id == assignment_id)).first()
     if not assign: raise HTTPException(404, "Assignment not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list):
-                emp = get_employee(db, assign.id_nomor)
-                if emp and emp.get("ws_bengkel") not in allowed:
-                    raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    emp = get_employee(db, assign.id_nomor)
+    if emp:
+        ensure_workshop_in_scope(current_user, emp.get("ws_bengkel"))
     write_audit(db, assign.id_nomor, "", "删除领用记录", old=json.dumps(dict(assign._mapping)), new="", operator=current_user["username"], ip=request.client.host)
     db.execute(delete(labor_assignments).where(labor_assignments.c.id == assignment_id))
     db.commit()
@@ -439,16 +383,11 @@ def labor_reminders(db=Depends(get_db), current_user=Depends(get_current_user)):
     today = date.today()
     stmt = select(labor_assignments).where(labor_assignments.c.status=="有效")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                stmt = stmt.select_from(
-                    labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
-                ).where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        stmt = stmt.select_from(
+            labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
+        ).where(employees.c.ws_bengkel.in_(allowed))
 
     rows = db.execute(stmt).fetchall()
     reminders = []
