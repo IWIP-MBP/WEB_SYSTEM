@@ -3,6 +3,7 @@ import logging
 from sqlalchemy import select, func
 from fastapi import HTTPException
 from models import employees, config_meta, employee_transfers
+from services.utils import parse_ws_scope
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ def build_org_chart(db, current_user=None, query_date=None):
         try:
             from datetime import datetime
             datetime.strptime(query_date, "%Y-%m-%d")
-        except Exception:
+        except ValueError:
             raise HTTPException(400, "Invalid query date format. Use YYYY-MM-DD.")
         
         query_datetime = query_date + " 23:59:59"
@@ -79,14 +80,7 @@ def build_org_chart(db, current_user=None, query_date=None):
         resolved_emps = []
         allowed_workshops = None
         if current_user:
-            ws_scope_str = current_user.get("ws_scope")
-            if ws_scope_str:
-                try:
-                    allowed_workshops = json.loads(ws_scope_str)
-                    if not isinstance(allowed_workshops, list):
-                        allowed_workshops = None
-                except:
-                    pass
+            allowed_workshops = parse_ws_scope(current_user.get("ws_scope"))
                     
         for emp in active_emps:
             id_num = emp["id_nomor"]
@@ -129,14 +123,9 @@ def build_org_chart(db, current_user=None, query_date=None):
         ).where(employees.c.status_status.contains("在职"))
         
         if current_user:
-            ws_scope_str = current_user.get("ws_scope")
-            if ws_scope_str:
-                try:
-                    allowed = json.loads(ws_scope_str)
-                    if isinstance(allowed, list) and len(allowed) > 0:
-                        stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
-                except:
-                    pass
+            allowed = parse_ws_scope(current_user.get("ws_scope"))
+            if allowed is not None and len(allowed) > 0:
+                stmt = stmt.where(employees.c.ws_bengkel.in_(allowed))
         rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
 
     nodes = {

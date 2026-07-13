@@ -147,7 +147,10 @@ def update_backup_config(
     }
     
     old_config = load_backup_config()
-    save_backup_config(config)
+    try:
+        save_backup_config(config)
+    except OSError as e:
+        raise HTTPException(500, f"保存备份配置失败: {str(e)}")
     
     # 动态 reschedule APScheduler 定时任务
     try:
@@ -155,6 +158,7 @@ def update_backup_config(
         logger.info(f"备份定时任务重构成功，运行时间已变更为 每天 {body.hour:02d}:{body.minute:02d}")
     except Exception as e:
         logger.error(f"重构备份定时任务失败: {e}")
+        raise HTTPException(500, f"备份配置已保存，但定时任务重置失败: {str(e)}")
             
     write_audit(db, "", "", "更新自动备份配置", old=json.dumps(old_config), new=json.dumps(config), reason="管理员修改自动备份周期及保留天数", operator=current_user["username"], ip="")
     return {"status": "success", "config": config}

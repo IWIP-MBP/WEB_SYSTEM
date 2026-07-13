@@ -11,7 +11,7 @@ from models import labor_items, labor_inventory, labor_assignments, employees
 from services.auth import get_current_user
 from services.audit import write_audit
 from services.labor_service import get_item_stock
-from services.utils import get_employee
+from services.utils import get_employee, parse_ws_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -136,16 +136,11 @@ def get_assignments(db=Depends(get_db), id_nomor: str = "", current_user=Depends
     query = select(labor_assignments)
     if id_nomor: query = query.where(labor_assignments.c.id_nomor == id_nomor)
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
-                ).where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and len(allowed) > 0:
+        query = query.select_from(
+            labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
+        ).where(employees.c.ws_bengkel.in_(allowed))
 
     rows = db.execute(query).fetchall()
     result = []
@@ -183,25 +178,20 @@ def get_assignments_report(
         .join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
         .join(labor_items, labor_assignments.c.item_id == labor_items.c.id)
     )
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and len(allowed) > 0:
+        query = query.where(employees.c.ws_bengkel.in_(allowed))
     if start_date:
         try:
             datetime.strptime(start_date, "%Y-%m-%d")
             query = query.where(labor_assignments.c.last_issue_date >= start_date)
-        except:
+        except ValueError:
             pass
     if end_date:
         try:
             datetime.strptime(end_date, "%Y-%m-%d")
             query = query.where(labor_assignments.c.last_issue_date <= end_date)
-        except:
+        except ValueError:
             pass
     if item_id:
         query = query.where(labor_assignments.c.item_id == item_id)
@@ -247,16 +237,9 @@ def issue_item(
     if not emp:
         raise HTTPException(404, "Employee not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and emp.get("ws_bengkel") not in allowed:
-                raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and emp.get("ws_bengkel") not in allowed:
+        raise HTTPException(403, "Permission denied for this workshop")
 
     item = db.execute(select(labor_items).where(labor_items.c.id == item_id)).first()
     if not item:
@@ -271,7 +254,7 @@ def issue_item(
     if issue_date:
         try:
             dt = datetime.strptime(issue_date, "%Y-%m-%d")
-        except:
+        except ValueError:
             raise HTTPException(400, "Invalid date format, use YYYY-MM-DD")
     else:
         dt = datetime.now()
@@ -322,18 +305,11 @@ def cancel_assignment(
     if not assign:
         raise HTTPException(404, "Assignment not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list):
-                emp = get_employee(db, assign.id_nomor)
-                if emp and emp.get("ws_bengkel") not in allowed:
-                    raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None:
+        emp = get_employee(db, assign.id_nomor)
+        if emp and emp.get("ws_bengkel") not in allowed:
+            raise HTTPException(403, "Permission denied for this workshop")
     if assign.status == "已撤销":
         raise HTTPException(400, "该记录已经撤销")
     qty = int(assign.quantity or 1)
@@ -368,18 +344,11 @@ def update_assignment(
     assign = db.execute(select(labor_assignments).where(labor_assignments.c.id == assignment_id)).first()
     if not assign: raise HTTPException(404, "Assignment not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list):
-                emp = get_employee(db, assign.id_nomor)
-                if emp and emp.get("ws_bengkel") not in allowed:
-                    raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None:
+        emp = get_employee(db, assign.id_nomor)
+        if emp and emp.get("ws_bengkel") not in allowed:
+            raise HTTPException(403, "Permission denied for this workshop")
     update_data = {}
     if data.last_issue_date is not None:
         try:
@@ -387,7 +356,7 @@ def update_assignment(
             update_data["last_issue_date"] = dt.strftime("%Y-%m-%d")
             cycle = data.cycle_days if data.cycle_days is not None else assign.cycle_days
             update_data["next_issue_date"] = (dt + timedelta(days=cycle)).strftime("%Y-%m-%d")
-        except:
+        except (ValueError, TypeError):
             raise HTTPException(400, "Invalid date format")
     if data.cycle_days is not None:
         update_data["cycle_days"] = data.cycle_days
@@ -417,18 +386,11 @@ def delete_assignment(
     assign = db.execute(select(labor_assignments).where(labor_assignments.c.id == assignment_id)).first()
     if not assign: raise HTTPException(404, "Assignment not found")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list):
-                emp = get_employee(db, assign.id_nomor)
-                if emp and emp.get("ws_bengkel") not in allowed:
-                    raise HTTPException(403, "Permission denied for this workshop")
-        except HTTPException:
-            raise
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None:
+        emp = get_employee(db, assign.id_nomor)
+        if emp and emp.get("ws_bengkel") not in allowed:
+            raise HTTPException(403, "Permission denied for this workshop")
     write_audit(db, assign.id_nomor, "", "删除领用记录", old=json.dumps(dict(assign._mapping)), new="", operator=current_user["username"], ip=request.client.host)
     db.execute(delete(labor_assignments).where(labor_assignments.c.id == assignment_id))
     db.commit()
@@ -439,16 +401,11 @@ def labor_reminders(db=Depends(get_db), current_user=Depends(get_current_user)):
     today = date.today()
     stmt = select(labor_assignments).where(labor_assignments.c.status=="有效")
     
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                stmt = stmt.select_from(
-                    labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
-                ).where(employees.c.ws_bengkel.in_(allowed))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and len(allowed) > 0:
+        stmt = stmt.select_from(
+            labor_assignments.join(employees, labor_assignments.c.id_nomor == employees.c.id_nomor)
+        ).where(employees.c.ws_bengkel.in_(allowed))
 
     rows = db.execute(stmt).fetchall()
     reminders = []
@@ -469,5 +426,6 @@ def labor_reminders(db=Depends(get_db), current_user=Depends(get_current_user)):
                         "days_left": diff,
                         "overdue": diff < 0
                     })
-            except: pass
+            except (ValueError, TypeError):
+                pass
     return sorted(reminders, key=lambda x: x["days_left"])

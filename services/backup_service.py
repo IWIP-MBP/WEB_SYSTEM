@@ -47,8 +47,9 @@ def save_backup_config(config):
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=4)
-    except Exception as e:
+    except OSError as e:
         logger.error(f"保存备份配置失败: {e}")
+        raise
 
 def create_db_backup() -> str:
     """

@@ -2,6 +2,7 @@ import os
 import json
 import bcrypt
 import asyncio
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, insert, update, delete, text
@@ -15,6 +16,7 @@ from services.limiter import limiter
 from pydantic import BaseModel
 from typing import Optional
 
+logger = logging.getLogger("uvicorn.error")
 router = APIRouter()
 
 class UserCreate(BaseModel):
@@ -181,8 +183,8 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
                     db.commit()
         except asyncio.CancelledError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"WebSocket 心跳任务异常终止: {e}", exc_info=True)
 
     keep_alive_task = asyncio.create_task(keep_alive())
 

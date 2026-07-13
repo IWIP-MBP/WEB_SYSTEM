@@ -16,7 +16,7 @@ from database import get_db, settings
 from models import log_audit, employees, labor_assignments, labor_items
 from services.auth import get_current_user
 from services.audit import write_audit
-from services.utils import get_employee, extract_birth_date_from_id_card, parse_db_url
+from services.utils import get_employee, extract_birth_date_from_id_card, parse_db_url, parse_ws_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -61,19 +61,14 @@ def get_log_summary(db=Depends(get_db), current_user=Depends(get_current_user), 
     else:
         try:
             datetime.strptime(date_str, "%Y-%m-%d")
-        except:
+        except ValueError:
             raise HTTPException(400, "Invalid date format")
     query = select(log_audit).where(log_audit.c.op_date.like(f"{date_str}%"))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
-                ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and len(allowed) > 0:
+        query = query.select_from(
+            log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
+        ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
     logs = db.execute(query).fetchall()
     return [dict(r._mapping) for r in logs]
 
@@ -82,16 +77,11 @@ def export_log_report(db=Depends(get_db), current_user=Depends(get_current_user)
     if current_user["role"] != "admin":
         raise HTTPException(403, "Only admin can export logs")
     query = select(log_audit).order_by(desc(log_audit.c.id))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
-                ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and len(allowed) > 0:
+        query = query.select_from(
+            log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
+        ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
     rows = db.execute(query).fetchall()
     df = pd.DataFrame([dict(r._mapping) for r in rows])
     rename_zh = {
@@ -128,16 +118,11 @@ def get_logs(
     search: str = ""
 ):
     query = select(log_audit).order_by(desc(log_audit.c.id))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
-                ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == "", log_audit.c.id_nomor.is_(None)))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user.get("ws_scope"))
+    if allowed is not None and len(allowed) > 0:
+        query = query.select_from(
+            log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
+        ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == "", log_audit.c.id_nomor.is_(None)))
     if date_from:
         query = query.where(log_audit.c.op_date >= f"{date_from} 00:00:00")
     if date_to:
@@ -294,7 +279,7 @@ def get_notification_history(days: int = 7, db=Depends(get_db), current_user=Dep
                             "name": emp.name_nama,
                             "birth_date": bd_str
                         })
-                except:
+                except (ValueError, TypeError):
                     pass
         result.append({
             "date": date_str,
