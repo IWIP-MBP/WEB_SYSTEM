@@ -1,5 +1,4 @@
 import os
-import io
 import json
 import shutil
 import logging
@@ -7,16 +6,18 @@ import subprocess
 from datetime import datetime, timedelta, date
 from typing import Optional, List
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy import select, insert, update, delete, or_, desc, func, text
 from pydantic import BaseModel
 
 from database import get_db, settings
 from models import log_audit, employees, labor_assignments, labor_items
-from services.auth import get_current_user
+from services.auth import get_current_user, ensure_admin, ensure_super_admin
 from services.audit import write_audit
-from services.utils import get_employee, extract_birth_date_from_id_card, parse_db_url
+from services.utils import get_employee, extract_birth_date_from_id_card, parse_db_url, pg_env, pg_conn_args, decode_pg_error
+from services.permissions import parse_ws_scope
+from services.export_utils import LOG_LABELS_ZH, LOG_LABELS_ID, dataframe_to_xlsx_bytes, xlsx_response, timestamped_filename
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,16 +26,8 @@ class BatchDeleteLogsRequest(BaseModel):
     ids: list
 
 def run_postgres_command(command, db_info, stdout_path=None):
-    env = os.environ.copy()
-    if db_info.get("password"):
-        env["PGPASSWORD"] = db_info["password"]
-    args = [
-        command,
-        "-h", db_info["host"],
-        "-p", str(db_info["port"]),
-        "-U", db_info["user"],
-        "-d", db_info["dbname"],
-    ]
+    env = pg_env(db_info)
+    args = [command, *pg_conn_args(db_info), "-d", db_info["dbname"]]
     stdout_handle = open(stdout_path, "wb") if stdout_path else subprocess.PIPE
     try:
         return subprocess.run(
@@ -49,10 +42,6 @@ def run_postgres_command(command, db_info, stdout_path=None):
         if stdout_path:
             stdout_handle.close()
 
-def command_error_message(exc):
-    stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else str(exc)
-    return stderr.strip() or str(exc)
-
 # ---------- 日志/系统接口 ----------
 @router.get("/api/logs/summary")
 def get_log_summary(db=Depends(get_db), current_user=Depends(get_current_user), date_str: str = None):
@@ -64,57 +53,28 @@ def get_log_summary(db=Depends(get_db), current_user=Depends(get_current_user), 
         except:
             raise HTTPException(400, "Invalid date format")
     query = select(log_audit).where(log_audit.c.op_date.like(f"{date_str}%"))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
-                ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        query = query.select_from(
+            log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
+        ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
     logs = db.execute(query).fetchall()
     return [dict(r._mapping) for r in logs]
 
 @router.get("/api/logs/report")
 def export_log_report(db=Depends(get_db), current_user=Depends(get_current_user), lang: str = "zh"):
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Only admin can export logs")
+    ensure_admin(current_user, "Only admin can export logs")
     query = select(log_audit).order_by(desc(log_audit.c.id))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
-                ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        query = query.select_from(
+            log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
+        ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == ""))
     rows = db.execute(query).fetchall()
     df = pd.DataFrame([dict(r._mapping) for r in rows])
-    rename_zh = {
-        "op_date": "操作时间", "id_nomor": "工号", "name_nama": "姓名",
-        "type_tipe": "操作类型", "old_payload": "原数据", "new_payload": "新数据",
-        "reason_alasan": "原因", "operator": "操作人", "ip_address": "IP"
-    }
-    rename_id = {
-        "op_date": "Waktu Operasi", "id_nomor": "ID Karyawan", "name_nama": "Nama Karyawan",
-        "type_tipe": "Tipe Operasi", "old_payload": "Data Lama", "new_payload": "Data Baru",
-        "reason_alasan": "Alasan", "operator": "Operator", "ip_address": "IP"
-    }
-    rename = rename_id if lang == "id" else rename_zh
+    rename = LOG_LABELS_ID if lang == "id" else LOG_LABELS_ZH
     df.rename(columns=rename, inplace=True)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    output.seek(0)
-    return Response(
-        content=output.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=log_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"}
-    )
+    return xlsx_response(dataframe_to_xlsx_bytes(df), timestamped_filename("log_report"))
 
 @router.get("/api/logs")
 def get_logs(
@@ -128,16 +88,11 @@ def get_logs(
     search: str = ""
 ):
     query = select(log_audit).order_by(desc(log_audit.c.id))
-    ws_scope_str = current_user.get("ws_scope")
-    if ws_scope_str:
-        try:
-            allowed = json.loads(ws_scope_str)
-            if isinstance(allowed, list) and len(allowed) > 0:
-                query = query.select_from(
-                    log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
-                ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == "", log_audit.c.id_nomor.is_(None)))
-        except:
-            pass
+    allowed = parse_ws_scope(current_user)
+    if allowed:
+        query = query.select_from(
+            log_audit.outerjoin(employees, log_audit.c.id_nomor == employees.c.id_nomor)
+        ).where(or_(employees.c.ws_bengkel.in_(allowed), log_audit.c.id_nomor == "", log_audit.c.id_nomor.is_(None)))
     if date_from:
         query = query.where(log_audit.c.op_date >= f"{date_from} 00:00:00")
     if date_to:
@@ -169,8 +124,7 @@ def delete_logs(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user.get("username") != "admin":
-        raise HTTPException(403, "Only admin can delete logs")
+    ensure_super_admin(current_user, "Only admin can delete logs")
     
     query = delete(log_audit)
     if op_type and op_type not in ["全部", "All"]:
@@ -192,8 +146,7 @@ def batch_delete_logs(
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    if current_user.get("username") != "admin":
-        raise HTTPException(403, "Only admin can delete logs")
+    ensure_super_admin(current_user, "Only admin can delete logs")
     ids = [int(i) for i in body.ids if str(i).isdigit()]
     if not ids:
         raise HTTPException(400, "No valid IDs provided")
@@ -208,8 +161,7 @@ def batch_delete_logs(
 # ---------- 数据库备份与恢复 ----------
 @router.get("/api/db/backup")
 def backup(current_user=Depends(get_current_user)):
-    if current_user.get("username") != "admin":
-        raise HTTPException(403)
+    ensure_super_admin(current_user)
     db_info = parse_db_url()
     backup_file = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
     filepath = os.path.join(settings.EXPORT_DIR, backup_file)
@@ -217,34 +169,23 @@ def backup(current_user=Depends(get_current_user)):
         run_postgres_command("pg_dump", db_info, stdout_path=filepath)
         return FileResponse(filepath, filename=backup_file)
     except subprocess.CalledProcessError as e:
-        msg = command_error_message(e)
+        msg = decode_pg_error(e)
         logger.error(f"Backup failed: {msg}")
         raise HTTPException(500, f"Backup failed: {msg}")
 
 @router.post("/api/db/restore")
 async def restore(file: UploadFile = File(...), current_user=Depends(get_current_user)):
-    if current_user.get("username") != "admin":
-        raise HTTPException(403)
+    ensure_super_admin(current_user)
     db_info = parse_db_url()
     path = os.path.join(settings.EXPORT_DIR, "restore_temp.sql")
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
     try:
-        args = [
-            "psql",
-            "-h", db_info["host"],
-            "-p", str(db_info["port"]),
-            "-U", db_info["user"],
-            "-d", db_info["dbname"],
-            "-f", path,
-        ]
-        env = os.environ.copy()
-        if db_info.get("password"):
-            env["PGPASSWORD"] = db_info["password"]
-        subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False, env=env)
+        args = ["psql", *pg_conn_args(db_info), "-d", db_info["dbname"], "-f", path]
+        subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False, env=pg_env(db_info))
         return {"status": "success"}
     except subprocess.CalledProcessError as e:
-        msg = command_error_message(e)
+        msg = decode_pg_error(e)
         logger.error(f"Restore failed: {msg}")
         raise HTTPException(500, f"Restore failed: {msg}")
 

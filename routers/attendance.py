@@ -1,12 +1,13 @@
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
 from database import get_db
-from services.auth import get_current_user
+from services.auth import get_current_user, ensure_admin
 from services.audit import write_audit
 from services.attendance_service import convert_attendance
+from services.export_utils import xlsx_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -20,8 +21,7 @@ def convert_attendance_endpoint(
     current_user: dict = Depends(get_current_user)
 ):
     # 限制只有管理员角色（admin）能够进行考勤排休转换
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="您当前权限不足，无法执行此操作。")
+    ensure_admin(current_user, "您当前权限不足，无法执行此操作。")
 
     try:
         # 读取上传的文件字节
@@ -74,11 +74,7 @@ def convert_attendance_endpoint(
 
         # 返回生成的 Excel 文件
         filename = f"attendance_converted_{year}_{month}.xlsx"
-        return Response(
-            content=out_bytes,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+        return xlsx_response(out_bytes, filename)
 
     except ValueError as val_err:
         logger.warning(f"考勤转换参数校验失败: {val_err}")

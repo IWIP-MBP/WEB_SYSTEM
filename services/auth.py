@@ -27,3 +27,13 @@ def get_current_user(request: Request, db=Depends(get_db)):
     if not user:
         raise HTTPException(401, detail="User not found")
     return dict(user._mapping)
+
+def ensure_admin(current_user, detail: str = "Only admin can perform this action"):
+    """校验当前用户拥有 admin 角色，否则抛出 403。"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, detail)
+
+def ensure_super_admin(current_user, detail: str = "Only the super admin account can perform this action"):
+    """校验当前用户为超级管理员账户 (username == 'admin')，否则抛出 403。"""
+    if current_user.get("username") != "admin":
+        raise HTTPException(403, detail)
