@@ -1,14 +1,37 @@
 import os
 import re
+import json
 import subprocess
 import logging
 from datetime import datetime, timedelta, date
 from urllib.parse import urlparse
+from fastapi import HTTPException
 from sqlalchemy import select, insert, delete
 from models import active_sessions, config_meta, employee_transfers, employees
 from database import settings
 
 logger = logging.getLogger(__name__)
+
+
+def parse_ws_scope(ws_scope_str):
+    """解析用户的 ws_scope（车间数据权限）配置。
+
+    返回允许访问的车间列表；当用户未配置数据权限范围时返回 None（表示不作限制）。
+    当配置存在但格式非法（无法解析为 JSON 或不是列表）时，主动抛出 403，
+    以“失败即拒绝 (fail closed)”的方式处理——避免因静默吞掉解析异常而
+    跳过权限过滤，从而导致越权读取到其他车间的数据。
+    """
+    if not ws_scope_str:
+        return None
+    try:
+        allowed = json.loads(ws_scope_str)
+    except (json.JSONDecodeError, TypeError) as e:
+        logger.warning(f"用户数据权限范围(ws_scope)解析失败，已拒绝访问: {e}")
+        raise HTTPException(403, "数据权限范围配置无效，请联系管理员 / Invalid data-scope configuration")
+    if not isinstance(allowed, list):
+        logger.warning("用户数据权限范围(ws_scope)不是合法的列表结构，已拒绝访问。")
+        raise HTTPException(403, "数据权限范围配置无效，请联系管理员 / Invalid data-scope configuration")
+    return allowed
 
 def is_real_ip(ip: str) -> bool:
     if not ip:
@@ -83,7 +106,7 @@ def clean_id_card(id_card):
     try:
         if 'e' in raw.lower() or 'E' in raw:
             raw = str(int(float(raw)))
-    except:
+    except (ValueError, TypeError):
         pass
     # 移除非数字和非X字符
     id_str = re.sub(r"[^0-9X]", "", raw.upper())
@@ -112,7 +135,7 @@ def extract_birth_date_from_id_card(id_card, nationality=None):
             day = int(birth_str[6:8])
             if 1900 <= year <= datetime.now().year and 1 <= month <= 12 and 1 <= day <= 31:
                 return datetime.strptime(birth_str, "%Y%m%d").date().strftime("%Y-%m-%d")
-        except:
+        except (ValueError, TypeError):
             pass
         return None
 
@@ -137,7 +160,7 @@ def extract_birth_date_from_id_card(id_card, nationality=None):
             if year < 1900 or year > current_year:
                 year = (1900 if yy >= 50 else 2000) + yy
             return date(year, mm, dd).strftime("%Y-%m-%d")
-        except:
+        except (ValueError, TypeError):
             pass
         return None
 

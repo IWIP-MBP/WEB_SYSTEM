@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from jose import jwt
+from jose.exceptions import JWTError
 from fastapi import Request, Depends, HTTPException
 from sqlalchemy import select
 from database import settings, get_db
@@ -8,7 +9,7 @@ from models import users
 def verify_token(token: str):
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except:
+    except JWTError:
         return None
 
 def create_token(data: dict):
