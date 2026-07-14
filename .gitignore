@@ -111,3 +111,6 @@ exports/
 *.sql
 *.log
 ngrok.yml
+backups/
+手动备份/
+*.dump

@@ -33,6 +33,8 @@ graph TD
         emp_r[routers/employees.py]
         labor_r[routers/labor.py]
         logs_r[routers/logs.py]
+        backup_r[routers/backup.py]
+        attendance_r[routers/attendance.py]
     end
 
     subgraph Services_Layer [业务服务层 - 核心逻辑控制]
@@ -43,6 +45,8 @@ graph TD
         utils_s[services/utils.py]
         ws_s[services/websocket_manager.py]
         limit_s[services/limiter.py]
+        backup_s[services/backup_service.py]
+        mig_s[services/migration.py]
     end
 
     subgraph Data_Layer [数据访问层 - 表结构与连接]
@@ -50,9 +54,9 @@ graph TD
         models[models.py - SQLAlchemy 映射表]
     end
 
-    main.py --> auth_r & emp_r & labor_r & logs_r
-    auth_r & emp_r & labor_r & logs_r --> auth_s & audit_s & org_s & labor_s & utils_s & ws_s & limit_s
-    auth_s & audit_s & org_s & labor_s & utils_s & ws_s & limit_s --> db & models
+    main.py --> auth_r & emp_r & labor_r & logs_r & backup_r & attendance_r
+    auth_r & emp_r & labor_r & logs_r & backup_r & attendance_r --> auth_s & audit_s & org_s & labor_s & utils_s & ws_s & limit_s & backup_s & mig_s
+    auth_s & audit_s & org_s & labor_s & utils_s & ws_s & limit_s & backup_s & mig_s --> db & models
 ```
 
 ### 模块结构说明：
@@ -63,14 +67,28 @@ graph TD
     *   [auth.py](file:///d:/WEB_SYSTEM/routers/auth.py)：用户身份验证、管理用户、实时 WebSocket 在线用户列表、ARP MAC/IP 心跳探测。
     *   [employees.py](file:///d:/WEB_SYSTEM/routers/employees.py)：花名册搜索、新增与批量导入Excel、岗位异动、彻底删除、花名册与财务成本分析 Excel 导出、组织架构图谱定义。
     *   [labor.py](file:///d:/WEB_SYSTEM/routers/labor.py)：劳保用品目录、出入库管理、领用分配发放、记录撤销与到期未换发自动提醒。
-    *   [logs.py](file:///d:/WEB_SYSTEM/routers/logs.py)：系统审计操作日志、通知历史大屏看板、数据库一键热备份与恢复（注意：日志删除与数据库备份/还原菜单及接口仅限 admin 账号访问）。
-5.  **`services/`**：包含解耦出的无状态核心逻辑计算服务（例如身份证国籍智能清洗出生日期、组织架构拓扑树深度计算等）。
+    *   [logs.py](file:///d:/WEB_SYSTEM/routers/logs.py)：系统审计操作日志、通知历史大屏看板。
+    *   [backup.py](file:///d:/WEB_SYSTEM/routers/backup.py)：自动备份策略配置、手动触发备份、备份文件列表查询及数据库后台异步恢复。
+    *   [attendance.py](file:///d:/WEB_SYSTEM/routers/attendance.py)：考勤模板与考勤文件解析、上传及查询。
+5.  **`services/`**：包含解耦出的无状态核心逻辑计算服务及数据治理服务：
+    *   [backup_service.py](file:///d:/WEB_SYSTEM/services/backup_service.py)：定时备份任务、旧备份自动清理、备份转码及还原底层逻辑。
+    *   [migration.py](file:///d:/WEB_SYSTEM/services/migration.py)：数据库全自动结构迁移升级逻辑。
+    *   其他包括国籍清洗、生日提醒、限流计算等各类业务工具类。
 
 ---
 
 ## 🛡️ 安全与权限控制 (Security & Permissions)
 *   **敏感管理功能限制**：系统审计操作日志的清空与批量删除、以及数据库备份与还原策略的配置和手动执行，仅允许系统超级管理员账户 (`username == "admin"`) 进行操作，防止越权日志篡改和关键备份数据泄露。其他管理员角色用户只具备常规的员工与劳保数据管理功能，无法删除系统操作日志或查看数据备份。
 *   **离职人员操作追踪**：离职名册中增加操作人 (`resign_operator`) 跟踪显示，并在员工离职登记时自动追踪记录办理离职的具体管理员。同时，离职名册中的表头通过多语言翻译引擎实现了中印双语的完整翻译展示，避免了字段名原始数据库键（如 `ws_bengkel`）的直接暴露。
+
+---
+
+## 💾 自动备份与容灾恢复 (Backup & Disaster Recovery)
+系统提供全自动与手动的双重安全机制，彻底解决因 Docker 容器重构、磁盘损坏等原因引起的数据丢失风险：
+*   **本地硬盘自动备份**：系统利用后台任务调度器，默认在每天凌晨 **02:00** (东京时间) 自动对 PostgreSQL 数据库执行导出（使用 pg_dump 并以自定义压缩格式 `-Fc` 输出）。备份文件自动存放于宿主机本地硬盘目录 **`d:\WEB_SYSTEM\backups`** (通过 `./backups` 挂载)，即使删除 Docker 容器或虚拟卷，核心数据依旧完好。
+*   **自动过期清理**：系统会自动保留最近 **7 天** 的备份文件，并在每次备份完成后自动清理超过保留期限的旧备份文件，防止宿主机磁盘被占满。
+*   **一键安全还原**：管理员可通过后端接口一键从本地备份恢复。还原逻辑中集成了字符编码检测，可自动将非 UTF-8 编码的旧备份文件（如 `GBK`、`Latin-1` 等）转码为 `UTF-8` 执行还原，还原完成后全自动执行数据库模式升级迁移。
+*   **静态资源防丢机制**：系统上传目录挂载配置已优化为本地直通挂载（`./uploads:/app/uploads`），确保用户上传的 Logo 图像、Excel 导入文件等静态资源能无损地与数据库一同存放在本地硬盘上。
 
 ---
 

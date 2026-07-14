@@ -126,7 +126,7 @@ def heartbeat(request: Request, mac: Optional[str] = None, db=Depends(get_db), c
         SET last_seen = :now, mac_address = :mac
     """), {"u": current_user["username"], "ip": client_ip, "mac": detected_mac, "now": now})
     db.commit()
-    clean_sessions(db, 60)
+    clean_sessions(db, 3600)
     rows = db.execute(select(active_sessions.c.username, active_sessions.c.ip_address)).fetchall()
     return [{"user": r[0], "ip": r[1] if is_real_ip(r[1]) else ""} for r in rows]
 

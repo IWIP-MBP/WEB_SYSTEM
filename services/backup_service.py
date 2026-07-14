@@ -9,9 +9,12 @@ from services.utils import parse_db_url
 
 logger = logging.getLogger("uvicorn.error")
 
-BACKUP_DIR = "/app/backups"
+# 使用相对项目根目录的绝对路径，确保在容器和宿主机下均指向正确的 backups 目录
+BACKUP_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "backups"))
 CONFIG_FILE = os.path.join(BACKUP_DIR, "config.json")
 os.makedirs(BACKUP_DIR, exist_ok=True)
+
+IS_RESTORING = False
 
 # 默认配置：每天凌晨 2:00 自动备份，保留 7 天
 DEFAULT_CONFIG = {
@@ -86,37 +89,103 @@ def create_db_backup() -> str:
 
 def restore_db_backup(filename: str):
     """
-    使用 pg_restore 结合 --clean 清除原库结构后，还原数据库。
+    还原数据库：对于 .sql 后缀使用 psql 还原，其他（如 .dump）使用 pg_restore 还原。
     """
-    filepath = os.path.join(BACKUP_DIR, filename)
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"未找到指定的备份文件: {filename}")
-        
-    db_info = parse_db_url()
-    
-    # pg_restore 参数：使用 --clean (-c) 清除已有对象，确保还原干净
-    args = [
-        "pg_restore",
-        "-h", db_info["host"],
-        "-p", str(db_info["port"]),
-        "-U", db_info["user"],
-        "-d", db_info["dbname"],
-        "-c",
-        filepath
-    ]
-    
-    env = os.environ.copy()
-    if db_info.get("password"):
-        env["PGPASSWORD"] = db_info["password"]
-        
+    global IS_RESTORING
+    IS_RESTORING = True
+    temp_filepath = None
     try:
-        logger.info(f"正在从备份文件 {filename} 还原数据库...")
-        subprocess.run(args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logger.info(f"数据库已成功从备份 {filename} 还原！")
-    except subprocess.CalledProcessError as e:
-        stderr_msg = e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e)
-        logger.error(f"数据库还原失败: {stderr_msg}")
-        raise RuntimeError(f"数据库还原失败: {stderr_msg}")
+        filepath = os.path.join(BACKUP_DIR, filename)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"未找到指定的备份文件: {filename}")
+            
+        db_info = parse_db_url()
+        env = os.environ.copy()
+        if db_info.get("password"):
+            env["PGPASSWORD"] = db_info["password"]
+
+        # 在执行还原前，清空整个 public 架构，防止由于结构不一致、列增删或约束冲突导致还原失败
+        try:
+            logger.info("正在清空数据库中的 public 架构以准备全新的还原...")
+            clean_args = [
+                "psql",
+                "-h", db_info["host"],
+                "-p", str(db_info["port"]),
+                "-U", db_info["user"],
+                "-d", db_info["dbname"],
+                "-c", "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+            ]
+            subprocess.run(clean_args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.info("数据库 public 架构清空成功。")
+        except Exception as e:
+            logger.warning(f"清空数据库 public 架构时发生警告/错误 (但仍将继续还原): {e}")
+
+        if filename.endswith(".sql"):
+            # 检查文件是否为合法的 UTF-8，若不是则尝试转码
+            is_utf8 = True
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    f.read(1024)  # 试读前1KB
+            except UnicodeDecodeError:
+                is_utf8 = False
+                
+            if not is_utf8:
+                for enc in ["utf-16", "gbk", "latin-1"]:
+                    try:
+                        with open(filepath, "r", encoding=enc) as f:
+                            content = f.read()
+                        temp_filepath = filepath + ".utf8_temp.sql"
+                        with open(temp_filepath, "w", encoding="utf-8") as f:
+                            f.write(content)
+                        logger.info(f"备份文件 {filename} 已成功从 {enc} 转码为 UTF-8，保存至临时文件 {temp_filepath}")
+                        filepath = temp_filepath
+                        break
+                    except Exception as e:
+                        logger.warning(f"尝试以 {enc} 解码备份文件失败: {e}")
+                        continue
+
+            # psql 参数：使用 -f 执行 SQL 脚本
+            args = [
+                "psql",
+                "-h", db_info["host"],
+                "-p", str(db_info["port"]),
+                "-U", db_info["user"],
+                "-d", db_info["dbname"],
+                "-f",
+                filepath
+            ]
+        else:
+            # pg_restore 参数：使用 --clean (-c) 清除已有对象，确保还原干净
+            args = [
+                "pg_restore",
+                "-h", db_info["host"],
+                "-p", str(db_info["port"]),
+                "-U", db_info["user"],
+                "-d", db_info["dbname"],
+                "-c",
+                filepath
+            ]
+            
+        try:
+            logger.info(f"正在从备份文件 {filename} 还原数据库...")
+            subprocess.run(args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.info(f"数据库已成功从备份 {filename} 还原！")
+            
+            # 还原成功后，自动执行一次数据库迁移以补充可能的列、约束和初始化 admin 用户
+            from services.migration import run_db_migrations
+            run_db_migrations()
+        except subprocess.CalledProcessError as e:
+            stderr_msg = e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e)
+            logger.error(f"数据库还原失败: {stderr_msg}")
+            raise RuntimeError(f"数据库还原失败: {stderr_msg}")
+    finally:
+        IS_RESTORING = False
+        if temp_filepath and os.path.exists(temp_filepath):
+            try:
+                os.remove(temp_filepath)
+                logger.info(f"已清理临时转码文件: {temp_filepath}")
+            except Exception as e:
+                logger.error(f"清理临时转码文件失败: {e}")
 
 def clean_old_backups(retention_days: int):
     """

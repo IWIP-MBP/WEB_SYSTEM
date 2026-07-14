@@ -60,7 +60,7 @@ def get_backups(current_user=Depends(get_current_user)):
         return backups
         
     for file in os.listdir(BACKUP_DIR):
-        if file.startswith("backup_") and file.endswith(".dump"):
+        if file.endswith((".dump", ".sql")):
             filepath = os.path.join(BACKUP_DIR, file)
             stat = os.stat(filepath)
             created_time = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")

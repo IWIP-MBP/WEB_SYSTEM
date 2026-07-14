@@ -47,7 +47,7 @@ def get_mac_address_from_arp(ip):
         logger.warning(f"Failed to get MAC from ARP for {ip}: {e}")
     return None
 
-def clean_sessions(db, max_age_seconds=60):
+def clean_sessions(db, max_age_seconds=3600):
     threshold = (datetime.now() - timedelta(seconds=max_age_seconds)).strftime("%Y-%m-%d %H:%M:%S")
     db.execute(delete(active_sessions).where(active_sessions.c.last_seen < threshold))
     db.commit()

@@ -23,4 +23,4 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
 # 启动命令
-CMD ["streamlit", "run", "ui.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+CMD ["sh", "-c", "streamlit run ui.py --server.port 8501 --server.address 0.0.0.0 --server.headless true --server.fileWatcherType none >> /app/streamlit.log 2>&1"]

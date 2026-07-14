@@ -229,7 +229,54 @@ async def restore(file: UploadFile = File(...), current_user=Depends(get_current
     path = os.path.join(settings.EXPORT_DIR, "restore_temp.sql")
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+        
+    temp_filepath = None
+    import services.backup_service as bs
+    bs.IS_RESTORING = True
     try:
+        env = os.environ.copy()
+        if db_info.get("password"):
+            env["PGPASSWORD"] = db_info["password"]
+
+        # 在执行还原前，清空整个 public 架构，防止由于结构不一致、列增删或约束冲突导致还原失败
+        try:
+            logger.info("正在清空数据库中的 public 架构以准备全新的还原...")
+            clean_args = [
+                "psql",
+                "-h", db_info["host"],
+                "-p", str(db_info["port"]),
+                "-U", db_info["user"],
+                "-d", db_info["dbname"],
+                "-c", "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+            ]
+            subprocess.run(clean_args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.info("数据库 public 架构清空成功。")
+        except Exception as e:
+            logger.warning(f"清空数据库 public 架构时发生警告/错误 (但仍将继续还原): {e}")
+
+        # 检查文件是否为合法的 UTF-8，若不是则尝试转码
+        is_utf8 = True
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                f.read(1024)  # 试读前1KB
+        except UnicodeDecodeError:
+            is_utf8 = False
+            
+        if not is_utf8:
+            for enc in ["utf-16", "gbk", "latin-1"]:
+                try:
+                    with open(path, "r", encoding=enc) as f:
+                        content = f.read()
+                    temp_filepath = path + ".utf8_temp.sql"
+                    with open(temp_filepath, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    logger.info(f"上传的还原文件已成功从 {enc} 转码为 UTF-8，保存至临时文件 {temp_filepath}")
+                    path = temp_filepath
+                    break
+                except Exception as e:
+                    logger.warning(f"尝试以 {enc} 解码上传文件失败: {e}")
+                    continue
+
         args = [
             "psql",
             "-h", db_info["host"],
@@ -238,15 +285,25 @@ async def restore(file: UploadFile = File(...), current_user=Depends(get_current
             "-d", db_info["dbname"],
             "-f", path,
         ]
-        env = os.environ.copy()
-        if db_info.get("password"):
-            env["PGPASSWORD"] = db_info["password"]
         subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False, env=env)
+        logger.info("数据库已成功从上传文件还原！")
+        
+        # 还原成功后，自动执行一次数据库迁移以补充可能的列、约束和初始化 admin 用户
+        from services.migration import run_db_migrations
+        run_db_migrations()
         return {"status": "success"}
     except subprocess.CalledProcessError as e:
         msg = command_error_message(e)
         logger.error(f"Restore failed: {msg}")
         raise HTTPException(500, f"Restore failed: {msg}")
+    finally:
+        bs.IS_RESTORING = False
+        if temp_filepath and os.path.exists(temp_filepath):
+            try:
+                os.remove(temp_filepath)
+                logger.info(f"已清理临时转码文件: {temp_filepath}")
+            except Exception as e:
+                logger.error(f"清理临时转码文件失败: {e}")
 
 # ---------- 通知历史 ----------
 @router.get("/api/notifications/history")

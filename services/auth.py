@@ -17,6 +17,10 @@ def create_token(data: dict):
     return jwt.encode(data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def get_current_user(request: Request, db=Depends(get_db)):
+    import services.backup_service as bs
+    if bs.IS_RESTORING:
+        raise HTTPException(503, detail="Database is restoring, please wait...")
+        
     auth = request.headers.get("Authorization")
     if not auth or not auth.startswith("Bearer "):
         raise HTTPException(401, detail="Missing token")

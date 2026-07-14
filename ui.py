@@ -847,6 +847,9 @@ LANG = {
         "backup_now": "立即备份",
         "restore_confirm_title": "⚠️ 数据库还原二次确认",
         "restore_confirm_msg": "警告：还原操作将覆盖当前系统中的所有数据库数据！此操作无法撤销。是否确认还原文件 {filename}？",
+        "restore_local": "🔄 从本地备份恢复",
+        "choose_local_backup": "选择本地备份文件",
+        "no_local_backups": "本地暂无备份文件",
         "skipped_rows": "跳过了 {count} 行（缺少工号或姓名）",
         "skipped_rows_format": "跳过了 {count} 行（缺少工号或姓名）",
         "spec": "规格",
@@ -1297,6 +1300,9 @@ LANG = {
         "backup_now": "Cadangkan Sekarang",
         "restore_confirm_title": "⚠️ Konfirmasi Pemulihan Database",
         "restore_confirm_msg": "Peringatan: Operasi pemulihan akan menimpa semua data database saat ini di sistem! Operasi ini tidak dapat dibatalkan. Apakah Anda yakin ingin memulihkan file {filename}?",
+        "restore_local": "🔄 Pulihkan dari Cadangan Lokal",
+        "choose_local_backup": "Pilih file cadangan lokal",
+        "no_local_backups": "Tidak ada file cadangan lokal",
         "skipped_rows": "{count} baris dilewati (ID atau nama kosong)",
         "skipped_rows_format": "{count} baris dilewati (ID atau nama kosong)",
         "spec": "Spesifikasi",
@@ -1579,6 +1585,24 @@ def api_post(endpoint, params=None, json_data=None, files=None):
         st.toast(f"{t('operation_failed')}: {e}", icon="❌")
         return None
 
+@st.experimental_dialog(t("restore_confirm_title"))
+def show_restore_dialog(filename):
+    st.warning(t("restore_confirm_msg").format(filename=filename))
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(t("confirm"), key=f"dialog_confirm_{filename}", use_container_width=True):
+            resp = api_post("/system/backup/restore", json_data={"filename": filename})
+            if resp and resp.get("status") == "success":
+                st.success(resp.get("message") or t("operation_success"))
+                st.session_state.toast_message = (t("db_restore_success"), "✅")
+                time.sleep(2)
+                st.rerun()
+            else:
+                st.error(t("operation_failed"))
+    with col2:
+        if st.button(t("cancel"), key=f"dialog_cancel_{filename}", use_container_width=True):
+            st.rerun()
+
 def api_put(endpoint, params=None, json_data=None):
     try:
         r = requests.put(f"/api{endpoint}", params=params, json=json_data, headers=auth_h(), timeout=API_TIMEOUT)
@@ -1751,8 +1775,23 @@ components.html(
     <script>
     const accessToken = "{st.session_state.access_token or ''}";
     
-    window.parent._current_access_token = accessToken;
-    window.parent._resolved_api_base = "/api";
+    try {{
+        window.parent._current_access_token = accessToken;
+        let apiBase = "/api";
+        const parentPort = window.parent.location.port;
+        const parentHost = window.parent.location.hostname;
+        const isLocal = parentHost === "localhost" || parentHost === "127.0.0.1" || parentHost.startsWith("192.168.") || parentHost.startsWith("10.") || parentHost.startsWith("172.");
+        if (isLocal && (parentPort === "8501" || parentPort === "80" || parentPort === "")) {{
+            apiBase = window.parent.location.protocol + "//" + parentHost + ":8000/api";
+        }}
+        window.parent._resolved_api_base = apiBase;
+    }} catch(e) {{
+        console.error("Error setting window.parent properties:", e);
+        try {{
+            window.parent._current_access_token = accessToken;
+            window.parent._resolved_api_base = "/api";
+        }} catch(ex) {{}}
+    }}
 
     const doc = window.parent.document;
     const body = doc.body;
@@ -1968,7 +2007,7 @@ components.html(
         taskbar.id = 'win-taskbar';
         taskbar.innerHTML = `
             <div class="taskbar-left">
-                <img src="/api/settings/logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%230f766e\\'><path d=\\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z\\'/></svg>';" class="taskbar-logo">
+                <img src="${{window.parent._resolved_api_base}}/settings/logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%230f766e\\'><path d=\\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z\\'/></svg>';" class="taskbar-logo">
                 <span class="taskbar-title">{t('login_title')}</span>
             </div>
             <div class="taskbar-center">
@@ -2276,8 +2315,25 @@ components.html(
             return;
         }}
 
-        let wsProtocol = window.parent.location.protocol === "https:" ? "wss:" : "ws:";
-        let wsUrl = wsProtocol + "//" + window.parent.location.host + "/ws/sessions?token=" + encodeURIComponent(token);
+        let wsProtocol = "ws:";
+        let wsHost = "localhost";
+        try {{
+            wsProtocol = window.parent.location.protocol === "https:" ? "wss:" : "ws:";
+            const hostname = window.parent.location.hostname;
+            const parentPort = window.parent.location.port;
+            const isLocal = hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.");
+            if (isLocal && (parentPort === "8501" || parentPort === "80" || parentPort === "")) {{
+                wsHost = hostname + ":8000";
+            }} else {{
+                wsHost = window.parent.location.host;
+            }}
+        }} catch(e) {{
+            console.error("Error resolving parent location for WS:", e);
+            try {{
+                wsHost = window.location.host;
+            }} catch(ex) {{}}
+        }}
+        let wsUrl = wsProtocol + "//" + wsHost + "/ws/sessions?token=" + encodeURIComponent(token);
 
         const ws = new WebSocket(wsUrl);
         window.parent._sessions_ws = ws;
@@ -2332,15 +2388,31 @@ components.html(
         }});
     }};
 
+    window.parent.sendHeartbeat = function() {{
+        const token = window.parent._current_access_token;
+        const url = window.parent._resolved_api_base;
+        if (!token || !url) return;
+        
+        fetch(url + "/sessions/heartbeat", {{
+            method: "POST",
+            headers: {{ "Authorization": "Bearer " + token }}
+        }}).catch(err => {{
+            console.log("Heartbeat error:", err);
+        }});
+    }};
+
     if (!window.parent._taskbar_poll_id) {{
         window.parent.fetchTaskbarData();
         window.parent.connectSessionsWS();
+        window.parent.sendHeartbeat();
         window.parent._taskbar_poll_id = setInterval(function() {{
             window.parent.fetchTaskbarData();
+            window.parent.sendHeartbeat();
         }}, 60000);
     }} else {{
         window.parent.fetchTaskbarData();
         window.parent.connectSessionsWS();
+        window.parent.sendHeartbeat();
     }}
     </script>
     """,
@@ -4762,24 +4834,7 @@ elif menu == t("backup_management"):
         st.warning(t("readonly_msg"))
         st.stop()
         
-    @st.experimental_dialog(t("restore_confirm_title"))
-    def show_restore_dialog(filename):
-        st.warning(t("restore_confirm_msg").format(filename=filename))
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(t("confirm"), key="restore_confirm_btn", use_container_width=True):
-                resp = api_post("/system/backup/restore", json_data={"filename": filename})
-                if resp and resp.get("status") == "success":
-                    st.success(resp.get("message") or t("operation_success"))
-                    st.session_state.toast_message = (t("db_restore_success"), "✅")
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.error(t("operation_failed"))
-        with col2:
-            if st.button(t("cancel"), key="restore_cancel_btn", use_container_width=True):
-                st.rerun()
- 
+
     # 获取当前配置
     config = api_get("/system/backup/config") or {"hour": 2, "minute": 0, "retention_days": 7}
     
@@ -4968,6 +5023,20 @@ elif menu == t("settings"):
                     st.rerun()
                 else:
                     st.toast(t("operation_failed"), icon="❌")
+        
+        st.write("---")
+        st.subheader(t("restore_local"))
+        local_backups = api_get("/system/backups") or []
+        if local_backups:
+            selected_local_file = st.selectbox(
+                t("choose_local_backup"),
+                [b["filename"] for b in local_backups],
+                key="restore_local_select"
+            )
+            if st.button(t("restore"), key="restore_local_db_btn"):
+                show_restore_dialog(selected_local_file)
+        else:
+            st.info(t("no_local_backups"))
     with tab_users:
         st.subheader(t("user_management"))
         all_workshops = api_get("/meta/车间") or []

@@ -12,6 +12,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "tcp_keepalives_idle=60"
+      - "-c"
+      - "tcp_keepalives_interval=10"
+      - "-c"
+      - "tcp_keepalives_count=6"
+      - "-c"
+      - "idle_in_transaction_session_timeout=300000"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d hr_system"]
       interval: 10s
@@ -35,14 +49,14 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - uploads_data:/app/uploads
-      - backups_data:/app/backups
+      - ./uploads:/app/uploads
+      - ./backups:/app/backups
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:
@@ -57,9 +71,9 @@ services:
       - API_BASE=http://backend:8000/api
       - TZ=Asia/Tokyo
     ports:
-      - "8501:8501"
+      - "80:8501"
     volumes:
-      - uploads_data:/app/uploads
+      - ./uploads:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
@@ -69,5 +83,3 @@ services:
 
 volumes:
   postgres_data:
-  uploads_data:
-  backups_data:

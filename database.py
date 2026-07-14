@@ -27,7 +27,17 @@ Settings.validate()
 settings = Settings()
 
 # ---------- 数据库 ----------
-engine = create_engine(settings.DATABASE_URL, pool_size=10, max_overflow=20, pool_pre_ping=True)
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    pool_recycle=3600,  # 1小时回收连接，防止连接断开
+    connect_args={
+        "connect_timeout": 10,
+        "options": "-c timezone=Asia/Tokyo"
+    }
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 metadata = MetaData()
 
