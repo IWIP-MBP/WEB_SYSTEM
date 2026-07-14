@@ -94,15 +94,16 @@ graph TD
 
 ## 🛠️ 技术栈 (Technology Stack)
 *   **后端 (Backend)**：FastAPI, SQLAlchemy ORM, Uvicorn, SlowAPI (限流保护), PyJWT (加解密身份 Token), pandas (报表解析)
-*   **前端 (Frontend)**：Streamlit, Plotly (交互式图表), Javascript Websocket Client
+*   **前端 (Frontend)**：Streamlit, Plotly (交互式图表), Javascript WebSocket Client
 *   **数据库 (Database)**：PostgreSQL 15
-*   **部署工具 (DevOps)**：Docker, Docker Compose, Multi-stage Builds (多阶段镜像优化)
+*   **部署与穿透 (DevOps)**：Docker, Docker Compose, Multi-stage Builds (多阶段镜像优化), Nginx (反向代理与流量分流), Ngrok (安全外网穿透)
 
 ---
 
 ## ⚡ 容器优化 (Containerization Features)
 *   **多阶段构建 (Multi-Stage Build)**：[Dockerfile.backend](file:///d:/WEB_SYSTEM/Dockerfile.backend) 采用构建级与运行时级双阶段设计，去除多余的编译链，降低宿主机资源消耗。
 *   **原生健康检测**：移除了需要启动 Python 环境的重量级 Healthcheck，全部采用内嵌 `curl` 对健康接口进行毫秒级探测，性能开销趋近于 0。
+*   **全容器化代理与穿透**：Nginx 反向代理和 Ngrok 隧道已完全容器化并集成到 Docker Compose 中，实现一键部署，彻底解耦宿主机环境依赖。
 
 ---
 
@@ -114,12 +115,15 @@ graph TD
 *   `SECRET_KEY`：JWT 签名私钥，生产环境请务必更改。
 
 ### 2. 启动服务 (Launch)
-在项目根目录下，执行一条命令编译并启动所有容器服务：
+在项目根目录下，直接执行一条命令编译并启动所有容器服务（包含 Nginx 代理和 ngrok 穿透）：
 ```bash
 docker compose up -d --build
 ```
 
 ### 3. 服务地址 (Services Ports)
-*   **前端展示界面**：[http://localhost:8501](http://localhost:8501)
+系统容器启动后，推荐通过以下服务主入口或外网穿透地址进行访问：
+*   **内网/局域网访问主入口 (Nginx 代理)**：[http://localhost](http://localhost) (或宿主机局域网 IP)
+*   **外网穿透访问 (ngrok)**：[https://civil-grueling-enigmatic.ngrok-free.dev](https://civil-grueling-enigmatic.ngrok-free.dev)
+*   **前端展示界面 (直接暴露端口)**：[http://localhost:8501](http://localhost:8501)
 *   **后端 API 文档 (Swagger UI)**：[http://localhost:8000/docs](http://localhost:8000/docs)
 *   **后端 API 接口**：[http://localhost:8000/api](http://localhost:8000/api)
