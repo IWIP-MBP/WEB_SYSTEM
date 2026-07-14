@@ -123,7 +123,7 @@ docker compose up -d --build
 ### 3. 服务地址 (Services Ports)
 系统容器启动后，推荐通过以下服务主入口或外网穿透地址进行访问：
 *   **内网/局域网访问主入口 (Nginx 代理)**：[http://localhost](http://localhost) (或宿主机局域网 IP)
-*   **外网穿透访问 (ngrok)**：[https://civil-grueling-enigmatic.ngrok-free.dev](https://civil-grueling-enigmatic.ngrok-free.dev)
+*   **外网穿透访问 (ngrok)**：`https://<your-ngrok-domain>.ngrok-free.dev` (需在 docker-compose.yml 中配置)
 *   **前端展示界面 (直接暴露端口)**：[http://localhost:8501](http://localhost:8501)
 *   **后端 API 文档 (Swagger UI)**：[http://localhost:8000/docs](http://localhost:8000/docs)
 *   **后端 API 接口**：[http://localhost:8000/api](http://localhost:8000/api)
