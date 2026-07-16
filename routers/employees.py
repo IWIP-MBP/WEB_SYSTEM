@@ -555,18 +555,25 @@ def import_excel(
         id_card_val = data.get("id_card")
         if id_card_val and not pd.isna(id_card_val):
             data["id_card"] = clean_id_card(str(id_card_val))
-        # 处理出生日期
-        birth_val = data.get("birth_date")
-        if birth_val and not pd.isna(birth_val):
-            try:
-                if isinstance(birth_val, str):
-                    data["birth_date"] = datetime.strptime(birth_val, "%Y-%m-%d").date().strftime("%Y-%m-%d")
-                else:
-                    data["birth_date"] = birth_val.strftime("%Y-%m-%d")
-            except:
-                pass
+        # 统一处理所有日期字段为 YYYY-MM-DD 格式
+        for date_col in ["birth_date", "hire_date", "contract_end", "resign_date", "resign_op_date"]:
+            date_val = data.get(date_col)
+            if date_val and not pd.isna(date_val):
+                try:
+                    if isinstance(date_val, str):
+                        date_val_clean = date_val.strip()
+                        if " " in date_val_clean:
+                            date_val_clean = date_val_clean.split(" ")[0]
+                        datetime.strptime(date_val_clean, "%Y-%m-%d")
+                        data[date_col] = date_val_clean
+                    elif hasattr(date_val, "strftime"):
+                        data[date_col] = date_val.strftime("%Y-%m-%d")
+                except:
+                    pass
         try:
-            clean_data = {k: (None if pd.isna(v) else str(v)) for k, v in data.items()}
+            # 仅保留并转换符合 employees 表定义的有效字段，避免由于 Excel 含有多余无用列导致插入报错
+            valid_cols = set(employees.c.keys()) - {'id'}
+            clean_data = {k: (None if pd.isna(v) else str(v)) for k, v in data.items() if k in valid_cols}
             
             ws_scope_str = current_user.get("ws_scope")
             if ws_scope_str:
