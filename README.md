@@ -103,7 +103,7 @@ graph TD
 ## ⚡ 容器优化 (Containerization Features)
 *   **多阶段构建 (Multi-Stage Build)**：[Dockerfile.backend](file:///d:/WEB_SYSTEM/Dockerfile.backend) 采用构建级与运行时级双阶段设计，去除多余的编译链，降低宿主机资源消耗。
 *   **原生健康检测**：移除了需要启动 Python 环境的重量级 Healthcheck，全部采用内嵌 `curl` 对健康接口进行毫秒级探测，性能开销趋近于 0。
-*   **全容器化代理与穿透**：Nginx 反向代理和 Ngrok 隧道已完全容器化并集成到 Docker Compose 中，实现一键部署，彻底解耦宿主机环境依赖。
+*   **全容器化代理与穿透**：Nginx 反向代理和 Ngrok 隧道已完全容器化并集成到 Docker Compose 中，实现一键部署，彻底解耦宿主机环境依赖。同时配置了 Ngrok 的端点池化（`--pooling-enabled`）以及证书吊销列表免校验（`crl_noverify: true`），有效避免了域名冲突和局域网限制下的 TLS 握手失败问题。
 
 ---
 
@@ -119,6 +119,9 @@ graph TD
 ```bash
 docker compose up -d --build
 ```
+
+> [!NOTE]
+> 本地运行已完全移至容器端。项目中旧有的宿主机端代理脚本（如 `start_nginx_ngrok.ps1`、`一键启动nginx和ngrok.bat`、`proxy.py`）均已清理，由 Docker 容器统一生命周期管理。
 
 ### 3. 服务地址 (Services Ports)
 系统容器启动后，推荐通过以下服务主入口或外网穿透地址进行访问：

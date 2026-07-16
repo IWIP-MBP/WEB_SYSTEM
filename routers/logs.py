@@ -44,6 +44,7 @@ def run_postgres_command(command, db_info, stdout_path=None):
             text=False,
             check=True,
             env=env,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
         )
     finally:
         if stdout_path:
@@ -249,7 +250,14 @@ async def restore(file: UploadFile = File(...), current_user=Depends(get_current
                 "-d", db_info["dbname"],
                 "-c", "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
             ]
-            subprocess.run(clean_args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(
+                clean_args,
+                env=env,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            )
             logger.info("数据库 public 架构清空成功。")
         except Exception as e:
             logger.warning(f"清空数据库 public 架构时发生警告/错误 (但仍将继续还原): {e}")
@@ -285,7 +293,15 @@ async def restore(file: UploadFile = File(...), current_user=Depends(get_current
             "-d", db_info["dbname"],
             "-f", path,
         ]
-        subprocess.run(args, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False, env=env)
+        subprocess.run(
+            args,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False,
+            env=env,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
         logger.info("数据库已成功从上传文件还原！")
         
         # 还原成功后，自动执行一次数据库迁移以补充可能的列、约束和初始化 admin 用户

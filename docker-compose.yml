@@ -99,12 +99,15 @@ services:
     image: ngrok/ngrok:latest
     container_name: hr_ngrok
     restart: always
+    volumes:
+      - ./ngrok.yml:/var/lib/ngrok/ngrok.yml:ro
     environment:
       - NGROK_AUTHTOKEN=3FG5jhZvaqERYNa24VGcdXEJmkt_7UpFfjpuvWi15TXRAiknW
     command:
       - "http"
       - "nginx:80"
       - "--url=civil-grueling-enigmatic.ngrok-free.dev"
+      - "--pooling-enabled"
     depends_on:
       - nginx
 

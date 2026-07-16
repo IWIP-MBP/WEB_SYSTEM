@@ -79,7 +79,14 @@ def create_db_backup() -> str:
         
     try:
         logger.info(f"正在启动数据库自动/手动备份至 {filepath}...")
-        subprocess.run(args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(
+            args,
+            env=env,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
         logger.info(f"数据库备份创建成功: {filename}")
         return filepath
     except subprocess.CalledProcessError as e:
@@ -115,7 +122,14 @@ def restore_db_backup(filename: str):
                 "-d", db_info["dbname"],
                 "-c", "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
             ]
-            subprocess.run(clean_args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(
+                clean_args,
+                env=env,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            )
             logger.info("数据库 public 架构清空成功。")
         except Exception as e:
             logger.warning(f"清空数据库 public 架构时发生警告/错误 (但仍将继续还原): {e}")
@@ -168,7 +182,14 @@ def restore_db_backup(filename: str):
             
         try:
             logger.info(f"正在从备份文件 {filename} 还原数据库...")
-            subprocess.run(args, env=env, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(
+                args,
+                env=env,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            )
             logger.info(f"数据库已成功从备份 {filename} 还原！")
             
             # 还原成功后，自动执行一次数据库迁移以补充可能的列、约束和初始化 admin 用户

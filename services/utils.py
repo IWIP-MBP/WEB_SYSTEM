@@ -39,7 +39,12 @@ def get_mac_address_from_arp(ip):
                             return mac.upper()
         if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
             cmd = ["arp", "-a", ip]
-            out = subprocess.check_output(cmd, text=True, timeout=2)
+            out = subprocess.check_output(
+                cmd,
+                text=True,
+                timeout=2,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            )
             match = re.search(r"([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}", out)
             if match:
                 return match.group(0).replace("-", ":").upper()
