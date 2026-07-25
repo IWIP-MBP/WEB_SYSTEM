@@ -1553,6 +1553,10 @@ FIELD_LABELS = {
 def label(col):
     return FIELD_LABELS.get(st.session_state.get("lang", "zh"), FIELD_LABELS["zh"]).get(col, col)
 
+@st.cache_data(ttl=60, show_spinner=False)
+def api_get_meta_cached(m_type: str):
+    return api_get(f"/meta/{m_type}") or []
+
 # ---------- API 辅助 ----------
 def auth_h():
     return {"Authorization": f"Bearer {st.session_state.access_token}"} if st.session_state.get("access_token") else {}
@@ -2132,7 +2136,7 @@ components.html(
 
     if (!window.parent._realtime_search_registered) {{
         let _searchTimer = null;
-        let _lastCommittedVal = "";
+        let _lastSearchVal = "";
         
         doc.addEventListener('input', function(e) {{
             const target = e.target;
@@ -2141,14 +2145,13 @@ components.html(
                 if (wrapper) {{
                     clearTimeout(_searchTimer);
                     const currentVal = target.value;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    
                     _searchTimer = setTimeout(function() {{
-                        if (currentVal === _lastCommittedVal) return;
-                        _lastCommittedVal = currentVal;
+                        if (currentVal === _lastSearchVal) return;
+                        _lastSearchVal = currentVal;
                         
-                        const start = target.selectionStart;
-                        const end = target.selectionEnd;
-                        
-                        // Save last focus info so MutationObserver can re-focus if DOM unmounts
                         window.parent._lastFocusedSearchInfo = {{
                             val: currentVal,
                             start: start,
@@ -2156,28 +2159,27 @@ components.html(
                             time: Date.now()
                         }};
                         
-                        // Dispatch Enter key event natively to Streamlit TextInput React component
-                        const enterEvent = new KeyboardEvent('keydown', {{
-                            key: 'Enter',
-                            code: 'Enter',
-                            keyCode: 13,
-                            which: 13,
-                            bubbles: true,
-                            cancelable: true
-                        }});
-                        target.dispatchEvent(enterEvent);
+                        target.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        target.blur();
+                        
+                        setTimeout(function() {{
+                            const activeInp = doc.querySelector('[data-testid="stTextInput"] input');
+                            if (activeInp) {{
+                                activeInp.focus();
+                                try {{ activeInp.setSelectionRange(start, end); }} catch(ex){{}}
+                            }}
+                        }}, 20);
                     }}, 350);
                 }}
             }}
         }}, true);
 
-        // Restore focus to search input after Streamlit DOM updates
         const observer = new MutationObserver(function() {{
             const info = window.parent._lastFocusedSearchInfo;
             if (info && (Date.now() - info.time < 1200)) {{
                 const inputs = doc.querySelectorAll('[data-testid="stTextInput"] input');
                 inputs.forEach(function(inp) {{
-                    if (inp.value === info.val && doc.activeElement !== inp) {{
+                    if (doc.activeElement !== inp) {{
                         inp.focus();
                         try {{ inp.setSelectionRange(info.start, info.end); }} catch(ex){{}}
                     }}
@@ -3574,10 +3576,10 @@ elif menu == t("org_chart"):
 elif menu == t("employees"):
     st.header(t("employees"))
     st.markdown(f'<div class="section-note">{t("employees_note")}</div>', unsafe_allow_html=True)
-    ws_list = api_get("/meta/车间") or []
-    team_list = api_get("/meta/班组") or []
-    nationality_list = api_get("/meta/国籍") or []
-    company_list = api_get("/meta/公司") or []
+    ws_list = api_get_meta_cached("车间")
+    team_list = api_get_meta_cached("班组")
+    nationality_list = api_get_meta_cached("国籍")
+    company_list = api_get_meta_cached("公司")
     
     search = st.text_input(t("search"), key="employee_search").strip()
     
@@ -3597,7 +3599,10 @@ elif menu == t("employees"):
         st.session_state.employee_page = 1
         st.session_state.prev_employee_filter_state = curr_filter_state
 
-    page = st.number_input(t("page"), min_value=1, value=st.session_state.get("employee_page", 1), key="employee_page")
+    if "employee_page" not in st.session_state:
+        st.session_state.employee_page = 1
+
+    page = st.number_input(t("page"), min_value=1, key="employee_page")
     page_size = 20
     status_query = "在职" if status_filter == t("status_active") else "离职"
     res = api_get("/employees", {"status": status_query, "search": search, "ws": ws_filter,
@@ -5080,6 +5085,7 @@ elif menu == t("settings"):
                 if add_val:
                     resp = api_post("/meta/add", params={"m_type": m_type, "value": add_val})
                     if resp and resp.get("status") == "success":
+                        st.cache_data.clear()
                         st.session_state.toast_message = (t("operation_success"), "✅")
                         st.rerun()
                     else:
@@ -5092,6 +5098,7 @@ elif menu == t("settings"):
                     if new:
                         resp = api_post("/meta/update", params={"m_type": m_type, "old_val": old, "new_val": new})
                         if resp and resp.get("status") == "success":
+                            st.cache_data.clear()
                             st.session_state.toast_message = (t("operation_success"), "✅")
                             st.rerun()
                         else:
@@ -5102,6 +5109,7 @@ elif menu == t("settings"):
                 if st.button(t("delete"), key="delete_meta"):
                     resp = api_post("/meta/delete", params={"m_type": m_type, "value": del_val})
                     if resp and resp.get("status") == "success":
+                        st.cache_data.clear()
                         st.session_state.toast_message = (t("operation_success"), "✅")
                         st.rerun()
                     else:
