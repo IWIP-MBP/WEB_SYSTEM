@@ -1803,6 +1803,19 @@ if not st.session_state.access_token:
 
 # ---------- Windows 任务栏状态栏组件 ----------
 import streamlit.components.v1 as components
+import os
+
+_realtime_search_dir = os.path.join(os.path.dirname(__file__), "components", "realtime_search")
+if os.path.exists(_realtime_search_dir):
+    _realtime_search_func = components.declare_component("realtime_search", path=_realtime_search_dir)
+else:
+    _realtime_search_func = None
+
+def realtime_search_input(label="搜索", default="", key=None, placeholder="🔍 输入工号或姓名即时搜索..."):
+    if _realtime_search_func is not None:
+        val = _realtime_search_func(default=default, placeholder=placeholder, key=key)
+        return (val if val is not None else default).strip()
+    return st.text_input(label, value=default, key=key, placeholder=placeholder).strip()
 components.html(
     f"""
     <script>
@@ -3581,7 +3594,7 @@ elif menu == t("employees"):
     nationality_list = api_get_meta_cached("国籍")
     company_list = api_get_meta_cached("公司")
     
-    search = st.text_input(t("search"), key="employee_search").strip()
+    search = realtime_search_input(label=t("search"), key="employee_search_comp", placeholder="🔍 " + t("search"))
     
     with st.expander(t("filter")):
         c1, c2, c3, c4, c5 = st.columns(5)

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+  }
+  .search-wrapper {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .search-input {
+    width: 100%;
+    height: 40px;
+    padding: 8px 12px 8px 36px;
+    font-size: 14px;
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+  }
+  .search-input:focus {
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+    background: #ffffff;
+  }
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    font-size: 14px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="search-wrapper">
+  <span class="search-icon">🔍</span>
+  <input type="text" id="searchInput" class="search-input" placeholder="输入工号或姓名即时搜索...">
+</div>
+
+<script>
+  function sendMessageToStreamlitClient(type, data) {
+    var outData = Object.assign({
+      isStreamlitMessage: true,
+      type: type,
+    }, data);
+    window.parent.postMessage(outData, "*");
+  }
+
+  function init() {
+    sendMessageToStreamlitClient("streamlit:setFrameHeight", { height: 44 });
+  }
+
+  var searchInput = document.getElementById("searchInput");
+  var timer = null;
+
+  searchInput.addEventListener("input", function(e) {
+    clearTimeout(timer);
+    var val = e.target.value;
+    timer = setTimeout(function() {
+      sendMessageToStreamlitClient("streamlit:setComponentValue", { value: val });
+    }, 250);
+  });
+
+  window.addEventListener("message", function(event) {
+    if (event.data && event.data.type === "streamlit:render") {
+      var args = event.data.args;
+      if (args) {
+        if (args.placeholder && searchInput.placeholder !== args.placeholder) {
+          searchInput.placeholder = args.placeholder;
+        }
+        if (args.default !== undefined && document.activeElement !== searchInput && searchInput.value !== args.default) {
+          searchInput.value = args.default;
+        }
+      }
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>
