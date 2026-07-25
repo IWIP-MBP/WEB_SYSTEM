@@ -2132,28 +2132,60 @@ components.html(
 
     if (!window.parent._realtime_search_registered) {{
         let _searchTimer = null;
+        let _lastCommittedVal = "";
+        
         doc.addEventListener('input', function(e) {{
             const target = e.target;
             if (target && target.tagName === 'INPUT' && target.type === 'text') {{
                 const wrapper = target.closest('[data-testid="stTextInput"]');
                 if (wrapper) {{
                     clearTimeout(_searchTimer);
+                    const currentVal = target.value;
                     _searchTimer = setTimeout(function() {{
-                        const activeEl = doc.activeElement;
+                        if (currentVal === _lastCommittedVal) return;
+                        _lastCommittedVal = currentVal;
+                        
                         const start = target.selectionStart;
                         const end = target.selectionEnd;
-                        target.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                        target.blur();
-                        if (activeEl === target) {{
-                            setTimeout(function() {{
-                                target.focus();
-                                try {{ target.setSelectionRange(start, end); }} catch(ex){{}}
-                            }}, 30);
-                        }}
+                        
+                        // Save last focus info so MutationObserver can re-focus if DOM unmounts
+                        window.parent._lastFocusedSearchInfo = {{
+                            val: currentVal,
+                            start: start,
+                            end: end,
+                            time: Date.now()
+                        }};
+                        
+                        // Dispatch Enter key event natively to Streamlit TextInput React component
+                        const enterEvent = new KeyboardEvent('keydown', {{
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true,
+                            cancelable: true
+                        }});
+                        target.dispatchEvent(enterEvent);
                     }}, 350);
                 }}
             }}
         }}, true);
+
+        // Restore focus to search input after Streamlit DOM updates
+        const observer = new MutationObserver(function() {{
+            const info = window.parent._lastFocusedSearchInfo;
+            if (info && (Date.now() - info.time < 1200)) {{
+                const inputs = doc.querySelectorAll('[data-testid="stTextInput"] input');
+                inputs.forEach(function(inp) {{
+                    if (inp.value === info.val && doc.activeElement !== inp) {{
+                        inp.focus();
+                        try {{ inp.setSelectionRange(info.start, info.end); }} catch(ex){{}}
+                    }}
+                }});
+            }}
+        }});
+        observer.observe(doc.body || doc.documentElement, {{ childList: true, subtree: true }});
+
         window.parent._realtime_search_registered = true;
     }}
 
