@@ -857,6 +857,14 @@ LANG = {
         "status": "状态",
         "status_active": "在职",
         "status_inactive": "离职",
+        "status_status": "员工状态",
+        "company": "归属公司",
+        "all_companies": "全部公司",
+        "login_intro_setting": "📝 系统介绍设置",
+        "login_intro_zh": "系统介绍 (中文)",
+        "login_intro_id": "系统介绍 (印尼文)",
+        "save_intro_btn": "💾 保存系统介绍",
+        "login_intro_saved": "系统介绍保存成功",
         "stock_format": "库存 {stock}",
         "stock_in": "入库",
         "stock_label": "库存",
@@ -1310,6 +1318,14 @@ LANG = {
         "status": "Status",
         "status_active": "Aktif",
         "status_inactive": "Resign",
+        "status_status": "Status Karyawan",
+        "company": "Perusahaan",
+        "all_companies": "Semua Perusahaan",
+        "login_intro_setting": "📝 Pengaturan Deskripsi Sistem",
+        "login_intro_zh": "Deskripsi Sistem (Bahasa Mandarin)",
+        "login_intro_id": "Deskripsi Sistem (Bahasa Indonesia)",
+        "save_intro_btn": "💾 Simpan Deskripsi Sistem",
+        "login_intro_saved": "Konfigurasi deskripsi sistem berhasil disimpan",
         "stock_format": "Stok {stock}",
         "stock_in": "Masuk",
         "stock_label": "Stok",
@@ -1521,14 +1537,14 @@ FIELD_LABELS = {
     "zh": {
         "id_nomor": "工号", "name_nama": "姓名", "ws_bengkel": "车间",
         "team_grup": "班组", "gender_jk": "性别", "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
-        "nat_negara": "国籍", "rel_agama": "宗教", "status_status": "状态", "resign_date": "离职日期",
+        "nat_negara": "国籍", "rel_agama": "宗教", "status_status": "员工状态", "resign_date": "离职日期",
         "remark_ket": "原因/备注", "id_card": "身份证号", "hire_date": "入职日期", "contract_end": "合同到期日",
         "company": "归属公司", "resign_operator": "操作人", "resign_op_date": "操作日期"
     },
     "id": {
         "id_nomor": "ID", "name_nama": "Nama", "ws_bengkel": "Bengkel",
         "team_grup": "Grup", "gender_jk": "JK", "pos_cn_jabatan": "Jabatan (CN)", "pos_id_jabatan": "Jabatan (ID)",
-        "nat_negara": "Kewarganegaraan", "rel_agama": "Agama", "status_status": "Status", "resign_date": "Tgl Resign",
+        "nat_negara": "Kewarganegaraan", "rel_agama": "Agama", "status_status": "Status Karyawan", "resign_date": "Tgl Resign",
         "remark_ket": "Keterangan", "id_card": "Nomor KTP", "hire_date": "Tgl Masuk", "contract_end": "Kontrak Berakhir",
         "company": "Perusahaan", "resign_operator": "Operator", "resign_op_date": "Tanggal Operasi"
     }
@@ -1699,13 +1715,26 @@ if "lang_toggle" in st.session_state:
     st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
 
 if not st.session_state.access_token:
+    login_intro_desc = t("login_desc")
+    try:
+        intro_resp = requests.get("/api/settings/login_intro", timeout=3)
+        if intro_resp.status_code == 200:
+            intro_data = intro_resp.json()
+            curr_lang = st.session_state.get("lang", "zh")
+            if curr_lang == "id" and intro_data.get("login_desc_id"):
+                login_intro_desc = intro_data["login_desc_id"]
+            elif intro_data.get("login_desc_zh"):
+                login_intro_desc = intro_data["login_desc_zh"]
+    except:
+        pass
+
     brand_col, form_col = st.columns([1.05, 0.95], gap="large")
     with brand_col:
         st.markdown(f"""
         <div class="login-brand">
             <div>
                 <h1>{t("login_title")}</h1>
-                <p>{t("login_desc")}</p>
+                <p>{login_intro_desc}</p>
                 <div class="login-badges">
                     <div class="login-badge">{t("login_badge1")}</div>
                     <div class="login-badge">{t("login_badge2")}</div>
@@ -3489,22 +3518,35 @@ elif menu == t("employees"):
     ws_list = api_get("/meta/车间") or []
     team_list = api_get("/meta/班组") or []
     nationality_list = api_get("/meta/国籍") or []
+    company_list = api_get("/meta/公司") or []
     with st.expander(t("filter")):
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, c5 = st.columns(5)
         status_filter = c1.selectbox(t("status_status"), [t("status_active"), t("status_inactive")], key="status_filter")
-        ws_filter = c2.selectbox(label("ws_bengkel"), [""] + ws_list, format_func=lambda x: t_val(x) if x else t("all_workshops"), key="ws_filter")
-        team_filter = c3.selectbox(label("team_grup"), [""] + team_list, format_func=lambda x: t_val(x) if x else t("all_teams"), key="team_filter")
-        nation_filter = c4.selectbox(label("nat_negara"), [""] + nationality_list, format_func=lambda x: t_val(x) if x else t("all_nations"), key="nation_filter")
-        search = st.text_input(t("search"), key="employee_search")
-    page = st.number_input(t("page"), min_value=1, value=1, key="employee_page")
+        company_filter = c2.selectbox(label("company"), [""] + company_list, format_func=lambda x: x if x else t("all_companies"), key="company_filter")
+        ws_filter = c3.selectbox(label("ws_bengkel"), [""] + ws_list, format_func=lambda x: t_val(x) if x else t("all_workshops"), key="ws_filter")
+        team_filter = c4.selectbox(label("team_grup"), [""] + team_list, format_func=lambda x: t_val(x) if x else t("all_teams"), key="team_filter")
+        nation_filter = c5.selectbox(label("nat_negara"), [""] + nationality_list, format_func=lambda x: t_val(x) if x else t("all_nations"), key="nation_filter")
+        search = st.text_input(t("search"), key="employee_search").strip()
+    
+    # 动态监测筛选条件变化，自动重置页码为 1
+    curr_filter_state = (status_filter, company_filter, ws_filter, team_filter, nation_filter, search)
+    if "prev_employee_filter_state" not in st.session_state:
+        st.session_state.prev_employee_filter_state = curr_filter_state
+    elif st.session_state.prev_employee_filter_state != curr_filter_state:
+        st.session_state.employee_page = 1
+        st.session_state.prev_employee_filter_state = curr_filter_state
+
+    page = st.number_input(t("page"), min_value=1, value=st.session_state.get("employee_page", 1), key="employee_page")
     page_size = 20
-    res = api_get("/employees", {"status": status_filter, "search": search, "ws": ws_filter,
-                                  "team": team_filter, "nation": nation_filter, "page": page, "page_size": page_size})
+    status_query = "在职" if status_filter == t("status_active") else "离职"
+    res = api_get("/employees", {"status": status_query, "search": search, "ws": ws_filter,
+                                  "team": team_filter, "nation": nation_filter, "company": company_filter, "page": page, "page_size": page_size})
     if res and "data" in res and res["data"]:
         df = pd.DataFrame(res["data"])
-        show_cols = ["id_nomor", "name_nama", "company", "ws_bengkel", "team_grup", "pos_cn_jabatan",
+        pos_col = "pos_id_jabatan" if st.session_state.get("lang") == "id" else "pos_cn_jabatan"
+        show_cols = ["id_nomor", "name_nama", "company", "ws_bengkel", "team_grup", pos_col,
                      "nat_negara", "rel_agama", "id_card", "hire_date", "contract_end", "status_status"]
-        df_show = df[show_cols].copy()
+        df_show = df[[c for c in show_cols if c in df.columns]].copy()
         for c in ["ws_bengkel", "team_grup", "gender_jk", "nat_negara", "rel_agama", "status_status"]:
             if c in df_show.columns:
                 df_show[c] = df_show[c].apply(t_val)
@@ -3515,7 +3557,7 @@ elif menu == t("employees"):
         st.dataframe(df_show, use_container_width=True, height=500, hide_index=True)
         st.caption(t("page_info_format").format(total=res['total'], page=page, max_page=max(1, (res['total']-1)//page_size + 1)))
         if is_admin and st.button(t("export"), key="export_btn"):
-            export_params = {"status": status_filter, "ws": ws_filter, "team": team_filter, "nation": nation_filter}
+            export_params = {"status": status_query, "ws": ws_filter, "team": team_filter, "nation": nation_filter, "company": company_filter, "lang": st.session_state.get("lang", "zh")}
             with st.spinner(t("export_generating")):
                 r = requests.get("/api/employees/export", params=export_params, headers=auth_h(), timeout=30)
                 if r.status_code == 200:
@@ -4966,7 +5008,7 @@ elif menu == t("settings"):
     if not is_admin:
         st.warning(t("readonly_msg"))
         st.stop()
-    tab_settings, tab_users, tab_logo = st.tabs([t("meta_maintenance"), t("user_management"), t("company_logo")])
+    tab_settings, tab_users, tab_logo, tab_intro = st.tabs([t("meta_maintenance"), t("user_management"), t("company_logo"), t("login_intro_setting")])
     with tab_settings:
         m_type = st.radio(t("meta_maintenance"), [t("workshop"), t("team"), t("nationality")], horizontal=True, key="meta_type")
         items = api_get(f"/meta/{m_type}") or []
@@ -5156,6 +5198,24 @@ elif menu == t("settings"):
                 st.info(t("logo_empty"))
         except:
             st.info(t("logo_get_failed"))
+    with tab_intro:
+        st.subheader(t("login_intro_setting"))
+        intro_info = api_get("/settings/login_intro") or {}
+        curr_zh = intro_info.get("login_desc_zh", "")
+        curr_id = intro_info.get("login_desc_id", "")
+        with st.form("login_intro_form"):
+            intro_zh_input = st.text_area(t("login_intro_zh"), value=curr_zh, height=120)
+            intro_id_input = st.text_area(t("login_intro_id"), value=curr_id, height=120)
+            if st.form_submit_button(t("save_intro_btn"), use_container_width=True):
+                resp = api_post("/settings/login_intro", json_data={
+                    "login_desc_zh": intro_zh_input,
+                    "login_desc_id": intro_id_input
+                })
+                if resp and resp.get("status") == "success":
+                    st.session_state.toast_message = (t("login_intro_saved"), "✅")
+                    st.rerun()
+                else:
+                    st.toast(t("operation_failed"), icon="❌")
 
 # 渲染屏幕中间的专用提示弹窗
 show_modal_message()

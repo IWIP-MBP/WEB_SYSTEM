@@ -84,6 +84,7 @@ def get_employees(
     ws: str = "",
     team: str = "",
     nation: str = "",
+    company: str = "",
     gender: str = "",
     page: int = 1,
     page_size: int = 20
@@ -94,6 +95,7 @@ def get_employees(
     if ws: query = query.where(employees.c.ws_bengkel == ws)
     if team: query = query.where(employees.c.team_grup == team)
     if nation: query = query.where(employees.c.nat_negara == nation)
+    if company: query = query.where(employees.c.company == company)
     if gender: query = query.where(employees.c.gender_jk == gender)
     
     ws_scope_str = current_user.get("ws_scope")
@@ -326,6 +328,7 @@ def export_employees(
     ws: str = "",
     team: str = "",
     nation: str = "",
+    company: str = "",
     lang: str = "zh"
 ):
     if current_user.get("role") != "admin":
@@ -334,6 +337,7 @@ def export_employees(
     if ws: query = query.where(employees.c.ws_bengkel == ws)
     if team: query = query.where(employees.c.team_grup == team)
     if nation: query = query.where(employees.c.nat_negara == nation)
+    if company: query = query.where(employees.c.company == company)
     
     ws_scope_str = current_user.get("ws_scope")
     if ws_scope_str:
@@ -1098,6 +1102,15 @@ def get_religions(db=Depends(get_db)):
     rows = db.execute(select(employees.c.rel_agama).distinct()).fetchall()
     return [r[0] for r in rows if r[0] and r[0].strip()]
 
+@router.get("/api/meta/公司")
+def get_companies(db=Depends(get_db)):
+    rows = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "公司")).fetchall()
+    meta_list = [r[0] for r in rows if r[0] and r[0].strip()]
+    emp_rows = db.execute(select(employees.c.company).distinct()).fetchall()
+    emp_list = [r[0] for r in emp_rows if r[0] and r[0].strip()]
+    combined = list(dict.fromkeys(meta_list + emp_list))
+    return combined
+
 @router.get("/api/meta/{m_type}")
 def get_meta(m_type: str, db=Depends(get_db)):
     return [v[0] for v in db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == m_type)).fetchall()]
@@ -1227,3 +1240,38 @@ def get_logo():
         return Response(content=open(filepath, "rb").read(), media_type="image/png")
     else:
         raise HTTPException(404, "Logo not found")
+
+# ---------- 登录页系统介绍配置 ----------
+@router.get("/api/settings/login_intro")
+def get_login_intro(db=Depends(get_db)):
+    row_zh = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "login_desc_zh")).scalar()
+    row_id = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "login_desc_id")).scalar()
+    default_zh = "集中管理员工花名册、劳保用品、库存发放、组织架构和操作审计，让日常人事工作更清晰、更可靠。同时集成印尼语学习系统，助力员工快速提升语言技能与沟通效率。"
+    default_id = "Mengelola data pegawai, alat pelindung diri (APD), stok & distribusi, bagan organisasi, dan audit aktivitas secara terpusat untuk pekerjaan personalia yang lebih teratur dan andal. Terintegrasi dengan sistem pembelajaran bahasa Indonesia untuk membantu meningkatkan keterampilan bahasa."
+    return {
+        "login_desc_zh": row_zh if (row_zh is not None and row_zh.strip()) else default_zh,
+        "login_desc_id": row_id if (row_id is not None and row_id.strip()) else default_id
+    }
+
+@router.post("/api/settings/login_intro")
+def save_login_intro(
+    data: dict,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, "Only admin can modify login introduction")
+    
+    desc_zh = data.get("login_desc_zh", "").strip() if data.get("login_desc_zh") else ""
+    desc_id = data.get("login_desc_id", "").strip() if data.get("login_desc_id") else ""
+    
+    db.execute(delete(config_meta).where(config_meta.c.meta_type == "login_desc_zh"))
+    if desc_zh:
+        db.execute(insert(config_meta).values(meta_type="login_desc_zh", meta_value=desc_zh))
+        
+    db.execute(delete(config_meta).where(config_meta.c.meta_type == "login_desc_id"))
+    if desc_id:
+        db.execute(insert(config_meta).values(meta_type="login_desc_id", meta_value=desc_id))
+        
+    db.commit()
+    return {"status": "success"}
