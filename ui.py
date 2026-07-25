@@ -3594,7 +3594,12 @@ elif menu == t("employees"):
     nationality_list = api_get_meta_cached("国籍")
     company_list = api_get_meta_cached("公司")
     
-    search = realtime_search_input(label=t("search"), key="employee_search_comp", placeholder="🔍 " + t("search"))
+    col_search, col_btn = st.columns([4, 1])
+    with col_search:
+        search = st.text_input(t("search"), key="employee_search", placeholder="🔍 " + t("search")).strip()
+    with col_btn:
+        st.markdown('<div style="height: 28px;"></div>', unsafe_allow_html=True)
+        st.button("🔍 " + t("search"), key="trigger_emp_search_btn", use_container_width=True)
     
     with st.expander(t("filter")):
         c1, c2, c3, c4, c5 = st.columns(5)
