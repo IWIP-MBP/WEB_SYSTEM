@@ -2154,49 +2154,49 @@ components.html(
         doc.addEventListener('input', function(e) {{
             const target = e.target;
             if (target && target.tagName === 'INPUT' && target.type === 'text') {{
-                const wrapper = target.closest('[data-testid="stTextInput"]');
-                if (wrapper) {{
+                const ariaLabel = target.getAttribute('aria-label') || '';
+                const placeholder = target.placeholder || '';
+                const isSearchInput = ariaLabel.includes('搜索') || ariaLabel.includes('Cari') || placeholder.includes('搜索') || placeholder.includes('Cari');
+                
+                if (isSearchInput) {{
                     clearTimeout(_searchTimer);
-                    const currentVal = target.value;
+                    const val = target.value;
                     const start = target.selectionStart;
                     const end = target.selectionEnd;
                     
                     _searchTimer = setTimeout(function() {{
-                        if (currentVal === _lastSearchVal) return;
-                        _lastSearchVal = currentVal;
+                        if (val === _lastSearchVal) return;
+                        _lastSearchVal = val;
                         
-                        window.parent._lastFocusedSearchInfo = {{
-                            val: currentVal,
+                        window.parent._lastSearchState = {{
+                            val: val,
                             start: start,
                             end: end,
                             time: Date.now()
                         }};
                         
-                        target.dispatchEvent(new Event('change', {{ bubbles: true }}));
                         target.blur();
                         
                         setTimeout(function() {{
-                            const activeInp = doc.querySelector('[data-testid="stTextInput"] input');
-                            if (activeInp) {{
-                                activeInp.focus();
-                                try {{ activeInp.setSelectionRange(start, end); }} catch(ex){{}}
+                            const searchEl = doc.querySelector('input[aria-label*="搜索"], input[aria-label*="Cari"], input[placeholder*="搜索"], input[placeholder*="Cari"]');
+                            if (searchEl) {{
+                                searchEl.focus();
+                                try {{ searchEl.setSelectionRange(start, end); }} catch(ex){{}}
                             }}
-                        }}, 20);
-                    }}, 350);
+                        }}, 15);
+                    }}, 280);
                 }}
             }}
         }}, true);
 
         const observer = new MutationObserver(function() {{
-            const info = window.parent._lastFocusedSearchInfo;
-            if (info && (Date.now() - info.time < 1200)) {{
-                const inputs = doc.querySelectorAll('[data-testid="stTextInput"] input');
-                inputs.forEach(function(inp) {{
-                    if (doc.activeElement !== inp) {{
-                        inp.focus();
-                        try {{ inp.setSelectionRange(info.start, info.end); }} catch(ex){{}}
-                    }}
-                }});
+            const state = window.parent._lastSearchState;
+            if (state && (Date.now() - state.time < 1200)) {{
+                const searchEl = doc.querySelector('input[aria-label*="搜索"], input[aria-label*="Cari"], input[placeholder*="搜索"], input[placeholder*="Cari"]');
+                if (searchEl && doc.activeElement !== searchEl) {{
+                    searchEl.focus();
+                    try {{ searchEl.setSelectionRange(state.start, state.end); }} catch(ex){{}}
+                }}
             }}
         }});
         observer.observe(doc.body || doc.documentElement, {{ childList: true, subtree: true }});
