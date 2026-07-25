@@ -2130,6 +2130,33 @@ components.html(
         window.parent._taskbar_click_handler_registered = true;
     }}
 
+    if (!window.parent._realtime_search_registered) {{
+        let _searchTimer = null;
+        doc.addEventListener('input', function(e) {{
+            const target = e.target;
+            if (target && target.tagName === 'INPUT' && target.type === 'text') {{
+                const wrapper = target.closest('[data-testid="stTextInput"]');
+                if (wrapper) {{
+                    clearTimeout(_searchTimer);
+                    _searchTimer = setTimeout(function() {{
+                        const activeEl = doc.activeElement;
+                        const start = target.selectionStart;
+                        const end = target.selectionEnd;
+                        target.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        target.blur();
+                        if (activeEl === target) {{
+                            setTimeout(function() {{
+                                target.focus();
+                                try {{ target.setSelectionRange(start, end); }} catch(ex){{}}
+                            }}, 30);
+                        }}
+                    }}, 350);
+                }}
+            }}
+        }}, true);
+        window.parent._realtime_search_registered = true;
+    }}
+
     window.parent.getOrCreateVirtualMac = function() {{
         let mac = localStorage.getItem('virtual_mac');
         if (!mac) {{
@@ -3519,6 +3546,9 @@ elif menu == t("employees"):
     team_list = api_get("/meta/班组") or []
     nationality_list = api_get("/meta/国籍") or []
     company_list = api_get("/meta/公司") or []
+    
+    search = st.text_input(t("search"), key="employee_search").strip()
+    
     with st.expander(t("filter")):
         c1, c2, c3, c4, c5 = st.columns(5)
         status_filter = c1.selectbox(t("status_status"), [t("status_active"), t("status_inactive")], key="status_filter")
@@ -3526,7 +3556,6 @@ elif menu == t("employees"):
         ws_filter = c3.selectbox(label("ws_bengkel"), [""] + ws_list, format_func=lambda x: t_val(x) if x else t("all_workshops"), key="ws_filter")
         team_filter = c4.selectbox(label("team_grup"), [""] + team_list, format_func=lambda x: t_val(x) if x else t("all_teams"), key="team_filter")
         nation_filter = c5.selectbox(label("nat_negara"), [""] + nationality_list, format_func=lambda x: t_val(x) if x else t("all_nations"), key="nation_filter")
-        search = st.text_input(t("search"), key="employee_search").strip()
     
     # 动态监测筛选条件变化，自动重置页码为 1
     curr_filter_state = (status_filter, company_filter, ws_filter, team_filter, nation_filter, search)
