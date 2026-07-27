@@ -2148,7 +2148,6 @@ components.html(
     }}
 
     if (!window.parent._realtime_search_registered) {{
-        let _searchTimer = null;
         let _lastSearchVal = "";
         
         doc.addEventListener('input', function(e) {{
@@ -2159,32 +2158,30 @@ components.html(
                 const isSearchInput = ariaLabel.includes('搜索') || ariaLabel.includes('Cari') || placeholder.includes('搜索') || placeholder.includes('Cari');
                 
                 if (isSearchInput) {{
-                    clearTimeout(_searchTimer);
                     const val = target.value;
+                    if (val === _lastSearchVal) return;
+                    _lastSearchVal = val;
+                    
                     const start = target.selectionStart;
                     const end = target.selectionEnd;
                     
-                    _searchTimer = setTimeout(function() {{
-                        if (val === _lastSearchVal) return;
-                        _lastSearchVal = val;
-                        
-                        window.parent._lastSearchState = {{
-                            val: val,
-                            start: start,
-                            end: end,
-                            time: Date.now()
-                        }};
-                        
-                        target.blur();
-                        
-                        setTimeout(function() {{
-                            const searchEl = doc.querySelector('input[aria-label*="搜索"], input[aria-label*="Cari"], input[placeholder*="搜索"], input[placeholder*="Cari"]');
-                            if (searchEl) {{
-                                searchEl.focus();
-                                try {{ searchEl.setSelectionRange(start, end); }} catch(ex){{}}
-                            }}
-                        }}, 15);
-                    }}, 280);
+                    window.parent._lastSearchState = {{
+                        val: val,
+                        start: start,
+                        end: end,
+                        time: Date.now()
+                    }};
+                    
+                    // 每一个字符变动立即触发 Commit 检索
+                    target.blur();
+                    
+                    setTimeout(function() {{
+                        const searchEl = doc.querySelector('input[aria-label*="搜索"], input[aria-label*="Cari"], input[placeholder*="搜索"], input[placeholder*="Cari"]');
+                        if (searchEl) {{
+                            searchEl.focus();
+                            try {{ searchEl.setSelectionRange(start, end); }} catch(ex){{}}
+                        }}
+                    }}, 5);
                 }}
             }}
         }}, true);

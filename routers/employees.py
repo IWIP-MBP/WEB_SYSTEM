@@ -708,7 +708,7 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
     nation_dist = db.execute(apply_ws_filter(select(employees.c.nat_negara, func.count()).where(employees.c.status_status.contains("在职")).group_by(employees.c.nat_negara))).fetchall()
     gender_dist = db.execute(apply_ws_filter(select(employees.c.gender_jk, func.count()).where(employees.c.status_status.contains("在职")).group_by(employees.c.gender_jk))).fetchall()
     
-    age_groups = {"<20":0, "20-30":0, "30-40":0, "40-50":0, ">50":0, "UNKNOWN":0}
+    age_groups = {"<20岁": 0, "20-30岁": 0, "31-40岁": 0, "41-50岁": 0, "≥51岁": 0, "未知": 0}
     today = date.today()
     rows = db.execute(apply_ws_filter(
         select(employees.c.id_card, employees.c.nat_negara, employees.c.birth_date)
@@ -739,14 +739,14 @@ def dashboard(db=Depends(get_db), current_user=Depends(get_current_user)):
             except:
                 pass
         if not birth:
-            age_groups["UNKNOWN"] += 1
+            age_groups["未知"] += 1
             continue
         age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
-        if age < 20: age_groups["<20"] += 1
-        elif age < 30: age_groups["20-30"] += 1
-        elif age < 40: age_groups["30-40"] += 1
-        elif age < 50: age_groups["40-50"] += 1
-        else: age_groups[">50"] += 1
+        if age < 20: age_groups["<20岁"] += 1
+        elif age <= 30: age_groups["20-30岁"] += 1
+        elif age <= 40: age_groups["31-40岁"] += 1
+        elif age <= 50: age_groups["41-50岁"] += 1
+        else: age_groups["≥51岁"] += 1
     
     workshop_team_nation = db.execute(
         apply_ws_filter(

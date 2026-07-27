@@ -51,6 +51,11 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./backups:/app/backups
+      - ./routers:/app/routers
+      - ./services:/app/services
+      - ./main.py:/app/main.py
+      - ./models.py:/app/models.py
+      - ./database.py:/app/database.py
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 60s
