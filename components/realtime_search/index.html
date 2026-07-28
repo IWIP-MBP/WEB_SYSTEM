@@ -65,8 +65,23 @@
 
   var searchInput = document.getElementById("searchInput");
   var timer = null;
+  var isComposing = false;
+
+  searchInput.addEventListener("compositionstart", function() {
+    isComposing = true;
+  });
+
+  searchInput.addEventListener("compositionend", function(e) {
+    isComposing = false;
+    clearTimeout(timer);
+    var val = e.target.value;
+    timer = setTimeout(function() {
+      sendMessageToStreamlitClient("streamlit:setComponentValue", { value: val });
+    }, 250);
+  });
 
   searchInput.addEventListener("input", function(e) {
+    if (isComposing) return;
     clearTimeout(timer);
     var val = e.target.value;
     timer = setTimeout(function() {

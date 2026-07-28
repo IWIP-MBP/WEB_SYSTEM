@@ -69,11 +69,15 @@ def add_meta_if_not_exists(db, meta_type, value):
         db.execute(insert(config_meta).values(meta_type=meta_type, meta_value=value.strip()))
         db.commit()
 
-def record_transfer(db, id_nomor, name, change_type, old_value, new_value, operator):
+def record_transfer(db, id_nomor, name, change_type, old_value, new_value, operator, transfer_date=None):
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if not transfer_date:
+        transfer_date = now_str[:10]
     db.execute(insert(employee_transfers).values(
-        transfer_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        transfer_date=transfer_date,
         id_nomor=id_nomor, name=name, change_type=change_type,
-        old_value=old_value, new_value=new_value, operator=operator))
+        old_value=old_value, new_value=new_value, operator=operator,
+        created_at=now_str))
     db.commit()
 
 def get_employee(db, id_nomor):

@@ -109,5 +109,6 @@ employee_transfers = Table("employee_transfers", metadata,
     Column("change_type", String),
     Column("old_value", String),
     Column("new_value", String),
-    Column("operator", String)
+    Column("operator", String),
+    Column("created_at", String)
 )

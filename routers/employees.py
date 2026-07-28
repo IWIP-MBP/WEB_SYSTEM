@@ -41,6 +41,8 @@ class EmployeeSave(BaseModel):
     id_card: Optional[str] = None
     hire_date: Optional[str] = None
     contract_end: Optional[str] = None
+    remark_ket: Optional[str] = None
+    transfer_date: Optional[str] = None
     custom_fields: Optional[str] = "{}"
     company: Optional[str] = None
 
@@ -89,9 +91,26 @@ def get_employees(
     page: int = 1,
     page_size: int = 20
 ):
-    query = select(employees).where(employees.c.status_status.contains(status))
+    query = select(employees)
     if search:
-        query = query.where(or_(employees.c.name_nama.ilike(f"%{search}%"), employees.c.id_nomor.ilike(f"%{search}%")))
+        s_pat = f"%{search.strip()}%"
+        query = query.where(or_(
+            employees.c.name_nama.ilike(s_pat),
+            employees.c.id_nomor.ilike(s_pat),
+            employees.c.ws_bengkel.ilike(s_pat),
+            employees.c.team_grup.ilike(s_pat),
+            employees.c.pos_cn_jabatan.ilike(s_pat),
+            employees.c.pos_id_jabatan.ilike(s_pat),
+            employees.c.nat_negara.ilike(s_pat),
+            employees.c.rel_agama.ilike(s_pat),
+            employees.c.id_card.ilike(s_pat),
+            employees.c.company.ilike(s_pat),
+            employees.c.remark_ket.ilike(s_pat),
+            employees.c.status_status.ilike(s_pat)
+        ))
+    else:
+        if status:
+            query = query.where(employees.c.status_status.contains(status))
     if ws: query = query.where(employees.c.ws_bengkel == ws)
     if team: query = query.where(employees.c.team_grup == team)
     if nation: query = query.where(employees.c.nat_negara == nation)
@@ -166,16 +185,17 @@ def save_employee(
             except Exception as e:
                 raise HTTPException(400, f"Permission verification failed: {str(e)}")
 
+        t_date = payload.pop("transfer_date", None)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if is_update and emp:
             old_ws = emp.get("ws_bengkel")
             new_ws = payload.get("ws_bengkel")
             if old_ws != new_ws and new_ws:
-                record_transfer(db, payload["id_nomor"], payload["name_nama"], "车间变更", old_ws or "", new_ws, current_user["username"])
+                record_transfer(db, payload["id_nomor"], payload.get("name_nama", emp["name_nama"]), "车间变更", old_ws or "", new_ws, current_user["username"], transfer_date=t_date)
             old_team = emp.get("team_grup")
             new_team = payload.get("team_grup")
             if old_team != new_team and new_team:
-                record_transfer(db, payload["id_nomor"], payload["name_nama"], "班组变更", old_team or "", new_team, current_user["username"])
+                record_transfer(db, payload["id_nomor"], payload.get("name_nama", emp["name_nama"]), "班组变更", old_team or "", new_team, current_user["username"], transfer_date=t_date)
         if payload.get("ws_bengkel"):
             add_meta_if_not_exists(db, "车间", payload["ws_bengkel"])
         if payload.get("team_grup"):
@@ -520,7 +540,7 @@ def import_excel(
         "宗教": "rel_agama", "Agama": "rel_agama",
         "身份证号": "id_card", "ID Card": "id_card", "Nomor KTP": "id_card",
         "入职日期": "hire_date", "Tgl Masuk": "hire_date", "Tanggal Masuk": "hire_date",
-        "合同到期日": "contract_end", "Kontrak Berakhir": "contract_end",
+        "合同到期日": "remark_ket", "Kontrak Berakhir": "remark_ket", "备注": "remark_ket", "Keterangan": "remark_ket", "Reason": "remark_ket",
         "出生日期": "birth_date",
         "归属公司": "company", "Perusahaan": "company",
     }

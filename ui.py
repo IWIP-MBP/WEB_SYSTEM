@@ -3591,12 +3591,18 @@ elif menu == t("employees"):
     nationality_list = api_get_meta_cached("国籍")
     company_list = api_get_meta_cached("公司")
     
+    is_id_lang = st.session_state.get("lang") == "id"
     col_search, col_btn = st.columns([4, 1])
     with col_search:
-        search = st.text_input(t("search"), key="employee_search", placeholder="🔍 " + t("search")).strip()
+        search = st.text_input(
+            "search",
+            key="employee_search_keyword_input",
+            placeholder="🔍 " + ("Cari berdasarkan No. ID, Nama, Bengkel, Grup, Jabatan, KTP, Keterangan..." if is_id_lang else "全局搜索：可按工号、姓名、车间、班组、岗位、国籍、身份证号、备注检索..."),
+            label_visibility="collapsed"
+        ).strip()
     with col_btn:
-        st.markdown('<div style="height: 28px;"></div>', unsafe_allow_html=True)
-        st.button("🔍 " + t("search"), key="trigger_emp_search_btn", use_container_width=True)
+        if st.button("🔍 " + t("search"), key="trigger_emp_search_btn", type="primary", use_container_width=True):
+            st.rerun()
     
     with st.expander(t("filter")):
         c1, c2, c3, c4, c5 = st.columns(5)
@@ -3614,19 +3620,16 @@ elif menu == t("employees"):
         st.session_state.employee_page = 1
         st.session_state.prev_employee_filter_state = curr_filter_state
 
-    if "employee_page" not in st.session_state:
-        st.session_state.employee_page = 1
-
-    page = st.number_input(t("page"), min_value=1, key="employee_page")
-    page_size = 20
+    page_size = st.session_state.get("emp_page_size_select", 20)
+    curr_p = st.session_state.get("employee_page", 1)
     status_query = "在职" if status_filter == t("status_active") else "离职"
     res = api_get("/employees", {"status": status_query, "search": search, "ws": ws_filter,
-                                  "team": team_filter, "nation": nation_filter, "company": company_filter, "page": page, "page_size": page_size})
+                                  "team": team_filter, "nation": nation_filter, "company": company_filter, "page": curr_p, "page_size": page_size})
     if res and "data" in res and res["data"]:
         df = pd.DataFrame(res["data"])
         pos_col = "pos_id_jabatan" if st.session_state.get("lang") == "id" else "pos_cn_jabatan"
         show_cols = ["id_nomor", "name_nama", "company", "ws_bengkel", "team_grup", pos_col,
-                     "nat_negara", "rel_agama", "id_card", "hire_date", "contract_end", "status_status"]
+                     "nat_negara", "rel_agama", "id_card", "hire_date", "remark_ket", "status_status"]
         df_show = df[[c for c in show_cols if c in df.columns]].copy()
         for c in ["ws_bengkel", "team_grup", "gender_jk", "nat_negara", "rel_agama", "status_status"]:
             if c in df_show.columns:
@@ -3636,18 +3639,61 @@ elif menu == t("employees"):
         df_show = df_show.reset_index(drop=True)
         df_show.insert(0, t("seq_no"), range(1, len(df_show) + 1))
         st.dataframe(df_show, use_container_width=True, height=500, hide_index=True)
-        st.caption(t("page_info_format").format(total=res['total'], page=page, max_page=max(1, (res['total']-1)//page_size + 1)))
-        if is_admin and st.button(t("export"), key="export_btn"):
-            export_params = {"status": status_query, "ws": ws_filter, "team": team_filter, "nation": nation_filter, "company": company_filter, "lang": st.session_state.get("lang", "zh")}
-            with st.spinner(t("export_generating")):
-                r = requests.get("/api/employees/export", params=export_params, headers=auth_h(), timeout=30)
-                if r.status_code == 200:
-                    st.download_button(label="📥 " + t("export"), data=r.content,
-                                       file_name=f"employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                       key="export_download")
-                else:
-                    st.toast(t("operation_failed"), icon="❌")
+        
+        # 表格下方的单行紧凑控件：[每页条数选择] + [页码输入框] + [第 X / Y 页] + [共 Z 条记录] + [导出按钮]
+        total_records = res.get('total', 0)
+        max_page = max(1, (total_records - 1) // page_size + 1)
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+        
+        p_col_ps, p_col_input, p_col_page, p_col_total, p_col_export = st.columns([1.8, 1.2, 1.6, 2.0, 3.4])
+        
+        with p_col_ps:
+            selected_ps = st.selectbox(
+                "Baris per Halaman" if is_id_lang else "每页条数",
+                [10, 20, 50, 100, 200, 10000],
+                index=[10, 20, 50, 100, 200, 10000].index(page_size) if page_size in [10, 20, 50, 100, 200, 10000] else 1,
+                format_func=lambda x: ("Semua" if is_id_lang else "全部") if x >= 10000 else (f"{x} Baris/Hal" if is_id_lang else f"{x} 条/页"),
+                key="emp_page_size_select",
+                label_visibility="collapsed"
+            )
+            if selected_ps != page_size:
+                st.session_state.employee_page = 1
+                st.rerun()
+
+        with p_col_input:
+            jump_p = st.number_input(
+                "Halaman" if is_id_lang else "页码",
+                min_value=1,
+                max_value=max_page,
+                value=curr_p,
+                key="employee_page_input",
+                label_visibility="collapsed"
+            )
+            if jump_p != curr_p:
+                st.session_state.employee_page = jump_p
+                st.rerun()
+
+        with p_col_page:
+            p_text = f"Hal <b>{curr_p}</b> / <b>{max_page}</b>" if is_id_lang else f"第 <b>{curr_p}</b> / <b>{max_page}</b> 页"
+            st.markdown(f"<div style='line-height: 38px; font-size: 14px; text-align: left; color: #374151;'>{p_text}</div>", unsafe_allow_html=True)
+
+        with p_col_total:
+            t_text = f"Total <b>{total_records}</b> Data" if is_id_lang else f"共 <b>{total_records}</b> 条记录"
+            st.markdown(f"<div style='line-height: 38px; font-size: 14px; text-align: left; color: #374151;'>{t_text}</div>", unsafe_allow_html=True)
+
+        with p_col_export:
+            if is_admin and st.button(t("export"), key="export_btn"):
+                export_params = {"status": status_query, "ws": ws_filter, "team": team_filter, "nation": nation_filter, "company": company_filter, "lang": st.session_state.get("lang", "zh")}
+                with st.spinner(t("export_generating")):
+                    r = requests.get("/api/employees/export", params=export_params, headers=auth_h(), timeout=30)
+                    if r.status_code == 200:
+                        st.download_button(label="📥 " + t("export"), data=r.content,
+                                           file_name=f"employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                           key="export_download")
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
+
     else:
         st.info(t("no_data"))
 

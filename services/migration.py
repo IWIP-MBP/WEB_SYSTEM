@@ -71,6 +71,16 @@ def run_db_migrations():
             logger.info("Checked/migrated employees table columns")
         except Exception as e:
             logger.warning(f"Error migrating employees table: {e}")
+    with engine.begin() as conn:
+        try:
+            existing_cols = [row[0] for row in conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='employee_transfers'"
+            )).fetchall()]
+            if 'created_at' not in existing_cols:
+                conn.execute(text("ALTER TABLE employee_transfers ADD COLUMN created_at VARCHAR"))
+                logger.info("Added created_at column to employee_transfers")
+        except Exception as e:
+            logger.warning(f"Error adding created_at column to employee_transfers: {e}")
 
     with engine.begin() as conn:
         try:
