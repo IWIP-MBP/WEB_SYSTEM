@@ -22,6 +22,10 @@ class UserCreate(BaseModel):
     password: str
     role: str = "viewer"
     ws_scope: Optional[str] = None
+    mask_id_card: Optional[str] = "true"
+
+class UserSettingsUpdate(BaseModel):
+    mask_id_card: Optional[str] = None
 
 @router.post("/api/auth/login")
 @limiter.limit("10/minute")
@@ -30,15 +34,22 @@ def login(username: str, password: str, request: Request, db=Depends(get_db)):
     if not user or not bcrypt.checkpw(password.encode('utf-8'), user.hashed_password.encode('utf-8')):
         raise HTTPException(401, detail="用户名或密码错误")
     token = create_token({"sub": username, "role": user.role})
+    mask_val = user.mask_id_card if user.mask_id_card is not None else ("false" if user.role == "admin" else "true")
     write_audit(db, "", "", "登录", old="{}", new=json.dumps({"username": username, "role": user.role}), reason="用户登录成功", operator=username, ip=request.client.host)
-    return {"access_token": token, "token_type": "bearer", "username": username, "role": user.role, "ws_scope": user.ws_scope}
+    return {"access_token": token, "token_type": "bearer", "username": username, "role": user.role, "ws_scope": user.ws_scope, "mask_id_card": mask_val}
 
 @router.get("/api/users")
 def get_users(db=Depends(get_db), current_user=Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(403, "Only admin can list users")
-    rows = db.execute(select(users.c.id, users.c.username, users.c.role, users.c.ws_scope)).fetchall()
-    return {"users": [{"id": r.id, "username": r.username, "role": r.role, "ws_scope": r.ws_scope} for r in rows]}
+    rows = db.execute(select(users.c.id, users.c.username, users.c.role, users.c.ws_scope, users.c.mask_id_card)).fetchall()
+    return {"users": [{
+        "id": r.id,
+        "username": r.username,
+        "role": r.role,
+        "ws_scope": r.ws_scope,
+        "mask_id_card": r.mask_id_card if r.mask_id_card is not None else ("false" if r.role == "admin" else "true")
+    } for r in rows]}
 
 @router.post("/api/users")
 def create_user(
@@ -53,9 +64,10 @@ def create_user(
     if existing:
         raise HTTPException(400, "Username already exists")
     hashed = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    db.execute(insert(users).values(username=user.username, hashed_password=hashed, role=user.role, ws_scope=user.ws_scope))
+    mask_val = user.mask_id_card if user.mask_id_card in ["true", "false"] else ("false" if user.role == "admin" else "true")
+    db.execute(insert(users).values(username=user.username, hashed_password=hashed, role=user.role, ws_scope=user.ws_scope, mask_id_card=mask_val))
     db.commit()
-    write_audit(db, "", "", "新增用户", old="", new=f"{user.username} ({user.role}), ws_scope: {user.ws_scope}", operator=current_user["username"], ip=request.client.host)
+    write_audit(db, "", "", "新增用户", old="", new=f"{user.username} ({user.role}), scope: {user.ws_scope}, mask_id_card: {mask_val}", operator=current_user["username"], ip=request.client.host)
     return {"status": "success"}
 
 @router.put("/api/users/{user_id}/role")
@@ -64,6 +76,7 @@ def update_user_role(
     role: str,
     request: Request,
     ws_scope: Optional[str] = None,
+    mask_id_card: Optional[str] = None,
     db=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -78,10 +91,30 @@ def update_user_role(
         raise HTTPException(400, "Cannot change your own role/permissions")
     old_role = target.role
     old_scope = target.ws_scope
-    db.execute(update(users).where(users.c.id == user_id).values(role=role, ws_scope=ws_scope))
+    old_mask = target.mask_id_card
+    update_vals = {"role": role, "ws_scope": ws_scope}
+    if mask_id_card in ["true", "false"]:
+        update_vals["mask_id_card"] = mask_id_card
+    db.execute(update(users).where(users.c.id == user_id).values(**update_vals))
     db.commit()
-    write_audit(db, "", "", "修改用户角色和权限", old=f"role: {old_role}, scope: {old_scope}", new=f"role: {role}, scope: {ws_scope}", operator=current_user["username"], ip=request.client.host)
+    write_audit(db, "", "", "修改用户角色和权限", old=f"role: {old_role}, scope: {old_scope}, mask: {old_mask}", new=f"role: {role}, scope: {ws_scope}, mask: {mask_id_card}", operator=current_user["username"], ip=request.client.host)
     return {"status": "success"}
+
+@router.put("/api/users/me/settings")
+def update_my_settings(
+    settings_data: UserSettingsUpdate,
+    request: Request,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    update_vals = {}
+    if settings_data.mask_id_card in ["true", "false"]:
+        update_vals["mask_id_card"] = settings_data.mask_id_card
+    if update_vals:
+        db.execute(update(users).where(users.c.username == current_user["username"]).values(**update_vals))
+        db.commit()
+        write_audit(db, "", "", "修改个人设置", old=f"mask: {current_user.get('mask_id_card')}", new=f"mask: {settings_data.mask_id_card}", operator=current_user["username"], ip=request.client.host)
+    return {"status": "success", "mask_id_card": settings_data.mask_id_card}
 
 @router.delete("/api/users/{user_id}")
 def delete_user(

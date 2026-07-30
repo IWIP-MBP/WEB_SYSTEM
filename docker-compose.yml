@@ -79,6 +79,8 @@ services:
       - "8501:8501"
     volumes:
       - ./uploads:/app/uploads
+      - ./ui.py:/app/ui.py
+      - ./components:/app/components
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s

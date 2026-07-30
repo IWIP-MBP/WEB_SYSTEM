@@ -98,6 +98,24 @@ def clean_id_card(id_card):
     id_str = re.sub(r"[^0-9X]", "", raw.upper())
     return id_str if id_str else None
 
+def mask_id_card(id_card):
+    """
+    非管理员脱敏身份证号：
+    - 长度 > 8位（如16位/18位身份证）：保留前4位和后4位，中间替换为 *
+    - 4位 < 长度 <= 8位：保留前2位和后2位，中间替换为 *
+    - 长度 <= 4位：全部替换为 *
+    """
+    if not id_card or not isinstance(id_card, str):
+        return id_card
+    s = id_card.strip()
+    length = len(s)
+    if length <= 4:
+        return "*" * length
+    elif length <= 8:
+        return s[:2] + "*" * (length - 4) + s[-2:]
+    else:
+        return s[:4] + "*" * (length - 8) + s[-4:]
+
 def extract_birth_date_from_id_card(id_card, nationality=None):
     """
     从身份证号提取出生日期，仅根据长度判断：

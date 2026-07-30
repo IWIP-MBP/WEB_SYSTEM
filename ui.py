@@ -744,7 +744,7 @@ LANG = {
         "logo_upload_failed": "上传失败",
         "logo_upload_success": "Logo 上传成功",
         "logo_upload_title": "上传公司 Logo（将在登录页显示）",
-        "logout": "退出",
+        "logout": "🚪 退出",
         "logs": "📜 操作日志",
         "logs_note": "按日期、类型和关键词追踪系统内的关键操作。",
         "menu_position": "菜单位置",
@@ -758,6 +758,12 @@ LANG = {
         "mode": "操作模式",
         "mode_add": "入职登记",
         "mode_edit": "资料修改",
+        "mask_id_card_setting": "身份证号脱敏",
+        "mask_id_card_enabled": "启用身份证号脱敏（遮罩显示关键数据）",
+        "personal_settings": "👤 个人偏好设置",
+        "personal_settings_caption": "管理您个人账号的检索与敏感数据脱敏查看设置。",
+        "yes": "是",
+        "no": "否",
         "nation_dist": "国籍分布",
         "nationality": "国籍",
         "new_name": "新名称",
@@ -1205,7 +1211,7 @@ LANG = {
         "logo_upload_failed": "Gagal mengunggah logo",
         "logo_upload_success": "Logo berhasil diunggah",
         "logo_upload_title": "Unggah Logo Perusahaan (akan ditampilkan di halaman masuk)",
-        "logout": "Keluar",
+        "logout": "🚪 Keluar",
         "logs": "📜 Log Aktivitas",
         "logs_note": "Melacak operasi penting dalam sistem berdasarkan tanggal, tipe, dan kata kunci.",
         "menu_position": "Posisi Menu",
@@ -1219,6 +1225,12 @@ LANG = {
         "mode": "Mode Operasi",
         "mode_add": "Pendaftaran",
         "mode_edit": "Ubah Data",
+        "mask_id_card_setting": "Masker Nomor KTP",
+        "mask_id_card_enabled": "Aktifkan Masker Nomor KTP",
+        "personal_settings": "👤 Pengaturan Pribadi",
+        "personal_settings_caption": "Kelola kontrol tampilan data sensitif untuk akun Anda.",
+        "yes": "Ya",
+        "no": "Tidak",
         "nation_dist": "Distribusi Negara",
         "nationality": "Kewarganegaraan",
         "new_name": "Nama baru",
@@ -1538,7 +1550,7 @@ FIELD_LABELS = {
         "id_nomor": "工号", "name_nama": "姓名", "ws_bengkel": "车间",
         "team_grup": "班组", "gender_jk": "性别", "pos_cn_jabatan": "岗位(中)", "pos_id_jabatan": "岗位(印)",
         "nat_negara": "国籍", "rel_agama": "宗教", "status_status": "员工状态", "resign_date": "离职日期",
-        "remark_ket": "原因/备注", "id_card": "身份证号", "hire_date": "入职日期", "contract_end": "合同到期日",
+        "remark_ket": "备注", "id_card": "身份证号", "hire_date": "入职日期", "contract_end": "合同到期日",
         "company": "归属公司", "resign_operator": "操作人", "resign_op_date": "操作日期"
     },
     "id": {
@@ -1647,6 +1659,27 @@ def to_date(val):
             return None
     return None
 
+def mask_id_card(val):
+    if not val or not isinstance(val, str):
+        return val
+    s = val.strip()
+    length = len(s)
+    if length <= 4:
+        return "*" * length
+    elif length <= 8:
+        return s[:2] + "*" * (length - 4) + s[-2:]
+    else:
+        return s[:4] + "*" * (length - 8) + s[-4:]
+
+def should_mask_id_card_ui():
+    user = st.session_state.get("user_info")
+    if not user:
+        return True
+    m = user.get("mask_id_card")
+    if m is not None:
+        return str(m).lower() in ["true", "1", "yes"]
+    return user.get("role") != "admin"
+
 def generate_employee_template():
     col_mapping = {
         "工号": "id_nomor",
@@ -1661,9 +1694,9 @@ def generate_employee_template():
         "宗教": "rel_agama",
         "身份证号": "id_card",
         "入职日期": "hire_date",
-        "合同到期日": "contract_end"
+        "备注": "remark_ket"
     }
-    columns = [label(col_mapping[c]) for c in ["工号", "姓名", "归属公司", "车间", "班组", "性别", "岗位(中)", "岗位(印)", "国籍", "宗教", "身份证号", "入职日期", "合同到期日"]]
+    columns = [label(col_mapping[c]) for c in ["工号", "姓名", "归属公司", "车间", "班组", "性别", "岗位(中)", "岗位(印)", "国籍", "宗教", "身份证号", "入职日期", "备注"]]
     df = pd.DataFrame(columns=columns)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -1841,6 +1874,8 @@ components.html(
 
     const doc = window.parent.document;
     const body = doc.body;
+
+
 
     window.parent.toggleTaskbarPopup = function(id) {{
         let popup = doc.getElementById(id);
@@ -2147,59 +2182,7 @@ components.html(
         window.parent._taskbar_click_handler_registered = true;
     }}
 
-    if (!window.parent._realtime_search_registered) {{
-        let _lastSearchVal = "";
-        
-        doc.addEventListener('input', function(e) {{
-            const target = e.target;
-            if (target && target.tagName === 'INPUT' && target.type === 'text') {{
-                const ariaLabel = target.getAttribute('aria-label') || '';
-                const placeholder = target.placeholder || '';
-                const isSearchInput = ariaLabel.includes('搜索') || ariaLabel.includes('Cari') || placeholder.includes('搜索') || placeholder.includes('Cari');
-                
-                if (isSearchInput) {{
-                    const val = target.value;
-                    if (val === _lastSearchVal) return;
-                    _lastSearchVal = val;
-                    
-                    const start = target.selectionStart;
-                    const end = target.selectionEnd;
-                    
-                    window.parent._lastSearchState = {{
-                        val: val,
-                        start: start,
-                        end: end,
-                        time: Date.now()
-                    }};
-                    
-                    // 每一个字符变动立即触发 Commit 检索
-                    target.blur();
-                    
-                    setTimeout(function() {{
-                        const searchEl = doc.querySelector('input[aria-label*="搜索"], input[aria-label*="Cari"], input[placeholder*="搜索"], input[placeholder*="Cari"]');
-                        if (searchEl) {{
-                            searchEl.focus();
-                            try {{ searchEl.setSelectionRange(start, end); }} catch(ex){{}}
-                        }}
-                    }}, 5);
-                }}
-            }}
-        }}, true);
 
-        const observer = new MutationObserver(function() {{
-            const state = window.parent._lastSearchState;
-            if (state && (Date.now() - state.time < 1200)) {{
-                const searchEl = doc.querySelector('input[aria-label*="搜索"], input[aria-label*="Cari"], input[placeholder*="搜索"], input[placeholder*="Cari"]');
-                if (searchEl && doc.activeElement !== searchEl) {{
-                    searchEl.focus();
-                    try {{ searchEl.setSelectionRange(state.start, state.end); }} catch(ex){{}}
-                }}
-            }}
-        }});
-        observer.observe(doc.body || doc.documentElement, {{ childList: true, subtree: true }});
-
-        window.parent._realtime_search_registered = true;
-    }}
 
     window.parent.getOrCreateVirtualMac = function() {{
         let mac = localStorage.getItem('virtual_mac');
@@ -2540,7 +2523,11 @@ if st.session_state.user_info.get("username") == "admin":
     menu_options.append(t("settings"))
 menu = st.sidebar.radio("Menu", menu_options, key="menu_radio")
 
-# 历史提醒按钮
+if st.sidebar.button(t("logout"), key="logout_btn"):
+    st.session_state.access_token = None
+    st.rerun()
+
+# 历史提醒按钮（在退出按钮下方）
 if st.sidebar.button(t("history_reminder"), key="history_reminder_btn"):
     st.session_state.show_history = not st.session_state.get("show_history", False)
 
@@ -2568,10 +2555,6 @@ if st.session_state.get("show_history"):
                         st.write(f"- {l['name']} ({l['id_nomor']}) - {l['item']} {t('next_issue_date_label')} {l['next_issue_date']}")
         else:
             st.info(t("no_history_records"))
-
-if st.sidebar.button(t("logout"), key="logout_btn"):
-    st.session_state.access_token = None
-    st.rerun()
 
 # 权限变量
 is_admin = st.session_state.user_info.get("role") == "admin"
@@ -3592,17 +3575,17 @@ elif menu == t("employees"):
     company_list = api_get_meta_cached("公司")
     
     is_id_lang = st.session_state.get("lang") == "id"
-    col_search, col_btn = st.columns([4, 1])
-    with col_search:
-        search = st.text_input(
-            "search",
-            key="employee_search_keyword_input",
-            placeholder="🔍 " + ("Cari berdasarkan No. ID, Nama, Bengkel, Grup, Jabatan, KTP, Keterangan..." if is_id_lang else "全局搜索：可按工号、姓名、车间、班组、岗位、国籍、身份证号、备注检索..."),
-            label_visibility="collapsed"
-        ).strip()
-    with col_btn:
-        if st.button("🔍 " + t("search"), key="trigger_emp_search_btn", type="primary", use_container_width=True):
-            st.rerun()
+    with st.form("emp_search_form", border=False):
+        col_search, col_btn = st.columns([4, 1])
+        with col_search:
+            search = st.text_input(
+                "search",
+                key="employee_search_keyword_input",
+                placeholder="🔍 " + ("Cari berdasarkan No. ID, Nama, Bengkel, Grup, Jabatan, KTP, Keterangan..." if is_id_lang else "全局搜索：可按工号、姓名、车间、班组、岗位、国籍、身份证号、备注检索..."),
+                label_visibility="collapsed"
+            ).strip()
+        with col_btn:
+            st.form_submit_button("🔍 " + t("search"), type="primary", use_container_width=True)
     
     with st.expander(t("filter")):
         c1, c2, c3, c4, c5 = st.columns(5)
@@ -3631,6 +3614,8 @@ elif menu == t("employees"):
         show_cols = ["id_nomor", "name_nama", "company", "ws_bengkel", "team_grup", pos_col,
                      "nat_negara", "rel_agama", "id_card", "hire_date", "remark_ket", "status_status"]
         df_show = df[[c for c in show_cols if c in df.columns]].copy()
+        if should_mask_id_card_ui() and "id_card" in df_show.columns:
+            df_show["id_card"] = df_show["id_card"].apply(mask_id_card)
         for c in ["ws_bengkel", "team_grup", "gender_jk", "nat_negara", "rel_agama", "status_status"]:
             if c in df_show.columns:
                 df_show[c] = df_show[c].apply(t_val)
@@ -3729,7 +3714,7 @@ elif menu == t("employees"):
                 f_company = st.text_input(label("company"), value=emp_data.get("company", ""), key="edit_company")
                 # 使用 date_input 宽度自适应
                 f_hire = st.date_input(label("hire_date"), value=to_date(emp_data.get("hire_date")), format="YYYY-MM-DD", key="edit_hire")
-                f_contract = st.date_input(label("contract_end"), value=to_date(emp_data.get("contract_end")), format="YYYY-MM-DD", key="edit_contract")
+                f_remark = st.text_input(label("remark_ket"), value=emp_data.get("remark_ket", "") or "", key="edit_remark")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button(t("save")):
                     payload = {
@@ -3738,7 +3723,7 @@ elif menu == t("employees"):
                         "pos_cn_jabatan": f_pcn, "pos_id_jabatan": f_pid, "rel_agama": f_rel,
                         "id_card": f_id_card, "company": f_company,
                         "hire_date": f_hire.strftime("%Y-%m-%d") if f_hire else "",
-                        "contract_end": f_contract.strftime("%Y-%m-%d") if f_contract else ""
+                        "remark_ket": f_remark
                     }
                     save_res = api_post("/employees/save", params={"is_update": True, "original_id": st.session_state.edit_employee_id}, json_data=payload)
                     if save_res and save_res.get("status") == "success":
@@ -3846,12 +3831,12 @@ elif menu == t("employees"):
                 with col_company:
                     f_company = st.text_input(label("company"), value=edit_init.get("company", ""), key="f_company")
                 
-                # 第六行：入职日期、合同到期日并排
+                # 第六行：入职日期、备注并排
                 col10, col11 = st.columns(2)
                 with col10:
                     f_hire = st.date_input(label("hire_date"), value=to_date(edit_init.get("hire_date")), format="YYYY-MM-DD", key="f_hire")
                 with col11:
-                    f_contract = st.date_input(label("contract_end"), value=to_date(edit_init.get("contract_end")), format="YYYY-MM-DD", key="f_contract")
+                    f_remark = st.text_input(label("remark_ket"), value=edit_init.get("remark_ket", "") or "", key="f_remark")
                 
                 # 提交按钮
                 if st.form_submit_button(t("save")):
@@ -3864,7 +3849,7 @@ elif menu == t("employees"):
                             "pos_cn_jabatan": f_pcn, "pos_id_jabatan": f_pid, "rel_agama": f_rel,
                             "id_card": f_id_card, "company": f_company,
                             "hire_date": f_hire.strftime("%Y-%m-%d") if f_hire else "",
-                            "contract_end": f_contract.strftime("%Y-%m-%d") if f_contract else ""
+                            "remark_ket": f_remark
                         }
                         orig_id = None
                         if mode == t("mode_edit") and selected:
@@ -5227,12 +5212,14 @@ elif menu == t("settings"):
                         u["ws_scope_display"] = ws_s
                 else:
                     u["ws_scope_display"] = t("all")
+                u["mask_id_display"] = t("yes") if (u.get("mask_id_card", "true") == "true") else t("no")
 
             users_df = pd.DataFrame(users_res["users"])
-            users_display = users_df[["username", "role", "ws_scope_display"]].rename(columns={
+            users_display = users_df[["username", "role", "ws_scope_display", "mask_id_display"]].rename(columns={
                 "username": t("username"),
                 "role": t("role"),
-                "ws_scope_display": t("workshop_scope")
+                "ws_scope_display": t("workshop_scope"),
+                "mask_id_display": t("mask_id_card_setting")
             })
             users_display = users_display.reset_index(drop=True)
             users_display.insert(0, t("seq_no"), range(1, len(users_display) + 1))
@@ -5243,6 +5230,7 @@ elif menu == t("settings"):
                 new_pwd2 = st.text_input(t("confirm_password"), type="password", key="new_pwd2")
                 new_role = st.selectbox(t("role"), ["viewer", "admin"], key="new_role")
                 new_ws_scope = st.multiselect(t("workshop_scope"), options=all_workshops, format_func=t_val, key="new_ws_scope")
+                new_mask_id = st.checkbox(t("mask_id_card_enabled"), value=(new_role != "admin"), key="new_mask_id")
                 if st.button(t("add"), key="add_user_btn"):
                     if not new_user or not new_pwd:
                         st.error(t("username_password_required"))
@@ -5250,7 +5238,8 @@ elif menu == t("settings"):
                         st.error(t("password_mismatch"))
                     else:
                         ws_scope_json = json.dumps(new_ws_scope) if new_ws_scope else None
-                        resp = api_post("/users", json_data={"username": new_user, "password": new_pwd, "role": new_role, "ws_scope": ws_scope_json})
+                        mask_json = "true" if new_mask_id else "false"
+                        resp = api_post("/users", json_data={"username": new_user, "password": new_pwd, "role": new_role, "ws_scope": ws_scope_json, "mask_id_card": mask_json})
                         if resp and resp.get("status") == "success":
                             st.session_state.toast_message = (t("operation_success"), "✅")
                             st.rerun()
@@ -5278,11 +5267,14 @@ elif menu == t("settings"):
                             format_func=t_val,
                             key="new_ws_scope_sel"
                         )
+                        target_mask_default = target_data.get("mask_id_card", "true") == "true"
+                        new_mask_id_sel = st.checkbox(t("mask_id_card_enabled"), value=target_mask_default, key=f"edit_mask_{target_user}")
                         col1, col2 = st.columns(2)
                         with col1:
                             if st.button(t("update"), key="update_role_btn"):
                                 ws_scope_json = json.dumps(new_ws_scope_sel) if new_ws_scope_sel else None
-                                resp = api_put(f"/users/{target_data['id']}/role", params={"role": new_role_sel, "ws_scope": ws_scope_json})
+                                mask_json = "true" if new_mask_id_sel else "false"
+                                resp = api_put(f"/users/{target_data['id']}/role", params={"role": new_role_sel, "ws_scope": ws_scope_json, "mask_id_card": mask_json})
                                 if resp and resp.get("status") == "success":
                                     st.session_state.toast_message = (t("operation_success"), "✅")
                                     st.rerun()

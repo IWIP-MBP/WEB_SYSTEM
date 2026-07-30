@@ -21,6 +21,7 @@ from services.utils import (
     get_employee,
     clean_id_card,
     extract_birth_date_from_id_card,
+    mask_id_card,
     add_meta_if_not_exists,
     record_transfer
 )
@@ -75,6 +76,14 @@ def restore_employee(request: Request, db=Depends(get_db), current_user=Depends(
                 old=json.dumps({"status": emp["status_status"], "resign_date": emp["resign_date"], "reason": emp["remark_ket"]}),
                 new=json.dumps({"status": "在职"}), operator=current_user["username"], ip=request.client.host)
     return {"status": "success"}
+
+def should_mask_id_card(user):
+    if not user:
+        return True
+    m = user.get("mask_id_card")
+    if m is not None:
+        return str(m).lower() in ["true", "1", "yes"]
+    return user.get("role") != "admin"
 
 # ---------- 员工花名册 ----------
 @router.get("/api/employees")
@@ -131,7 +140,12 @@ def get_employees(
     total = db.execute(select(func.count()).select_from(query.subquery())).scalar()
     order_by_col = desc(employees.c.resign_date) if status and ("离职" in status or "resign" in status.lower()) else desc(employees.c.id)
     rows = db.execute(query.order_by(order_by_col, desc(employees.c.id)).offset((page-1)*page_size).limit(page_size)).fetchall()
-    return {"data": [dict(r._mapping) for r in rows], "total": total}
+    data = [dict(r._mapping) for r in rows]
+    if should_mask_id_card(current_user):
+        for r in data:
+            if r.get("id_card"):
+                r["id_card"] = mask_id_card(r["id_card"])
+    return {"data": data, "total": total}
 
 @router.get("/api/employees/query")
 def get_employee_by_id(id_nomor: str, db=Depends(get_db), current_user=Depends(get_current_user)):
@@ -148,6 +162,8 @@ def get_employee_by_id(id_nomor: str, db=Depends(get_db), current_user=Depends(g
             raise
         except:
             pass
+    if should_mask_id_card(current_user) and emp.get("id_card"):
+        emp["id_card"] = mask_id_card(emp["id_card"])
     return emp
 
 @router.post("/api/employees/save")

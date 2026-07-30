@@ -55,7 +55,8 @@ users = Table("users", metadata,
     Column("username", String, unique=True, nullable=False),
     Column("hashed_password", String, nullable=False),
     Column("role", String, default="viewer"),
-    Column("ws_scope", String, nullable=True)
+    Column("ws_scope", String, nullable=True),
+    Column("mask_id_card", String, default="true")
 )
 
 # 在线会话

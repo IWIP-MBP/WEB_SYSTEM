@@ -111,6 +111,10 @@ def run_db_migrations():
                 conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'viewer'"))
             if 'ws_scope' not in existing_users:
                 conn.execute(text("ALTER TABLE users ADD COLUMN ws_scope VARCHAR"))
+            if 'mask_id_card' not in existing_users:
+                conn.execute(text("ALTER TABLE users ADD COLUMN mask_id_card VARCHAR DEFAULT 'true'"))
+                conn.execute(text("UPDATE users SET mask_id_card = 'false' WHERE role = 'admin'"))
+                conn.execute(text("UPDATE users SET mask_id_card = 'true' WHERE role != 'admin'"))
             logger.info("Checked/migrated users table columns")
         except Exception as e:
             logger.warning(f"Error migrating users table: {e}")
