@@ -114,3 +114,6 @@ ngrok.yml
 backups/
 手动备份/
 *.dump
+*.bak
+*.snapshot*
+ngrok_out.txt

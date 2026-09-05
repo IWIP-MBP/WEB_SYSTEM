@@ -10,20 +10,23 @@ import base64
 import time
 # Monkeypatch requests to support relative paths for server-side requests
 _INTERNAL_BACKEND_URL = os.getenv("API_BASE", "http://localhost:8000/api").replace("/api", "").rstrip("/")
-_orig_get = requests.get
-_orig_post = requests.post
-_orig_put = requests.put
-_orig_delete = requests.delete
 
 def _resolve_url(url):
-    if url.startswith("/api"):
+    if isinstance(url, str) and url.startswith("/api"):
         return f"{_INTERNAL_BACKEND_URL}{url}"
     return url
 
-requests.get = lambda url, *args, **kwargs: _orig_get(_resolve_url(url), *args, **kwargs)
-requests.post = lambda url, *args, **kwargs: _orig_post(_resolve_url(url), *args, **kwargs)
-requests.put = lambda url, *args, **kwargs: _orig_put(_resolve_url(url), *args, **kwargs)
-requests.delete = lambda url, *args, **kwargs: _orig_delete(_resolve_url(url), *args, **kwargs)
+if not getattr(requests, "_relative_url_patched", False):
+    requests._orig_get = requests.get
+    requests._orig_post = requests.post
+    requests._orig_put = requests.put
+    requests._orig_delete = requests.delete
+
+    requests.get = lambda url, *args, **kwargs: requests._orig_get(_resolve_url(url), *args, **kwargs)
+    requests.post = lambda url, *args, **kwargs: requests._orig_post(_resolve_url(url), *args, **kwargs)
+    requests.put = lambda url, *args, **kwargs: requests._orig_put(_resolve_url(url), *args, **kwargs)
+    requests.delete = lambda url, *args, **kwargs: requests._orig_delete(_resolve_url(url), *args, **kwargs)
+    requests._relative_url_patched = True
 
 API_BASE = "/api"
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
