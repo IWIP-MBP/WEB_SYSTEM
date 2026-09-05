@@ -1782,6 +1782,9 @@ if not st.session_state.access_token:
                     <a href="http://10.158.0.185:8080/login" target="_blank" class="login-badge">
                         {t("indonesian_learning_portal")}
                     </a>
+                    <a href="/gym/" target="_blank" class="login-badge" style="background: rgba(45, 212, 191, 0.18); border: 1px solid rgba(45, 212, 191, 0.45); color: #2dd4bf; text-decoration: none;">
+                        🏋️‍♂️ {'健身房管理系统' if st.session_state.get('lang') != 'id' else 'Sistem Gym'} ➔
+                    </a>
                 </div>
             </div>
             <p>{t("login_footer")}</p>
@@ -1831,6 +1834,16 @@ if not st.session_state.access_token:
                             st.error(t("login_error"))
                     except Exception as e:
                         st.error(f"{t('login_error')}: {e}")
+        gym_title = "🏋️‍♂️ 健身房物资管理系统" if st.session_state.get("lang") != "id" else "🏋️‍♂️ Sistem Manajemen Gym"
+        gym_desc = "无需登录人事系统，外部直达通道：" if st.session_state.get("lang") != "id" else "Akses langsung tanpa login HR:"
+        st.markdown(f'''
+        <div style="margin: 1.2rem 0 0.6rem; padding: 0.75rem 1rem; border-radius: 10px; background: rgba(45, 212, 191, 0.08); border: 1px dashed rgba(45, 212, 191, 0.35); text-align: center;">
+            <div style="font-size: 0.8rem; color: #a1a1aa; margin-bottom: 0.35rem;">{gym_desc}</div>
+            <a href="/gym/" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2dd4bf; text-decoration: none; font-size: 0.92rem;">
+                {gym_title} ➔
+            </a>
+        </div>
+        ''', unsafe_allow_html=True)
         st.caption(t("login_footer"))
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
@@ -2529,6 +2542,9 @@ menu = st.sidebar.radio("Menu", menu_options, key="menu_radio")
 if st.sidebar.button(t("logout"), key="logout_btn"):
     st.session_state.access_token = None
     st.rerun()
+
+gym_sidebar_label = "🏋️‍♂️ 健身房物资管理" if st.session_state.get("lang") != "id" else "🏋️‍♂️ Manajemen Gym"
+st.sidebar.markdown(f'<a href="/gym/" target="_blank" style="display: block; text-align: center; margin: 0.5rem 0; padding: 0.45rem; background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.35); border-radius: 8px; color: #2dd4bf; text-decoration: none; font-size: 0.88rem; font-weight: 500;">{gym_sidebar_label} ➔</a>', unsafe_allow_html=True)
 
 # 历史提醒按钮（在退出按钮下方）
 if st.sidebar.button(t("history_reminder"), key="history_reminder_btn"):
