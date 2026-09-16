@@ -33,6 +33,13 @@ API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
 
 st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
 
+# 确保在各版本 Streamlit 下均支持 dialog 弹窗
+if not hasattr(st, "experimental_dialog") and hasattr(st, "dialog"):
+    st.experimental_dialog = st.dialog
+elif not hasattr(st, "dialog") and hasattr(st, "experimental_dialog"):
+    st.dialog = st.experimental_dialog
+
+
 def init_session_state():
     defaults = {
         "lang": "zh",
@@ -321,6 +328,7 @@ st.markdown("""
     div[data-testid="stDataEditor"] {
         background: var(--app-panel) !important;
         border: 1px solid var(--app-border) !important;
+        box-sizing: border-box !important;
         backdrop-filter: blur(24px) saturate(210%) !important;
         -webkit-backdrop-filter: blur(24px) saturate(210%) !important;
         border-radius: 16px;
@@ -817,6 +825,10 @@ LANG = {
         "report_filter": "报表筛选",
         "reset_org": "🔄 恢复默认层级",
         "resign_btn": "确认注销",
+        "resign_confirm_title": "⚠️ 确认办理员工离职注销",
+        "resign_confirm_warning": "请再次核对以下离职信息。确认注销后，员工状态将变更为【离职】并移入离职名册，请谨慎操作！",
+        "resign_success": "员工离职办理成功",
+        "none": "无",
         "resign_date": "离职日期",
         "resign_distribution_analysis": "离职人员分布分析",
         "resign_employee": "办理离职",
@@ -959,7 +971,7 @@ LANG = {
         "confirm_delete_transfers": "⚠️ 确认要永久删除选中的异动记录吗？",
         "delete_permanently": "彻底删除",
         "delete_permanently_warning": "⚠️ 警示：彻底删除操作将直接从数据库中删除该员工及其所有相关记录，此操作不可逆，请谨慎操作！",
-        "input_admin_password_confirm": "请输入管理员密码以确认删除：",
+        "input_admin_password_confirm": "请输入admin超级管理员密码以确认彻底删除：",
         "confirm_delete_permanently": "确认彻底删除",
         "confirm_delete_btn": "确认删除",
         "attendance_converter": "📅 考勤排休转换",
@@ -1284,6 +1296,10 @@ LANG = {
         "report_filter": "Filter Laporan",
         "reset_org": "🔄 Atur Ulang Hirarki",
         "resign_btn": "Konfirmasi Resign",
+        "resign_confirm_title": "⚠️ Konfirmasi Resign Karyawan",
+        "resign_confirm_warning": "Harap periksa kembali informasi resign berikut. Setelah konfirmasi, status karyawan akan diubah menjadi [Resign] dan dipindahkan ke Daftar Resign. Harap berhati-hati!",
+        "resign_success": "Karyawan berhasil diproses resign",
+        "none": "Tidak ada",
         "resign_date": "Tanggal Resign",
         "resign_distribution_analysis": "Analisis Distribusi Resign",
         "resign_employee": "Resign Pegawai",
@@ -1426,7 +1442,7 @@ LANG = {
         "confirm_delete_transfers": "⚠️ Konfirmasi untuk menghapus riwayat mutasi yang dipilih secara permanen?",
         "delete_permanently": "Hapus Permanen",
         "delete_permanently_warning": "⚠️ Peringatan: Tindakan hapus permanen akan menghapus karyawan ini beserta semua data terkait dari database secara langsung. Tindakan ini tidak dapat dibatalkan, harap berhati-hati!",
-        "input_admin_password_confirm": "Silakan masukkan kata sandi administrator untuk konfirmasi:",
+        "input_admin_password_confirm": "Silakan masukkan kata sandi super admin (admin) untuk konfirmasi:",
         "confirm_delete_permanently": "Konfirmasi Hapus Permanen",
         "confirm_delete_btn": "Konfirmasi Hapus",
         "attendance_converter": "📅 Konversi Absensi",
@@ -1637,6 +1653,29 @@ def show_restore_dialog(filename):
     with col2:
         if st.button(t("cancel"), key=f"dialog_cancel_{filename}", use_container_width=True):
             st.rerun()
+
+@st.experimental_dialog(t("resign_confirm_title"))
+def show_resign_dialog(target, resign_date_str, reason):
+    st.warning(t("resign_confirm_warning"))
+    st.markdown(f"**{t('select_employee')}**: `{target}`")
+    st.markdown(f"**{t('resign_date')}**: `{resign_date_str}`")
+    st.markdown(f"**{t('resign_reason')}**: {reason if reason else t('none')}")
+    st.divider()
+    col1, col2 = st.columns(2)
+    eid = target.split(" | ")[0].strip() if target else ""
+    with col1:
+        if st.button(t("resign_btn"), key=f"dialog_confirm_resign_{eid}", type="primary", use_container_width=True):
+            resp = api_post("/employees/resign", params={"id_nomor": eid, "reason": reason, "resign_date": resign_date_str})
+            if resp and resp.get("status") == "success":
+                st.session_state.toast_message = (t("resign_success"), "✅")
+                st.rerun()
+            else:
+                err_msg = resp.get("detail", t("operation_failed")) if isinstance(resp, dict) else t("operation_failed")
+                st.error(f"{t('operation_failed')}: {err_msg}")
+    with col2:
+        if st.button(t("cancel"), key=f"dialog_cancel_resign_{eid}", use_container_width=True):
+            st.rerun()
+
 
 def api_put(endpoint, params=None, json_data=None):
     try:
@@ -3640,9 +3679,10 @@ elif menu == t("employees"):
                 df_show[c] = df_show[c].apply(t_val)
         df_show = df_show.rename(columns={c: label(c) for c in show_cols})
 
+        df_show = df_show.fillna("").astype(str)
         df_show = df_show.reset_index(drop=True)
         df_show.insert(0, t("seq_no"), range(1, len(df_show) + 1))
-        st.dataframe(df_show, use_container_width=True, height=500, hide_index=True)
+        st.dataframe(df_show, use_container_width=True, hide_index=True)
         
         # 表格下方的单行紧凑控件：[每页条数选择] + [页码输入框] + [第 X / Y 页] + [共 Z 条记录] + [导出按钮]
         total_records = res.get('total', 0)
@@ -3729,7 +3769,7 @@ elif menu == t("employees"):
                     f_rel = c3.text_input(label("rel_agama"), value=emp_data.get("rel_agama", ""), key="edit_rel")
                 f_pcn = st.text_input(label("pos_cn_jabatan"), value=emp_data.get("pos_cn_jabatan", ""))
                 f_pid = st.text_input(label("pos_id_jabatan"), value=emp_data.get("pos_id_jabatan", ""))
-                f_id_card = st.text_input(t("id_card"), value=emp_data.get("id_card", ""))
+                f_id_card = st.text_input(t("id_card"), value=emp_data.get("id_card", ""), help="支持中国18位身份证、印尼16位KTP或护照，支持直接粘贴")
                 f_company = st.text_input(label("company"), value=emp_data.get("company", ""), key="edit_company")
                 # 使用 date_input 宽度自适应
                 f_hire = st.date_input(label("hire_date"), value=to_date(emp_data.get("hire_date")), format="YYYY-MM-DD", key="edit_hire")
@@ -3841,7 +3881,7 @@ elif menu == t("employees"):
                 with col8:
                     f_pcn = st.text_input(label("pos_cn_jabatan"), value=edit_init.get("pos_cn_jabatan", ""))
                 with col9:
-                    f_id_card = st.text_input(t("id_card"), value=edit_init.get("id_card", ""))
+                    f_id_card = st.text_input(t("id_card"), value=edit_init.get("id_card", ""), help="支持中国18位身份证、印尼16位KTP或护照，支持直接粘贴")
                 
                 # 第五行：岗位(印)、归属公司并排
                 col_pid, col_company = st.columns(2)
@@ -3916,18 +3956,18 @@ elif menu == t("resigned"):
         if data and data.get("data"):
             df = pd.DataFrame(data["data"])
             display_cols = ["resign_date", "resign_op_date", "id_nomor", "name_nama", "ws_bengkel", "team_grup", "nat_negara", "remark_ket", "resign_operator"]
+            for col in display_cols:
+                if col not in df.columns:
+                    df[col] = ""
             df_display = df[display_cols].copy()
             for c in ["ws_bengkel", "team_grup", "nat_negara"]:
                 if c in df_display.columns:
                     df_display[c] = df_display[c].apply(t_val)
-            if "resign_operator" in df_display.columns:
-                df_display["resign_operator"] = df_display["resign_operator"].fillna("")
-            if "resign_op_date" in df_display.columns:
-                df_display["resign_op_date"] = df_display["resign_op_date"].fillna("")
+            df_display = df_display.fillna("").astype(str)
             df_display.columns = [label(col) for col in display_cols]
             df_display = df_display.reset_index(drop=True)
             df_display.insert(0, t("seq_no"), range(1, len(df_display) + 1))
-            st.dataframe(df_display, use_container_width=True, height=400, hide_index=True)
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
             st.write(f"**{t('actions')}**")
             target_resign = st.selectbox(
                 t("select_employee"),
@@ -3983,14 +4023,11 @@ elif menu == t("resigned"):
                     target = st.selectbox(t("select_employee"), df['id_nomor'] + " | " + df['name_nama'], key="resign_select")
                     resign_date = st.date_input(t("resign_date"), value=date.today())
                     reason = st.text_area(t("resign_reason"), key="resign_reason")
-                    if st.button(t("resign_btn"), key="resign_btn"):
-                        eid = target.split(" | ")[0]
-                        resp = api_post("/employees/resign", params={"id_nomor": eid, "reason": reason, "resign_date": resign_date.strftime("%Y-%m-%d")})
-                        if resp and resp.get("status") == "success":
-                            st.session_state.toast_message = (t("operation_success"), "✅")
-                            st.rerun()
+                    if st.button(t("resign_btn"), key="resign_btn", type="primary"):
+                        if target:
+                            show_resign_dialog(target, resign_date.strftime("%Y-%m-%d"), reason)
                         else:
-                            st.toast(t("operation_failed"), icon="❌")
+                            st.warning(t("please_select_employee"))
             else:
                 st.info(t("no_data"))
 

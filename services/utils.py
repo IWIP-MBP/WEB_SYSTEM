@@ -2,6 +2,8 @@ import os
 import re
 import subprocess
 import logging
+import unicodedata
+from decimal import Decimal
 from datetime import datetime, timedelta, date
 from urllib.parse import urlparse
 from sqlalchemy import select, insert, delete
@@ -87,16 +89,35 @@ def get_employee(db, id_nomor):
 def clean_id_card(id_card):
     if not id_card:
         return None
-    # 处理科学计数法（如 Excel 导入的 3.17e+15 → 3170000000000000）
-    raw = str(id_card).strip().strip("'\"")
-    try:
-        if 'e' in raw.lower() or 'E' in raw:
-            raw = str(int(float(raw)))
-    except:
-        pass
-    # 移除非数字和非X字符
-    id_str = re.sub(r"[^0-9X]", "", raw.upper())
-    return id_str if id_str else None
+    # 全角字符转半角，Unicode 规范化
+    raw = unicodedata.normalize('NFKC', str(id_card))
+    # 移除零宽字符和首尾引号/空白
+    raw = re.sub(r'[\u200b-\u200f\ufeff]', '', raw).strip().strip('\'"')
+    if not raw:
+        return None
+
+    # 处理科学计数法（如从 Excel 复制的 3.1701234567890123e+15 或 3.20124199001011234E+17）
+    # 使用严格正则匹配，避免误伤普通包含 E 的护照号（如 E12345678）
+    # 使用 Decimal 转换，彻底杜绝 float 浮点运算带来的 15 位以上末尾精度截断与失真
+    if re.match(r'^[+-]?\d+(?:\.\d+)?[eE][+-]?\d+$', raw):
+        try:
+            d = Decimal(raw)
+            raw = f'{d:f}'.split('.')[0]
+        except Exception:
+            pass
+
+    # 移除非法分隔符（空格、制表符、常见中英文横杠、斜杠等）
+    raw = re.sub(r'[\s\-_/]+', '', raw).upper()
+
+    # 提取有效证件号模式（兼容前缀文本，如“身份证号：3201...”、“No.KTP: 3201...”）
+    match = re.search(r'([0-9]{14,18}[0-9X]?|[0-9]{1,6}\*+[0-9X]{1,6}|[A-Z][0-9]{7,12})', raw)
+    if match and len(match.group(1)) >= 8:
+        raw = match.group(1)
+    else:
+        # 保留数字、英文字母及脱敏星号
+        raw = re.sub(r'[^0-9A-Z*]', '', raw)
+
+    return raw if raw else None
 
 def mask_id_card(id_card):
     """
@@ -127,7 +148,7 @@ def extract_birth_date_from_id_card(id_card, nationality=None):
     if not id_card:
         return None
     id_str = clean_id_card(id_card)
-    if not id_str:
+    if not id_str or "*" in id_str:
         return None
 
     # 中国身份证：18位，前17位数字，最后一位数字或X

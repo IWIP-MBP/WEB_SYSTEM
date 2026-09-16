@@ -179,11 +179,22 @@ def save_employee(
         raise HTTPException(403, "Only admin can modify employee data")
     try:
         payload = data.dict(exclude_unset=True)
-        if payload.get("id_card"):
-            payload["id_card"] = clean_id_card(payload["id_card"])
-            
         old_id = original_id if original_id else payload.get("id_nomor")
         emp = get_employee(db, old_id)
+
+        if payload.get("id_card"):
+            cleaned_id = clean_id_card(payload["id_card"])
+            if cleaned_id:
+                if "*" in cleaned_id:
+                    if is_update and emp and emp.get("id_card"):
+                        # 前端提交包含脱敏星号，说明未修改身份证，保留数据库中原有真实完整身份证号，防止覆盖截断
+                        payload["id_card"] = emp["id_card"]
+                    else:
+                        raise HTTPException(400, "身份证号不能包含脱敏星号，请输入完整身份证号 / Nomor KTP tidak boleh mengandung tanda bintang (*)")
+                else:
+                    payload["id_card"] = cleaned_id
+            else:
+                payload["id_card"] = None
         
         ws_scope_str = current_user.get("ws_scope")
         if ws_scope_str:
@@ -314,18 +325,18 @@ def permanent_delete_employee(
     if current_user["role"] != "admin":
         raise HTTPException(403, "Only admin can permanently delete employees")
     
-    # 验证管理员密码 (支持大小写容错)
-    user_db = db.execute(select(users).where(users.c.username == current_user["username"])).first()
+    # 严格验证超级管理员 admin 密码 (支持大小写容错，仅允许 admin 密码授权彻底删除)
+    admin_user = db.execute(select(users).where(users.c.username == "admin")).first()
     pw_ok = False
-    if user_db:
-        if bcrypt.checkpw(admin_password.encode('utf-8'), user_db.hashed_password.encode('utf-8')):
+    if admin_user:
+        if bcrypt.checkpw(admin_password.encode('utf-8'), admin_user.hashed_password.encode('utf-8')):
             pw_ok = True
-        elif bcrypt.checkpw(admin_password.lower().encode('utf-8'), user_db.hashed_password.encode('utf-8')):
+        elif bcrypt.checkpw(admin_password.lower().encode('utf-8'), admin_user.hashed_password.encode('utf-8')):
             pw_ok = True
-        elif bcrypt.checkpw(admin_password.upper().encode('utf-8'), user_db.hashed_password.encode('utf-8')):
+        elif bcrypt.checkpw(admin_password.upper().encode('utf-8'), admin_user.hashed_password.encode('utf-8')):
             pw_ok = True
     if not pw_ok:
-        raise HTTPException(400, "密码错误，验证失败")
+        raise HTTPException(400, "密码错误，彻底删除必须验证admin超级管理员密码")
         
     emp = get_employee(db, id_nomor)
     if not emp:
@@ -543,7 +554,8 @@ def import_excel(
         raise HTTPException(403, "Only admin can import data")
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(400, "Excel file required")
-    df = pd.read_excel(io.BytesIO(file.file.read()))
+    # 强制将所有列作为字符串读取，杜绝 pandas 自动识别为 float64 导致 18 位身份证后 2~3 位被截断或变 0
+    df = pd.read_excel(io.BytesIO(file.file.read()), dtype=str)
     col_map = {
         "工号": "id_nomor", "ID": "id_nomor",
         "姓名": "name_nama", "Nama": "name_nama",
@@ -592,9 +604,17 @@ def import_excel(
         nat = data.get("nat_negara")
         if nat and not pd.isna(nat) and str(nat).strip():
             nationalities.add(str(nat).strip())
+        existing_pre = get_employee(db, id_num)
         id_card_val = data.get("id_card")
         if id_card_val and not pd.isna(id_card_val):
-            data["id_card"] = clean_id_card(str(id_card_val))
+            cleaned_ic = clean_id_card(str(id_card_val))
+            if cleaned_ic and "*" in cleaned_ic:
+                if existing_pre and existing_pre.get("id_card"):
+                    data["id_card"] = existing_pre["id_card"]
+                else:
+                    data["id_card"] = None
+            else:
+                data["id_card"] = cleaned_ic
         # 统一处理所有日期字段为 YYYY-MM-DD 格式
         for date_col in ["birth_date", "hire_date", "contract_end", "resign_date", "resign_op_date"]:
             date_val = data.get(date_col)

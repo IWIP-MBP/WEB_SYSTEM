@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后勤三部数字化综合服务平台 | Portal Layanan Terpadu Logistik 3</title>
+<style>
+  :root {
+    --bg-base: #0a0f1d;
+    --bg-card: rgba(16, 24, 44, 0.75);
+    --bg-card-hover: rgba(23, 37, 68, 0.9);
+    --border-color: rgba(56, 189, 248, 0.15);
+    --border-color-hover: rgba(56, 189, 248, 0.45);
+    --primary: #0284c7;
+    --primary-glow: rgba(2, 132, 199, 0.4);
+    --accent: #38bdf8;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  [data-theme="light"] {
+    --bg-base: #f0f4f8;
+    --bg-card: rgba(255, 255, 255, 0.85);
+    --bg-card-hover: #ffffff;
+    --border-color: rgba(2, 132, 199, 0.2);
+    --border-color-hover: rgba(2, 132, 199, 0.5);
+    --primary: #0284c7;
+    --primary-glow: rgba(2, 132, 199, 0.2);
+    --accent: #0369a1;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Decorative Background Grid & Ambient Lights */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(2, 132, 199, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 85% 25%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* TOP NAVIGATION HEADER */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(10, 15, 29, 0.8);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  [data-theme="light"] header {
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .brand-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 4px 14px var(--primary-glow);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .brand-text h1 {
+    font-size: 18.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand-badge {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  .brand-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* LANGUAGE SWITCHER */
+  .lang-switcher {
+    display: flex;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .lang-btn:hover {
+    color: var(--text-main);
+  }
+
+  .lang-btn.active {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 2px 8px var(--primary-glow);
+  }
+
+  .theme-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .theme-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  /* MAIN CONTAINER */
+  main {
+    flex: 1;
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 28px 36px 48px 36px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* NETWORK BANNER */
+  .network-status-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 14px 22px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .net-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .net-pulse-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 10px var(--success);
+    animation: livePulse 2s infinite;
+  }
+
+  @keyframes livePulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
+  .net-badge {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: monospace;
+  }
+
+  .net-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* PORTAL SECTION HEADER */
+  .section-headline {
+    margin-bottom: 22px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .section-headline h2 {
+    font-size: 22px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-headline p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* SYSTEM CARDS GRID */
+  .system-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 22px;
+    margin-bottom: 36px;
+  }
+
+  @media (max-width: 960px) {
+    .system-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .system-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .system-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--card-accent, #38bdf8), transparent);
+    opacity: 0.8;
+  }
+
+  .system-card:hover {
+    transform: translateY(-4px);
+    background: var(--bg-card-hover);
+    border-color: var(--border-color-hover);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .card-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+
+  .card-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .card-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+  }
+
+  .card-titles h3 {
+    font-size: 17.5px;
+    font-weight: 800;
+    margin-bottom: 4px;
+    color: var(--text-main);
+  }
+
+  .card-titles .subtitle {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin: 14px 0 18px 0;
+  }
+
+  .card-meta-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .meta-chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    font-family: monospace;
+  }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+  }
+
+  .btn-enter {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--card-accent, #0284c7) 0%, #0369a1 100%);
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+  }
+
+  .btn-enter:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45);
+  }
+
+  .btn-sub {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-sub:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border-color);
+    padding: 20px 36px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    backdrop-filter: blur(12px);
+    background: rgba(10, 15, 29, 0.7);
+  }
+
+  [data-theme="light"] footer {
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  @media (max-width: 640px) {
+    header {
+      padding: 12px 16px;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .header-brand {
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      font-size: 20px;
+    }
+
+    .brand-text h1 {
+      font-size: 15px;
+      line-height: 1.3;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .brand-text p {
+      display: none;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+
+    .header-controls {
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .lang-switcher {
+      padding: 2px;
+    }
+
+    .lang-btn {
+      padding: 7px;
+      font-size: 0;
+    }
+
+    .lang-btn::first-letter {
+      font-size: 15px;
+    }
+
+    .theme-btn {
+      width: 34px;
+      height: 34px;
+    }
+
+    main {
+      padding: 18px 16px 32px;
+    }
+
+    .network-status-bar {
+      padding: 12px 14px;
+      margin-bottom: 22px;
+    }
+
+    .net-left,
+    .net-right {
+      width: 100%;
+    }
+
+    .net-right {
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .section-headline {
+      margin-bottom: 16px;
+    }
+
+    .section-headline h2 {
+      font-size: 19px;
+    }
+
+    .section-headline p {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .system-grid {
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .system-card {
+      padding: 18px;
+      border-radius: 14px;
+    }
+
+    .card-icon-box {
+      width: 46px;
+      height: 46px;
+      font-size: 24px;
+    }
+
+    .card-titles h3 {
+      font-size: 16px;
+    }
+
+    .card-desc {
+      margin: 12px 0 16px;
+    }
+
+    .card-actions {
+      gap: 8px;
+      padding-top: 14px;
+    }
+
+    .btn-enter,
+    .btn-sub {
+      min-height: 42px;
+    }
+
+    footer {
+      padding: 16px;
+      text-align: left;
+    }
+
+    footer > div {
+      align-items: flex-start !important;
+      flex-direction: column;
+      gap: 6px !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-brand">
+      <div class="brand-icon">🌐</div>
+      <div class="brand-text">
+        <h1>
+          <span id="txtHeaderTitle">后勤三部数字化综合服务平台</span>
+          <span class="brand-badge" id="txtHeaderBadge">统一微服务门户</span>
+        </h1>
+        <p id="txtHeaderSub">企业级 Docker 容器集群导航大厅 · 智能内外网分流</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <!-- Language Switcher -->
+      <div class="lang-switcher">
+        <button class="lang-btn active" id="btnZh" onclick="setLanguage('zh')">🇨🇳 中文</button>
+        <button class="lang-btn" id="btnId" onclick="setLanguage('id')">🇮🇩 Bahasa Indonesia</button>
+      </div>
+      <!-- Theme Switcher -->
+      <button class="theme-btn" id="btnTheme" onclick="toggleTheme()" title="切换明暗色彩">🌓</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- NETWORK AUTO-DETECTION BAR -->
+    <div class="network-status-bar">
+      <div class="net-left">
+        <div class="net-pulse-box">
+          <div class="pulse-dot"></div>
+          <span id="txtNetStatus">网关服务集群在线运行中</span>
+        </div>
+        <div class="net-badge" id="txtNetMode">检测中...</div>
+        <div class="net-badge" id="txtHostIp">Host: --</div>
+      </div>
+      <div class="net-right">
+        <span id="txtIsolationHint">🛡️ 各系统独立容器运行，环境会话完全解耦互不影响</span>
+      </div>
+    </div>
+
+    <!-- SECTION TITLE -->
+    <div class="section-headline">
+      <div>
+        <h2>
+          <span>🚀</span>
+          <span id="txtSectionTitle">核心业务系统与数字化工具</span>
+        </h2>
+        <p id="txtSectionSub">点击下方卡片即可直接进入对应系统，支持免配置内外网自适应访问</p>
+      </div>
+    </div>
+
+    <!-- SYSTEM CARDS -->
+    <div class="system-grid">
+
+      <!-- 1. 人事管理系统 (Streamlit + FastAPI) -->
+      <div class="system-card" style="--card-accent: #0284c7;">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(2, 132, 199, 0.15); border-color: rgba(2, 132, 199, 0.3);">👥</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeHrStatus">服务正常</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleHr">ACC3 企业人事管理系统</h3>
+            <div class="subtitle" id="subHr">员工花名册 · 考勤打卡 · 薪酬休假 · 综合报表</div>
+          </div>
+          <div class="card-desc" id="descHr">
+            ACC3 核心人力资源数字化平台，支持员工全生命周期档案管理、出勤统计核算、薪资账单结算及多维数据透视。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">Streamlit</span>
+            <span class="meta-chip">FastAPI</span>
+            <span class="meta-chip">PostgreSQL</span>
+            <span class="meta-chip">/hr/</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/hr/" class="btn-enter" id="linkHrMain" target="_self">
+            <span id="btnHrEnter">进入人事系统 ›</span>
+          </a>
+          <a href="/api/docs" class="btn-sub" id="linkHrApi" target="_blank" rel="noopener noreferrer" data-network-scope="lan">
+            <span id="btnHrApi">API 文档</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 2. 智慧健身房系统 (Flask 5050) -->
+      <div class="system-card" style="--card-accent: #10b981;">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3);">🏋️</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeGymStatus">服务正常</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleGym">园区智慧健身房综合管理系统</h3>
+            <div class="subtitle" id="subGym">会员门禁 · 扫码入场 · 器械预约 · 健身数据</div>
+          </div>
+          <div class="card-desc" id="descGym">
+            服务于员工健康生活的智慧活动中心平台，提供会员身份验证、体能运动档案、器械排期与高峰人流智能分流。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">Flask</span>
+            <span class="meta-chip">Port 5050</span>
+            <span class="meta-chip">SQLite</span>
+            <span class="meta-chip">/gym/</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/gym/" class="btn-enter" id="linkGymMain" target="_self" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+            <span id="btnGymEnter">进入健身房系统 ›</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 3. 后勤三部信息中心（综合管理平台） -->
+      <div class="system-card" style="--card-accent: #f59e0b;">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);">📦</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeLogisticsStatus">服务正常</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleLogistics">ACC3 信息中心（综合管理平台）</h3>
+            <div class="subtitle" id="subLogistics">安全管理 · 车辆管理 · 食堂管理 · 宿舍管理 · 人员管理</div>
+          </div>
+          <div class="card-desc" id="descLogistics">
+            面向未来信息化建设的综合管理平台，统一支撑 ACC3 安全、车辆、食堂、宿舍及人员等业务场景的数字化管理与协同。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip" id="chipSafety">安全管理</span>
+            <span class="meta-chip" id="chipVehicles">车辆管理</span>
+            <span class="meta-chip" id="chipCanteen">食堂管理</span>
+            <span class="meta-chip" id="chipDormitory">宿舍管理</span>
+            <span class="meta-chip" id="chipPersonnel">人员管理</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/logistics/" class="btn-enter" id="linkLogisticsMain" target="_self" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">
+            <span id="btnLogisticsEnter">进入信息中心 ›</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 4. 菱王电梯现场排障工作台 (LINVOL) -->
+      <div class="system-card" style="--card-accent: #0284c7;">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(2, 132, 199, 0.15); border-color: rgba(2, 132, 199, 0.3);">🛗</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeElevatorStatus">服务正常</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleElevator">菱王电梯 LINVOL 现场快速排障工作台</h3>
+            <div class="subtitle" id="subElevator">2000kg 货梯专属 · LIN-A 控制柜测点下针 · F9 黑匣子</div>
+          </div>
+          <div class="card-desc" id="descElevator">
+            绑定设备 25H0001341，针对 2 吨大吨位货梯恶劣工况，提供地坎卡石子排查、18.5kW 启动过流处置及万用表针脚级下针指引。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">LTHW 2000kg</span>
+            <span class="meta-chip">LIN-A 柜</span>
+            <span class="meta-chip">4/4/4</span>
+            <span class="meta-chip">/elevator/</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/elevator/" class="btn-enter" id="linkElevatorMain" target="_self">
+            <span id="btnElevatorEnter">打开排障工作台 ›</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 5. MinIO 对象存储云盘 -->
+      <div class="system-card" style="--card-accent: #ec4899;" data-network-scope="lan">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3);">🗄️</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeMinioStatus">服务正常</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleMinio">MinIO 云端对象存储控制台</h3>
+            <div class="subtitle" id="subMinio">物流单据影像 · 员工归档附件 · S3 高可用数据湖</div>
+          </div>
+          <div class="card-desc" id="descMinio">
+            高性能企业级云存储集群，为后勤三部全部业务系统提供海量图片、PDF 电子单据、Excel 导入文件安全存储。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">MinIO</span>
+            <span class="meta-chip">S3 API</span>
+            <span class="meta-chip">Port 9391</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="http://10.158.0.185:9391" class="btn-enter" id="linkMinioMain" target="_blank" rel="noopener noreferrer" style="background: linear-gradient(135deg, #db2777 0%, #be185d 100%);">
+            <span id="btnMinioEnter">管理控制台 ›</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 6. 后端 API 接口开放平台 -->
+      <div class="system-card" style="--card-accent: #8b5cf6;" data-network-scope="lan">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3);">📡</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeApiStatus">在线调试</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleApi">后勤三部 API 接口开放平台</h3>
+            <div class="subtitle" id="subApi">FastAPI Swagger 交互文档 · 跨系统数据通信网关</div>
+          </div>
+          <div class="card-desc" id="descApi">
+            面向开发与运维的统一 RESTful 接口调试中心，涵盖考勤打卡、权限鉴权、花名册流转及自动化脚本通道。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">FastAPI</span>
+            <span class="meta-chip">OpenAPI 3.0</span>
+            <span class="meta-chip">Swagger UI</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/api/docs" class="btn-enter" id="linkApiMain" target="_blank" rel="noopener noreferrer" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);">
+            <span id="btnApiEnter">查看接口文档 ›</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div id="txtFooterCopyright">© 2026 后勤三部数字化技术中心 · 企业级容器集群管理</div>
+      <div style="display:flex; gap:16px; font-size:11.5px;">
+        <span id="txtFooterLan">内网地址：10.158.0.185</span>
+        <span id="footerDivider">•</span>
+        <span id="txtFooterWan">外网隧道：ngrok SSL 加密</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- BILINGUAL I18N SCRIPT -->
+  <script>
+    const i18nData = {
+      zh: {
+        headerTitle: "后勤三部数字化综合服务平台",
+        headerBadge: "统一微服务门户",
+        headerSub: "企业级 Docker 容器集群导航大厅 · 智能内外网分流",
+        headerSubExternal: "统一业务服务门户 · 安全外网访问",
+        netStatusOnline: "网关服务集群在线运行中",
+        netModeWan: "🌐 外网访问模式 (ngrok 隧道)",
+        netModeLan: "🏠 内网高速模式 (局域网直连)",
+        isolationHint: "🛡️ 各系统独立容器运行，环境会话完全解耦互不影响",
+        isolationHintExternal: "🛡️ 外网仅提供已授权的业务服务入口",
+        sectionTitle: "核心业务系统与数字化工具",
+        sectionSub: "点击下方卡片即可直接进入对应系统，支持免配置内外网自适应访问",
+        badgeOnline: "服务正常",
+        badgeDebug: "在线调试",
+        titleHr: "ACC3 企业人事管理系统",
+        subHr: "员工花名册 · 考勤打卡 · 薪酬休假 · 综合报表",
+        descHr: "ACC3 核心人力资源数字化平台，支持员工全生命周期档案管理、出勤统计核算、薪资账单结算及多维数据透视。",
+        btnHrEnter: "进入人事系统 ›",
+        btnHrApi: "API 文档",
+        titleGym: "园区智慧健身房综合管理系统",
+        subGym: "会员门禁 · 扫码入场 · 器械预约 · 健身数据",
+        descGym: "服务于员工健康生活的智慧活动中心平台，提供会员身份验证、体能运动档案、器械排期与高峰人流智能分流。",
+        btnGymEnter: "进入健身房系统 ›",
+        titleLogistics: "ACC3 信息中心（综合管理平台）",
+        subLogistics: "安全管理 · 车辆管理 · 食堂管理 · 宿舍管理 · 人员管理",
+        descLogistics: "面向未来信息化建设的综合管理平台，统一支撑 ACC3 安全、车辆、食堂、宿舍及人员等业务场景的数字化管理与协同。",
+        btnLogisticsEnter: "进入信息中心 ›",
+        chipSafety: "安全管理",
+        chipVehicles: "车辆管理",
+        chipCanteen: "食堂管理",
+        chipDormitory: "宿舍管理",
+        chipPersonnel: "人员管理",
+        titleElevator: "菱王电梯 LINVOL 现场快速排障工作台",
+        subElevator: "2000kg 货梯专属 · LIN-A 控制柜测点下针 · F9 黑匣子",
+        descElevator: "绑定设备 25H0001341，针对 2 吨大吨位货梯恶劣工况，提供地坎卡石子排查、18.5kW 启动过流处置及万用表针脚级下针指引。",
+        btnElevatorEnter: "打开排障工作台 ›",
+        titleMinio: "MinIO 云端对象存储控制台",
+        subMinio: "物流单据影像 · 员工归档附件 · S3 高可用数据湖",
+        descMinio: "高性能企业级云存储集群，为后勤三部全部业务系统提供海量图片、PDF 电子单据、Excel 导入文件安全存储。",
+        btnMinioEnter: "管理控制台 ›",
+        titleApi: "后勤三部 API 接口开放平台",
+        subApi: "FastAPI Swagger 交互文档 · 跨系统数据通信网关",
+        descApi: "面向开发与运维的统一 RESTful 接口调试中心，涵盖考勤打卡、权限鉴权、花名册流转及自动化脚本通道。",
+        btnApiEnter: "查看接口文档 ›",
+        footerCopyright: "© 2026 后勤三部数字化技术中心 · 企业级容器集群管理",
+        footerLan: "内网地址：10.158.0.185",
+        footerWan: "外网隧道：ngrok SSL 加密",
+        footerWanExternal: "外网访问已启用加密保护"
+      },
+      id: {
+        headerTitle: "Portal Layanan Terpadu Logistik 3",
+        headerBadge: "Portal Mikroservis Terpadu",
+        headerSub: "Navigasi Klaster Kontainer Docker Perusahaan · Perutean Cerdas LAN & WAN",
+        headerSubExternal: "Portal Layanan Bisnis Terpadu · Akses Eksternal Aman",
+        netStatusOnline: "Kluster Gateway Berjalan Normal Online",
+        netModeWan: "🌐 Mode Jaringan Eksternal (Tunnel ngrok)",
+        netModeLan: "🏠 Mode Berkecepatan Tinggi (LAN Lokal)",
+        isolationHint: "🛡️ Sistem berjalan mandiri, sesi lingkungan terisolasi tanpa saling mengganggu",
+        isolationHintExternal: "🛡️ Akses eksternal hanya menampilkan layanan bisnis yang diizinkan",
+        sectionTitle: "Sistem Bisnis Utama & Alat Digital",
+        sectionSub: "Klik kartu di bawah untuk langsung mengakses sistem terkait, adaptif LAN & WAN",
+        badgeOnline: "Layanan Normal",
+        badgeDebug: "Debug Aktif",
+        titleHr: "Sistem Manajemen SDM ACC3",
+        subHr: "Daftar Karyawan · Absensi · Penggajian & Cuti · Laporan",
+        descHr: "Platform digital sumber daya manusia untuk pengelolaan siklus karyawan, perhitungan absensi, penggajian, dan statistik komprehensif.",
+        btnHrEnter: "Masuk Sistem SDM ›",
+        btnHrApi: "Dok API",
+        titleGym: "Sistem Manajemen Gym Pintar Kawasan",
+        subGym: "Akses Anggota · Check-in QR · Reservasi Alat · Data Kebugaran",
+        descGym: "Pusat aktivitas kebugaran cerdas untuk staf, verifikasi anggota, catatan kebugaran, dan manajemen arus kunjungan jam sibuk.",
+        btnGymEnter: "Masuk Sistem Gym ›",
+        titleLogistics: "Pusat Informasi ACC3 (Platform Manajemen Terpadu)",
+        subLogistics: "Manajemen Keamanan · Kendaraan · Kantin · Asrama · Personel",
+        descLogistics: "Platform manajemen terpadu untuk pembangunan informatika masa depan yang mendukung pengelolaan dan kolaborasi digital ACC3 untuk keamanan, kendaraan, kantin, asrama, serta personel.",
+        btnLogisticsEnter: "Masuk Pusat Informasi ›",
+        chipSafety: "Keamanan",
+        chipVehicles: "Kendaraan",
+        chipCanteen: "Kantin",
+        chipDormitory: "Asrama",
+        chipPersonnel: "Personel",
+        titleElevator: "Workbench Diagnosis Kerusakan Lift LINVOL",
+        subElevator: "Khusus Lift Kargo 2000kg · Pinpoint Kabinet LIN-A · Blackbox F9",
+        descElevator: "Khusus unit 25H0001341 muatan 2 ton, pembersihan ambang pintu macet, lonjakan arus 18.5kW, dan panduan pin multimeter.",
+        btnElevatorEnter: "Buka Workbench Lift ›",
+        titleMinio: "Konsol Penyimpanan Objek MinIO",
+        subMinio: "Foto Dokumen Logistik · Lampiran Karyawan · Danau Data S3",
+        descMinio: "Penyimpanan cloud berkinerja tinggi untuk gambar, dokumen PDF, dan file Excel seluruh sistem Bagian Logistik 3.",
+        btnMinioEnter: "Buka Konsol MinIO ›",
+        titleApi: "Portal Dokumentasi API Backend",
+        subApi: "Dokumentasi Swagger Interaktif · Gateway Integrasi Data",
+        descApi: "Pusat pengujian RESTful API untuk pengembang & operasi: absensi, otentikasi akun, mutasi data, dan integrasi skrip otomatis.",
+        btnApiEnter: "Lihat Dokumen API ›",
+        footerCopyright: "© 2026 Pusat Teknologi Digital Logistik 3 · Manajemen Kontainer Perusahaan",
+        footerLan: "Alamat LAN: 10.158.0.185",
+        footerWan: "Tunnel WAN: Enkripsi SSL ngrok",
+        footerWanExternal: "Akses eksternal dilindungi enkripsi"
+      }
+    };
+
+    let currentLang = localStorage.getItem("portal_lang") || "zh";
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem("portal_lang", lang);
+      
+      document.getElementById("btnZh").classList.toggle("active", lang === "zh");
+      document.getElementById("btnId").classList.toggle("active", lang === "id");
+
+      const t = i18nData[lang];
+      document.getElementById("txtHeaderTitle").textContent = t.headerTitle;
+      document.getElementById("txtHeaderBadge").textContent = t.headerBadge;
+      document.getElementById("txtHeaderSub").textContent = t.headerSub;
+      document.getElementById("txtSectionTitle").textContent = t.sectionTitle;
+      document.getElementById("txtSectionSub").textContent = t.sectionSub;
+      document.getElementById("txtIsolationHint").textContent = t.isolationHint;
+
+      // Status Badges
+      ["badgeHrStatus", "badgeGymStatus", "badgeLogisticsStatus", "badgeElevatorStatus", "badgeMinioStatus"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t.badgeOnline;
+      });
+      const apiBadge = document.getElementById("badgeApiStatus");
+      if (apiBadge) apiBadge.textContent = t.badgeDebug;
+
+      // Cards
+      document.getElementById("titleHr").textContent = t.titleHr;
+      document.getElementById("subHr").textContent = t.subHr;
+      document.getElementById("descHr").textContent = t.descHr;
+      document.getElementById("btnHrEnter").textContent = t.btnHrEnter;
+      document.getElementById("btnHrApi").textContent = t.btnHrApi;
+
+      document.getElementById("titleGym").textContent = t.titleGym;
+      document.getElementById("subGym").textContent = t.subGym;
+      document.getElementById("descGym").textContent = t.descGym;
+      document.getElementById("btnGymEnter").textContent = t.btnGymEnter;
+
+      document.getElementById("titleLogistics").textContent = t.titleLogistics;
+      document.getElementById("subLogistics").textContent = t.subLogistics;
+      document.getElementById("descLogistics").textContent = t.descLogistics;
+      document.getElementById("btnLogisticsEnter").textContent = t.btnLogisticsEnter;
+      document.getElementById("chipSafety").textContent = t.chipSafety;
+      document.getElementById("chipVehicles").textContent = t.chipVehicles;
+      document.getElementById("chipCanteen").textContent = t.chipCanteen;
+      document.getElementById("chipDormitory").textContent = t.chipDormitory;
+      document.getElementById("chipPersonnel").textContent = t.chipPersonnel;
+
+      document.getElementById("titleElevator").textContent = t.titleElevator;
+      document.getElementById("subElevator").textContent = t.subElevator;
+      document.getElementById("descElevator").textContent = t.descElevator;
+      document.getElementById("btnElevatorEnter").textContent = t.btnElevatorEnter;
+
+      document.getElementById("titleMinio").textContent = t.titleMinio;
+      document.getElementById("subMinio").textContent = t.subMinio;
+      document.getElementById("descMinio").textContent = t.descMinio;
+      document.getElementById("btnMinioEnter").textContent = t.btnMinioEnter;
+
+      document.getElementById("titleApi").textContent = t.titleApi;
+      document.getElementById("subApi").textContent = t.subApi;
+      document.getElementById("descApi").textContent = t.descApi;
+      document.getElementById("btnApiEnter").textContent = t.btnApiEnter;
+
+      document.getElementById("txtFooterCopyright").textContent = t.footerCopyright;
+      document.getElementById("txtFooterLan").textContent = t.footerLan;
+      document.getElementById("txtFooterWan").textContent = t.footerWan;
+
+      // Update Network Banner Text
+      updateNetworkBanner();
+    }
+
+    // Network Environment Detection
+    function updateNetworkBanner() {
+      const hostname = window.location.hostname;
+      const isExternal = hostname.includes("ngrok") || (!hostname.startsWith("10.") && !hostname.startsWith("172.") && !hostname.startsWith("192.") && hostname !== "localhost" && hostname !== "127.0.0.1");
+      const t = i18nData[currentLang];
+
+      const badgeMode = document.getElementById("txtNetMode");
+      const hostEl = document.getElementById("txtHostIp");
+      const restrictedElements = document.querySelectorAll("[data-network-scope='lan']");
+      const footerLan = document.getElementById("txtFooterLan");
+      const footerDivider = document.getElementById("footerDivider");
+      hostEl.textContent = `Host: ${hostname || 'localhost'}`;
+
+      if (isExternal) {
+        document.getElementById("txtHeaderSub").textContent = t.headerSubExternal;
+        document.getElementById("txtIsolationHint").textContent = t.isolationHintExternal;
+        hostEl.hidden = true;
+        footerLan.hidden = true;
+        footerDivider.hidden = true;
+        document.getElementById("txtFooterWan").textContent = t.footerWanExternal;
+        restrictedElements.forEach(element => element.hidden = true);
+        badgeMode.textContent = t.netModeWan;
+        badgeMode.style.borderColor = "#38bdf8";
+        badgeMode.style.color = "#38bdf8";
+        badgeMode.style.background = "rgba(56, 189, 248, 0.15)";
+      } else {
+        hostEl.hidden = false;
+        footerLan.hidden = false;
+        footerDivider.hidden = false;
+        document.getElementById("txtFooterWan").textContent = t.footerWan;
+        restrictedElements.forEach(element => element.hidden = false);
+        badgeMode.textContent = t.netModeLan;
+        badgeMode.style.borderColor = "#10b981";
+        badgeMode.style.color = "#10b981";
+        badgeMode.style.background = "rgba(16, 185, 129, 0.15)";
+      }
+
+      // MinIO is only available on the trusted LAN.
+      const linkMinio = document.getElementById("linkMinioMain");
+      if (!isExternal) {
+        linkMinio.href = `http://${hostname}:9391`;
+        linkMinio.target = "_blank";
+      }
+    }
+
+    // Theme Toggle
+    function toggleTheme() {
+      const isLight = document.body.getAttribute("data-theme") === "light";
+      if (isLight) {
+        document.body.removeAttribute("data-theme");
+        localStorage.setItem("portal_theme", "dark");
+      } else {
+        document.body.setAttribute("data-theme", "light");
+        localStorage.setItem("portal_theme", "light");
+      }
+    }
+
+    // Initialize
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedTheme = localStorage.getItem("portal_theme");
+      if (savedTheme === "light") {
+        document.body.setAttribute("data-theme", "light");
+      }
+      setLanguage(currentLang);
+    });
+  </script>
+</body>
+</html>
