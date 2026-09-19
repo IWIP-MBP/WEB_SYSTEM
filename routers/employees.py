@@ -97,10 +97,14 @@ def get_employees(
     nation: str = "",
     company: str = "",
     gender: str = "",
+    resign_start: str = "",
+    resign_end: str = "",
     page: int = 1,
     page_size: int = 20
 ):
     query = select(employees)
+    if status:
+        query = query.where(employees.c.status_status.contains(status))
     if search:
         s_pat = f"%{search.strip()}%"
         query = query.where(or_(
@@ -115,16 +119,16 @@ def get_employees(
             employees.c.id_card.ilike(s_pat),
             employees.c.company.ilike(s_pat),
             employees.c.remark_ket.ilike(s_pat),
+            employees.c.resign_operator.ilike(s_pat),
             employees.c.status_status.ilike(s_pat)
         ))
-    else:
-        if status:
-            query = query.where(employees.c.status_status.contains(status))
     if ws: query = query.where(employees.c.ws_bengkel == ws)
     if team: query = query.where(employees.c.team_grup == team)
     if nation: query = query.where(employees.c.nat_negara == nation)
     if company: query = query.where(employees.c.company == company)
     if gender: query = query.where(employees.c.gender_jk == gender)
+    if resign_start: query = query.where(employees.c.resign_date >= resign_start)
+    if resign_end: query = query.where(employees.c.resign_date <= resign_end)
     
     ws_scope_str = current_user.get("ws_scope")
     if ws_scope_str:
@@ -372,19 +376,43 @@ def export_employees(
     db=Depends(get_db),
     current_user=Depends(get_current_user),
     status: str = "在职",
+    search: str = "",
     ws: str = "",
     team: str = "",
     nation: str = "",
     company: str = "",
+    resign_start: str = "",
+    resign_end: str = "",
     lang: str = "zh"
 ):
     if current_user.get("role") != "admin":
         raise HTTPException(403, "Only admin can export data")
-    query = select(employees).where(employees.c.status_status.contains(status))
+    query = select(employees)
+    if status:
+        query = query.where(employees.c.status_status.contains(status))
+    if search:
+        s_pat = f"%{search.strip()}%"
+        query = query.where(or_(
+            employees.c.name_nama.ilike(s_pat),
+            employees.c.id_nomor.ilike(s_pat),
+            employees.c.ws_bengkel.ilike(s_pat),
+            employees.c.team_grup.ilike(s_pat),
+            employees.c.pos_cn_jabatan.ilike(s_pat),
+            employees.c.pos_id_jabatan.ilike(s_pat),
+            employees.c.nat_negara.ilike(s_pat),
+            employees.c.rel_agama.ilike(s_pat),
+            employees.c.id_card.ilike(s_pat),
+            employees.c.company.ilike(s_pat),
+            employees.c.remark_ket.ilike(s_pat),
+            employees.c.resign_operator.ilike(s_pat),
+            employees.c.status_status.ilike(s_pat)
+        ))
     if ws: query = query.where(employees.c.ws_bengkel == ws)
     if team: query = query.where(employees.c.team_grup == team)
     if nation: query = query.where(employees.c.nat_negara == nation)
     if company: query = query.where(employees.c.company == company)
+    if resign_start: query = query.where(employees.c.resign_date >= resign_start)
+    if resign_end: query = query.where(employees.c.resign_date <= resign_end)
     
     ws_scope_str = current_user.get("ws_scope")
     if ws_scope_str:
@@ -557,20 +585,20 @@ def import_excel(
     # 强制将所有列作为字符串读取，杜绝 pandas 自动识别为 float64 导致 18 位身份证后 2~3 位被截断或变 0
     df = pd.read_excel(io.BytesIO(file.file.read()), dtype=str)
     col_map = {
-        "工号": "id_nomor", "ID": "id_nomor",
-        "姓名": "name_nama", "Nama": "name_nama",
-        "车间": "ws_bengkel", "Bengkel": "ws_bengkel",
-        "班组": "team_grup", "Grup": "team_grup",
-        "性别": "gender_jk", "JK": "gender_jk",
-        "岗位(中)": "pos_cn_jabatan", "Jabatan (CN)": "pos_cn_jabatan",
-        "岗位(印)": "pos_id_jabatan", "Jabatan (ID)": "pos_id_jabatan",
-        "国籍": "nat_negara", "Negara": "nat_negara", "Kewarganegaraan": "nat_negara",
-        "宗教": "rel_agama", "Agama": "rel_agama",
-        "身份证号": "id_card", "ID Card": "id_card", "Nomor KTP": "id_card",
-        "入职日期": "hire_date", "Tgl Masuk": "hire_date", "Tanggal Masuk": "hire_date",
-        "合同到期日": "remark_ket", "Kontrak Berakhir": "remark_ket", "备注": "remark_ket", "Keterangan": "remark_ket", "Reason": "remark_ket",
-        "出生日期": "birth_date",
-        "归属公司": "company", "Perusahaan": "company",
+        "工号": "id_nomor", "ID": "id_nomor", "ID Nomor": "id_nomor", "ID 工号": "id_nomor", "ID Nomor 工号": "id_nomor",
+        "姓名": "name_nama", "Nama": "name_nama", "Nama 姓名": "name_nama",
+        "车间": "ws_bengkel", "Bengkel": "ws_bengkel", "Bengkel 车间": "ws_bengkel",
+        "班组": "team_grup", "Grup": "team_grup", "Regu": "team_grup", "Grup 班组": "team_grup", "Regu 班组": "team_grup",
+        "性别": "gender_jk", "JK": "gender_jk", "Jenis Kelamin": "gender_jk", "JK 性别": "gender_jk", "Jenis Kelamin 性别": "gender_jk",
+        "岗位(中)": "pos_cn_jabatan", "Jabatan (CN)": "pos_cn_jabatan", "Jabatan (CN) 岗位(中)": "pos_cn_jabatan",
+        "岗位(印)": "pos_id_jabatan", "Jabatan (ID)": "pos_id_jabatan", "Jabatan (ID) 岗位(印)": "pos_id_jabatan",
+        "国籍": "nat_negara", "Negara": "nat_negara", "Kewarganegaraan": "nat_negara", "Negara 国籍": "nat_negara", "Kewarganegaraan 国籍": "nat_negara",
+        "宗教": "rel_agama", "Agama": "rel_agama", "Agama 宗教": "rel_agama",
+        "身份证号": "id_card", "ID Card": "id_card", "Nomor KTP": "id_card", "KTP": "id_card", "Nomor KTP 身份证号": "id_card", "KTP 身份证号": "id_card",
+        "入职日期": "hire_date", "Tgl Masuk": "hire_date", "Tanggal Masuk": "hire_date", "Tanggal Masuk 入职日期": "hire_date", "Tgl Masuk 入职日期": "hire_date",
+        "合同到期日": "remark_ket", "Kontrak Berakhir": "remark_ket", "备注": "remark_ket", "Keterangan": "remark_ket", "Reason": "remark_ket", "Keterangan 备注": "remark_ket",
+        "出生日期": "birth_date", "Tanggal Lahir": "birth_date", "Tgl Lahir": "birth_date", "Tanggal Lahir 出生日期": "birth_date", "Tgl Lahir 出生日期": "birth_date",
+        "归属公司": "company", "Perusahaan": "company", "Perusahaan 归属公司": "company",
     }
     df.rename(columns=col_map, inplace=True)
     success = 0
@@ -692,7 +720,16 @@ def import_excel(
     return {"imported": success, "updated": updated, "errors": errors, "skipped": skipped, "total_rows": len(df)}
 
 @router.get("/api/employee/transfers")
-def get_transfers(db=Depends(get_db), current_user=Depends(get_current_user)):
+def get_transfers(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user),
+    search: str = "",
+    change_type: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    page: int = 1,
+    page_size: int = 50
+):
     stmt = select(employee_transfers)
     ws_scope_str = current_user.get("ws_scope")
     if ws_scope_str:
@@ -704,8 +741,113 @@ def get_transfers(db=Depends(get_db), current_user=Depends(get_current_user)):
                 ).where(employees.c.ws_bengkel.in_(allowed))
         except:
             pass
+
+    if search:
+        s_pat = f"%{search.strip()}%"
+        stmt = stmt.where(or_(
+            employee_transfers.c.id_nomor.ilike(s_pat),
+            employee_transfers.c.name.ilike(s_pat),
+            employee_transfers.c.change_type.ilike(s_pat),
+            employee_transfers.c.old_value.ilike(s_pat),
+            employee_transfers.c.new_value.ilike(s_pat),
+            employee_transfers.c.operator.ilike(s_pat)
+        ))
+    if change_type:
+        stmt = stmt.where(employee_transfers.c.change_type == change_type)
+    if date_from:
+        stmt = stmt.where(employee_transfers.c.transfer_date >= date_from)
+    if date_to:
+        stmt = stmt.where(employee_transfers.c.transfer_date <= f"{date_to} 23:59:59")
+
+    # Distinct change_types for filter dropdown
+    type_stmt = select(employee_transfers.c.change_type).distinct()
+    type_rows = db.execute(type_stmt).fetchall()
+    change_types = [r[0] for r in type_rows if r[0]]
+
+    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar()
+    
+    if page_size >= 10000:
+        rows = db.execute(stmt.order_by(desc(employee_transfers.c.id))).fetchall()
+    else:
+        rows = db.execute(stmt.order_by(desc(employee_transfers.c.id)).offset((page-1)*page_size).limit(page_size)).fetchall()
+        
+    return {
+        "data": [dict(r._mapping) for r in rows],
+        "total": total,
+        "change_types": change_types
+    }
+
+@router.get("/api/employee/transfers/export")
+def export_transfers(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user),
+    search: str = "",
+    change_type: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    lang: str = "zh"
+):
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, "Only admin can export data")
+    stmt = select(employee_transfers)
+    ws_scope_str = current_user.get("ws_scope")
+    if ws_scope_str:
+        try:
+            allowed = json.loads(ws_scope_str)
+            if isinstance(allowed, list) and len(allowed) > 0:
+                stmt = stmt.select_from(
+                    employee_transfers.join(employees, employee_transfers.c.id_nomor == employees.c.id_nomor)
+                ).where(employees.c.ws_bengkel.in_(allowed))
+        except:
+            pass
+
+    if search:
+        s_pat = f"%{search.strip()}%"
+        stmt = stmt.where(or_(
+            employee_transfers.c.id_nomor.ilike(s_pat),
+            employee_transfers.c.name.ilike(s_pat),
+            employee_transfers.c.change_type.ilike(s_pat),
+            employee_transfers.c.old_value.ilike(s_pat),
+            employee_transfers.c.new_value.ilike(s_pat),
+            employee_transfers.c.operator.ilike(s_pat)
+        ))
+    if change_type:
+        stmt = stmt.where(employee_transfers.c.change_type == change_type)
+    if date_from:
+        stmt = stmt.where(employee_transfers.c.transfer_date >= date_from)
+    if date_to:
+        stmt = stmt.where(employee_transfers.c.transfer_date <= f"{date_to} 23:59:59")
+
     rows = db.execute(stmt.order_by(desc(employee_transfers.c.id))).fetchall()
-    return [dict(r._mapping) for r in rows]
+    df = pd.DataFrame([dict(r._mapping) for r in rows])
+    if df.empty:
+        df = pd.DataFrame(columns=["transfer_date", "id_nomor", "name", "change_type", "old_value", "new_value", "operator"])
+    
+    cols = ["transfer_date", "id_nomor", "name", "change_type", "old_value", "new_value", "operator"]
+    df = df[[c for c in cols if c in df.columns]]
+    
+    rename_zh = {
+        "transfer_date": "异动日期", "id_nomor": "工号", "name": "姓名",
+        "change_type": "异动类型", "old_value": "变更前旧值", "new_value": "变更后新值",
+        "operator": "操作人"
+    }
+    rename_id = {
+        "transfer_date": "Tanggal Mutasi", "id_nomor": "No. ID", "name": "Nama",
+        "change_type": "Tipe Mutasi", "old_value": "Nilai Lama", "new_value": "Nilai Baru",
+        "operator": "Operator"
+    }
+    rename = rename_id if lang == "id" else rename_zh
+    df.rename(columns=rename, inplace=True)
+    df.insert(0, "No." if lang == "id" else "序号", range(1, len(df) + 1))
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=transfers_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"}
+    )
 
 @router.delete("/api/employee/transfers")
 def delete_transfers(ids: List[int] = Query([]), db=Depends(get_db), current_user=Depends(get_current_user)):
@@ -958,15 +1100,20 @@ def get_org_chart_editable(db=Depends(get_db), current_user=Depends(get_current_
             
     rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
     
+    dept_name = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "dept_name")).scalar()
+    if not dept_name or not dept_name.strip():
+        dept_name = os.getenv("DEPT_NAME", "后勤三部")
+    dept_name = dept_name.strip()
+
     nodes = {}
-    nodes["后勤三部"] = {"id": "root", "parent": "", "name": "后勤三部", "type": "root", "total": 0}
+    nodes[dept_name] = {"id": "root", "parent": "", "name": dept_name, "type": "root", "total": 0}
     
     for row in rows:
         ws = row.ws_bengkel or "未分配车间"
         team = row.team_grup or "未分配班组"
         cnt = row.cnt
         if ws not in nodes:
-            nodes[ws] = {"id": ws, "parent": "后勤三部", "name": ws, "type": "workshop", "total": 0}
+            nodes[ws] = {"id": ws, "parent": dept_name, "name": ws, "type": "workshop", "total": 0}
         if team not in nodes:
             nodes[team] = {"id": team, "parent": ws, "name": team, "type": "team", "total": 0}
         nodes[ws]["total"] += cnt
@@ -1331,3 +1478,56 @@ def save_login_intro(
         
     db.commit()
     return {"status": "success"}
+
+# ---------- 系统部门名称配置 ----------
+@router.get("/api/system/department_name")
+def get_department_name(db=Depends(get_db)):
+    dept = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "dept_name")).scalar()
+    if not dept or not dept.strip():
+        dept = os.getenv("DEPT_NAME", "后勤三部")
+    return {"dept_name": dept.strip()}
+
+@router.post("/api/system/department_name")
+def update_department_name(
+    request: Request,
+    data: dict,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, "Only admin can modify department name")
+    
+    new_name = data.get("dept_name", "").strip() if data.get("dept_name") else ""
+    if not new_name:
+        raise HTTPException(400, "部门名称不能为空")
+        
+    old_dept = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "dept_name")).scalar()
+    if not old_dept or not old_dept.strip():
+        old_dept = os.getenv("DEPT_NAME", "后勤三部")
+    old_dept = old_dept.strip()
+
+    db.execute(delete(config_meta).where(config_meta.c.meta_type == "dept_name"))
+    db.execute(insert(config_meta).values(meta_type="dept_name", meta_value=new_name))
+
+    # 同步更新 org_layout 中的 root 节点 display_name（若已保存自定义布局）
+    raw_layout = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "org_layout")).scalar()
+    if raw_layout:
+        try:
+            layout_json = json.loads(raw_layout)
+            nodes_list = layout_json.get("nodes", []) if isinstance(layout_json, dict) else (layout_json if isinstance(layout_json, list) else [])
+            updated = False
+            for n in nodes_list:
+                if isinstance(n, dict) and n.get("key") == "root":
+                    n["display_name"] = new_name
+                    n["name"] = new_name
+                    updated = True
+            if updated:
+                db.execute(delete(config_meta).where(config_meta.c.meta_type == "org_layout"))
+                db.execute(insert(config_meta).values(meta_type="org_layout", meta_value=json.dumps(layout_json if isinstance(layout_json, dict) else {"nodes": nodes_list})))
+        except Exception:
+            pass
+
+    db.commit()
+    write_audit(db, "", "", "修改部门名称", old=old_dept, new=new_name, operator=current_user["username"], ip=request.client.host)
+    return {"status": "success", "dept_name": new_name}
+

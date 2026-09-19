@@ -107,11 +107,13 @@ pythonenv*/
 
 # Project specific
 uploads/
+uploads_*/
 exports/
 *.sql
 *.log
 ngrok.yml
 backups/
+backups_*/
 手动备份/
 *.dump
 *.bak

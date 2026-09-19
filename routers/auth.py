@@ -27,6 +27,13 @@ class UserCreate(BaseModel):
 class UserSettingsUpdate(BaseModel):
     mask_id_card: Optional[str] = None
 
+class UserPasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+class AdminPasswordReset(BaseModel):
+    new_password: str
+
 @router.post("/api/auth/login")
 @limiter.limit("10/minute")
 def login(username: str, password: str, request: Request, db=Depends(get_db)):
@@ -115,6 +122,55 @@ def update_my_settings(
         db.commit()
         write_audit(db, "", "", "修改个人设置", old=f"mask: {current_user.get('mask_id_card')}", new=f"mask: {settings_data.mask_id_card}", operator=current_user["username"], ip=request.client.host)
     return {"status": "success", "mask_id_card": settings_data.mask_id_card}
+
+@router.put("/api/users/me/password")
+def change_my_password(
+    pwd_data: UserPasswordChange,
+    request: Request,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    if not pwd_data.old_password or not pwd_data.new_password:
+        raise HTTPException(400, "原密码和新密码均不能为空")
+    if len(pwd_data.new_password) < 6:
+        raise HTTPException(400, "新密码长度不能少于6位")
+    if pwd_data.old_password == pwd_data.new_password:
+        raise HTTPException(400, "新密码不能与原密码相同")
+    
+    user = db.execute(select(users).where(users.c.username == current_user["username"])).first()
+    if not user or not bcrypt.checkpw(pwd_data.old_password.encode('utf-8'), user.hashed_password.encode('utf-8')):
+        raise HTTPException(400, "原密码错误")
+    
+    hashed = bcrypt.hashpw(pwd_data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    db.execute(update(users).where(users.c.username == current_user["username"]).values(hashed_password=hashed))
+    db.commit()
+    write_audit(db, "", "", "修改个人密码", old="", new="******", reason="用户自主修改密码", operator=current_user["username"], ip=request.client.host)
+    return {"status": "success", "message": "密码修改成功"}
+
+@router.put("/api/users/{user_id}/password")
+def reset_user_password(
+    user_id: int,
+    pwd_data: AdminPasswordReset,
+    request: Request,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    if current_user["role"] != "admin":
+        raise HTTPException(403, "Only admin can reset passwords")
+    if not pwd_data.new_password:
+        raise HTTPException(400, "新密码不能为空")
+    if len(pwd_data.new_password) < 6:
+        raise HTTPException(400, "新密码长度不能少于6位")
+    
+    target = db.execute(select(users).where(users.c.id == user_id)).first()
+    if not target:
+        raise HTTPException(404, "User not found")
+        
+    hashed = bcrypt.hashpw(pwd_data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    db.execute(update(users).where(users.c.id == user_id).values(hashed_password=hashed))
+    db.commit()
+    write_audit(db, "", "", "管理员重置密码", old="", new=f"重置用户 {target.username} 密码", reason="管理员重置密码", operator=current_user["username"], ip=request.client.host)
+    return {"status": "success", "message": f"用户 {target.username} 密码已重置"}
 
 @router.delete("/api/users/{user_id}")
 def delete_user(

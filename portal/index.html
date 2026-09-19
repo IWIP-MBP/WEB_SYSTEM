@@ -708,6 +708,40 @@
         </div>
       </div>
 
+      <!-- 1.1 综合管理部 人事管理系统 (Streamlit + FastAPI 隔离实例) -->
+      <div class="system-card" style="--card-accent: #6366f1;">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3);">🏢</div>
+            <div class="card-status-badge">
+              <div class="card-status-dot"></div>
+              <span id="badgeHrDept2Status">独立实例</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleHrDept2">ACC5 企业人事管理系统</h3>
+            <div class="subtitle" id="subHrDept2">ACC5 专属独立数据库 · 独立本地备份 · 专属账号体系</div>
+          </div>
+          <div class="card-desc" id="descHrDept2">
+            ACC5 核心人力资源数字化平台，数据库与本地备份物理独立隔绝，支持员工全生命周期档案管理、出勤统计与权限独立控制。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">Streamlit</span>
+            <span class="meta-chip">FastAPI</span>
+            <span class="meta-chip">hr_system_dept2</span>
+            <span class="meta-chip">/hr-dept2/</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/hr-dept2/" class="btn-enter" id="linkHrDept2Main" target="_self" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+            <span id="btnHrDept2Enter">进入 ACC5 系统 ›</span>
+          </a>
+          <a href="/api-dept2/docs" class="btn-sub" id="linkHrDept2Api" target="_blank" rel="noopener noreferrer" data-network-scope="lan">
+            <span id="btnHrDept2Api">API 文档</span>
+          </a>
+        </div>
+      </div>
+
       <!-- 2. 智慧健身房系统 (Flask 5050) -->
       <div class="system-card" style="--card-accent: #10b981;">
         <div>
@@ -895,11 +929,16 @@
         sectionSub: "点击下方卡片即可直接进入对应系统，支持免配置内外网自适应访问",
         badgeOnline: "服务正常",
         badgeDebug: "在线调试",
-        titleHr: "ACC3 企业人事管理系统",
+        titleHr: "ACC3 企业人事管理系统（后勤三部）",
         subHr: "员工花名册 · 考勤打卡 · 薪酬休假 · 综合报表",
         descHr: "ACC3 核心人力资源数字化平台，支持员工全生命周期档案管理、出勤统计核算、薪资账单结算及多维数据透视。",
         btnHrEnter: "进入人事系统 ›",
         btnHrApi: "API 文档",
+        titleHrDept2: "ACC5 企业人事管理系统",
+        subHrDept2: "ACC5 专属独立数据库 · 独立本地备份 · 专属账号体系",
+        descHrDept2: "ACC5 核心人力资源数字化平台，数据库与本地备份物理独立隔绝，支持员工全生命周期档案管理、出勤统计与权限独立控制。",
+        btnHrDept2Enter: "进入 ACC5 系统 ›",
+        btnHrDept2Api: "API 文档",
         titleGym: "园区智慧健身房综合管理系统",
         subGym: "会员门禁 · 扫码入场 · 器械预约 · 健身数据",
         descGym: "服务于员工健康生活的智慧活动中心平台，提供会员身份验证、体能运动档案、器械排期与高峰人流智能分流。",
@@ -944,11 +983,16 @@
         sectionSub: "Klik kartu di bawah untuk langsung mengakses sistem terkait, adaptif LAN & WAN",
         badgeOnline: "Layanan Normal",
         badgeDebug: "Debug Aktif",
-        titleHr: "Sistem Manajemen SDM ACC3",
+        titleHr: "Sistem Manajemen SDM ACC3 (Logistik 3)",
         subHr: "Daftar Karyawan · Absensi · Penggajian & Cuti · Laporan",
         descHr: "Platform digital sumber daya manusia untuk pengelolaan siklus karyawan, perhitungan absensi, penggajian, dan statistik komprehensif.",
         btnHrEnter: "Masuk Sistem SDM ›",
         btnHrApi: "Dok API",
+        titleHrDept2: "Sistem Manajemen SDM ACC5",
+        subHrDept2: "Database Mandiri ACC5 · Cadangan Lokal Terpisah · Akun Khusus",
+        descHrDept2: "Platform digital sumber daya manusia ACC5 untuk pengelolaan siklus karyawan, perhitungan absensi, penggajian, dan statistik komprehensif.",
+        btnHrDept2Enter: "Masuk Sistem ACC5 ›",
+        btnHrDept2Api: "Dok API",
         titleGym: "Sistem Manajemen Gym Pintar Kawasan",
         subGym: "Akses Anggota · Check-in QR · Reservasi Alat · Data Kebugaran",
         descGym: "Pusat aktivitas kebugaran cerdas untuk staf, verifikasi anggota, catatan kebugaran, dan manajemen arus kunjungan jam sibuk.",
@@ -983,6 +1027,65 @@
 
     let currentLang = localStorage.getItem("portal_lang") || "zh";
 
+    let dynamicDeptNames = {
+      dept1: null,
+      dept2: null
+    };
+
+    async function fetchPortalDeptNames() {
+      try {
+        const res1 = await fetch('/api/system/department_name?_t=' + Date.now());
+        if (res1.ok) {
+          const data1 = await res1.json();
+          if (data1.dept_name) dynamicDeptNames.dept1 = data1.dept_name;
+        }
+      } catch (e) {}
+
+      try {
+        const res2 = await fetch('/api-dept2/system/department_name?_t=' + Date.now());
+        if (res2.ok) {
+          const data2 = await res2.json();
+          if (data2.dept_name) dynamicDeptNames.dept2 = data2.dept_name;
+        }
+      } catch (e) {}
+
+      applyDynamicDeptNames();
+    }
+
+    function applyDynamicDeptNames() {
+      if (dynamicDeptNames.dept1) {
+        const d1 = dynamicDeptNames.dept1;
+        const titleEl = document.getElementById("titleHr");
+        const btnEl = document.getElementById("btnHrEnter");
+        if (titleEl) {
+          titleEl.textContent = currentLang === "id" ? `Sistem Manajemen SDM ${d1}` : `${d1} 企业人事管理系统`;
+        }
+        if (btnEl) {
+          btnEl.textContent = currentLang === "id" ? `Masuk Sistem ${d1} ›` : `进入 ${d1} 系统 ›`;
+        }
+      }
+
+      if (dynamicDeptNames.dept2) {
+        const d2 = dynamicDeptNames.dept2;
+        const titleEl = document.getElementById("titleHrDept2");
+        const subEl = document.getElementById("subHrDept2");
+        const descEl = document.getElementById("descHrDept2");
+        const btnEl = document.getElementById("btnHrDept2Enter");
+        if (titleEl) {
+          titleEl.textContent = currentLang === "id" ? `Sistem Manajemen SDM ${d2}` : `${d2} 企业人事管理系统`;
+        }
+        if (subEl) {
+          subEl.textContent = currentLang === "id" ? `Database Mandiri ${d2} · Cadangan Lokal Terpisah · Akun Khusus` : `${d2} 专属独立数据库 · 独立本地备份 · 专属账号体系`;
+        }
+        if (descEl) {
+          descEl.textContent = currentLang === "id" ? `Platform digital sumber daya manusia ${d2} untuk pengelolaan siklus karyawan, perhitungan absensi, penggajian, dan statistik komprehensif.` : `${d2} 核心人力资源数字化平台，数据库与本地备份物理独立隔绝，支持员工全生命周期档案管理、出勤统计与权限独立控制。`;
+        }
+        if (btnEl) {
+          btnEl.textContent = currentLang === "id" ? `Masuk Sistem ${d2} ›` : `进入 ${d2} 系统 ›`;
+        }
+      }
+    }
+
     function setLanguage(lang) {
       currentLang = lang;
       localStorage.setItem("portal_lang", lang);
@@ -999,7 +1102,7 @@
       document.getElementById("txtIsolationHint").textContent = t.isolationHint;
 
       // Status Badges
-      ["badgeHrStatus", "badgeGymStatus", "badgeLogisticsStatus", "badgeElevatorStatus", "badgeMinioStatus"].forEach(id => {
+      ["badgeHrStatus", "badgeHrDept2Status", "badgeGymStatus", "badgeLogisticsStatus", "badgeElevatorStatus", "badgeMinioStatus"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = t.badgeOnline;
       });
@@ -1012,6 +1115,12 @@
       document.getElementById("descHr").textContent = t.descHr;
       document.getElementById("btnHrEnter").textContent = t.btnHrEnter;
       document.getElementById("btnHrApi").textContent = t.btnHrApi;
+
+      document.getElementById("titleHrDept2").textContent = t.titleHrDept2;
+      document.getElementById("subHrDept2").textContent = t.subHrDept2;
+      document.getElementById("descHrDept2").textContent = t.descHrDept2;
+      document.getElementById("btnHrDept2Enter").textContent = t.btnHrDept2Enter;
+      document.getElementById("btnHrDept2Api").textContent = t.btnHrDept2Api;
 
       document.getElementById("titleGym").textContent = t.titleGym;
       document.getElementById("subGym").textContent = t.subGym;
@@ -1049,6 +1158,9 @@
 
       // Update Network Banner Text
       updateNetworkBanner();
+
+      // Apply Dynamic Dept Names
+      applyDynamicDeptNames();
     }
 
     // Network Environment Detection
@@ -1115,6 +1227,7 @@
         document.body.setAttribute("data-theme", "light");
       }
       setLanguage(currentLang);
+      fetchPortalDeptNames();
     });
   </script>
 </body>

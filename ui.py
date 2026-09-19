@@ -30,8 +30,29 @@ if not getattr(requests, "_relative_url_patched", False):
 
 API_BASE = "/api"
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "15"))
+API_PREFIX = os.getenv("API_PREFIX", "/api")
+WS_PREFIX = os.getenv("WS_PREFIX", "/ws")
 
-st.set_page_config(page_title="后勤三部人事管理系统", layout="wide", page_icon="👥")
+def fetch_system_dept_name():
+    try:
+        r = requests.get("/api/system/department_name", timeout=3)
+        if r.ok:
+            name = r.json().get("dept_name")
+            if name and str(name).strip():
+                return str(name).strip()
+    except Exception:
+        pass
+    return os.getenv("DEPT_NAME", "后勤三部")
+
+def get_current_dept_name():
+    if "dept_name" in st.session_state and st.session_state["dept_name"]:
+        return st.session_state["dept_name"]
+    name = fetch_system_dept_name()
+    st.session_state["dept_name"] = name
+    return name
+
+DEPT_NAME = get_current_dept_name()
+st.set_page_config(page_title=f"{DEPT_NAME}人事管理系统", layout="wide", page_icon="👥")
 
 # 确保在各版本 Streamlit 下均支持 dialog 弹窗
 if not hasattr(st, "experimental_dialog") and hasattr(st, "dialog"):
@@ -57,6 +78,7 @@ def init_session_state():
         "summary_shown_today": False,
         "reminder_shown_today": False,
         "show_history": False,
+        "dept_name": DEPT_NAME,
     }
     for key, default in defaults.items():
         if key not in st.session_state:
@@ -624,6 +646,15 @@ LANG = {
         "confirm_issue_required": "请先勾选确认发放信息，避免误操作",
         "confirm_issue_text": "确认发放",
         "confirm_password": "确认密码",
+        "confirm_new_password": "确认新密码",
+        "change_password": "修改密码",
+        "old_password": "原密码",
+        "password_length_min": "新密码长度不能少于6位",
+        "password_changed_success": "密码修改成功！",
+        "reset_password": "重置密码",
+        "reset_password_success": "用户密码重置成功！",
+        "password_same_error": "新密码不能与原密码相同",
+        "current_user": "当前用户",
         "cost_report_menu": "📊 导出成本报表",
         "cost_report_desc": "按日期范围筛选员工（含离职员工），自定义导出字段、字段顺序和列名，导出Excel成本报表。",
         "cost_report_template": "📋 方案模板",
@@ -843,6 +874,12 @@ LANG = {
         "resign_workshop_dist": "离职车间分布",
         "resigned": "🚫 离职名册",
         "resigned_note": "集中查看离职员工，并支持恢复在职或办理离职。",
+        "resign_search_placeholder": "全局搜索：可按工号、姓名、车间、班组、岗位、国籍、身份证号、离职原因/备注、操作人检索...",
+        "transfer_search_placeholder": "搜索：可按工号、姓名、异动类型、变更前旧值、变更后新值、操作人检索...",
+        "all_change_types": "全部异动类型",
+        "export_transfers": "导出异动记录",
+        "filter_by_resign_date": "启用离职日期筛选",
+        "filter_by_transfer_date": "启用异动日期筛选",
         "restore": "🔄 恢复数据库",
         "restore_btn": "恢复在职",
         "role": "角色",
@@ -860,6 +897,13 @@ LANG = {
         "seq_no": "序号",
         "settings": "⚙️ 系统设置",
         "settings_note": "维护基础数据、用户权限、数据库备份和系统 Logo。",
+        "dept_name_setting": "🏢 部门名称设置",
+        "dept_name_setting_caption": "在此自定义本系统所属部门名称（如 ACC5、ACC3、综合管理部 等）。修改后全系统页面标题、登录欢迎语、页脚及组织架构图根节点将全量自动同步更新。",
+        "dept_name_input_label": "部门名称 (Nama Departemen)",
+        "dept_name_input_help": "例如: ACC5、ACC3、综合管理部、后勤三部",
+        "save_dept_btn": "💾 保存部门名称",
+        "dept_name_empty_err": "部门名称不能为空",
+        "dept_name_saved": "部门名称修改成功，全系统已同步生效！",
         "backup_management": "💾 数据备份与还原",
         "backup_config": "自动备份策略配置",
         "backup_hour": "备份时间(小时)",
@@ -1095,6 +1139,15 @@ LANG = {
         "confirm_issue_required": "Centang konfirmasi pemberian terlebih dahulu untuk menghindari kesalahan.",
         "confirm_issue_text": "Konfirmasi pemberian",
         "confirm_password": "Konfirmasi Kata Sandi",
+        "confirm_new_password": "Konfirmasi Kata Sandi Baru",
+        "change_password": "Ubah Kata Sandi",
+        "old_password": "Kata Sandi Lama",
+        "password_length_min": "Panjang kata sandi baru minimal 6 karakter",
+        "password_changed_success": "Kata sandi berhasil diubah!",
+        "reset_password": "Reset Kata Sandi",
+        "reset_password_success": "Kata sandi pengguna berhasil direset!",
+        "password_same_error": "Kata sandi baru tidak boleh sama dengan kata sandi lama",
+        "current_user": "Pengguna Saat Ini",
         "cost_report_menu": "📊 Ekspor Laporan Biaya",
         "cost_report_desc": "Filter karyawan berdasarkan rentang tanggal (termasuk karyawan yang mengundurkan diri), sesuaikan kolom ekspor, urutan kolom, dan nama kolom, lalu ekspor laporan biaya Excel.",
         "cost_report_template": "📋 Templat Solusi",
@@ -1314,6 +1367,12 @@ LANG = {
         "resign_workshop_dist": "Distribusi Resign per Bengkel",
         "resigned": "🚫 Daftar Resign",
         "resigned_note": "Melihat pegawai yang resign secara terpusat, mendukung pemulihan atau pemrosesan resign.",
+        "resign_search_placeholder": "Pencarian: Cari berdasarkan No. ID, Nama, Bengkel, Grup, Jabatan, KTP, Keterangan, Operator...",
+        "transfer_search_placeholder": "Cari: Berdasarkan No. ID, Nama, Tipe Mutasi, Nilai Lama, Nilai Baru, Operator...",
+        "all_change_types": "Semua Tipe Mutasi",
+        "export_transfers": "Ekspor Riwayat Mutasi",
+        "filter_by_resign_date": "Aktifkan Filter Tanggal Resign",
+        "filter_by_transfer_date": "Aktifkan Filter Tanggal Mutasi",
         "restore": "🔄 Pulihkan Database",
         "restore_btn": "Pulihkan",
         "role": "Peran",
@@ -1331,6 +1390,13 @@ LANG = {
         "seq_no": "No",
         "settings": "⚙️ Pengaturan",
         "settings_note": "Memelihara data dasar, hak akses pengguna, cadangan database, dan Logo sistem.",
+        "dept_name_setting": "🏢 Pengaturan Nama Departemen",
+        "dept_name_setting_caption": "Sesuaikan nama departemen sistem ini di sini (misalnya ACC5, ACC3, Divisi Manajemen Terpadu, dll.). Setelah diubah, judul halaman, salam login, footer, dan simpul akar bagan organisasi akan otomatis disinkronkan ke seluruh sistem.",
+        "dept_name_input_label": "Nama Departemen (Nama Departemen)",
+        "dept_name_input_help": "Contoh: ACC5, ACC3, Manajemen Terpadu, Logistik 3",
+        "save_dept_btn": "💾 Simpan Nama Departemen",
+        "dept_name_empty_err": "Nama departemen tidak boleh kosong",
+        "dept_name_saved": "Nama departemen berhasil diperbarui dan diterapkan ke seluruh sistem!",
         "backup_management": "💾 Cadangan & Pemulihan Data",
         "backup_config": "Konfigurasi Strategi Pencadangan Otomatis",
         "backup_hour": "Waktu Pencadangan (Jam)",
@@ -1516,6 +1582,11 @@ LANG = {
 
 def t(key):
     lang = st.session_state.get("lang", "zh")
+    d_name = get_current_dept_name()
+    if key == "login_title":
+        return f"{d_name}人事管理系统" if lang == "zh" else f"Sistem Manajemen Personalia {d_name}"
+    if key == "login_footer":
+        return f"{d_name} | 版本 2.0" if lang == "zh" else f"{d_name} | Versi 2.0"
     return LANG.get(lang, LANG["zh"]).get(key, key)
 
 def t_val(val):
@@ -1911,11 +1982,11 @@ components.html(
     
     try {{
         window.parent._current_access_token = accessToken;
-        let apiBase = "/api";
+        let apiBase = "{API_PREFIX}";
         const parentPort = window.parent.location.port;
         const parentHost = window.parent.location.hostname;
         const isLocal = parentHost === "localhost" || parentHost === "127.0.0.1" || parentHost.startsWith("192.168.") || parentHost.startsWith("10.") || parentHost.startsWith("172.");
-        if (isLocal && (parentPort === "8501" || parentPort === "80" || parentPort === "")) {{
+        if ("{API_PREFIX}" === "/api" && isLocal && (parentPort === "8501" || parentPort === "80" || parentPort === "")) {{
             apiBase = window.parent.location.protocol + "//" + parentHost + ":8000/api";
         }}
         window.parent._resolved_api_base = apiBase;
@@ -1923,7 +1994,7 @@ components.html(
         console.error("Error setting window.parent properties:", e);
         try {{
             window.parent._current_access_token = accessToken;
-            window.parent._resolved_api_base = "/api";
+            window.parent._resolved_api_base = "{API_PREFIX}";
         }} catch(ex) {{}}
     }}
 
@@ -2460,7 +2531,7 @@ components.html(
             const hostname = window.parent.location.hostname;
             const parentPort = window.parent.location.port;
             const isLocal = hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.");
-            if (isLocal && (parentPort === "8501" || parentPort === "80" || parentPort === "")) {{
+            if ("{WS_PREFIX}" === "/ws" && isLocal && (parentPort === "8501" || parentPort === "80" || parentPort === "")) {{
                 wsHost = hostname + ":8000";
             }} else {{
                 wsHost = window.parent.location.host;
@@ -2471,7 +2542,7 @@ components.html(
                 wsHost = window.location.host;
             }} catch(ex) {{}}
         }}
-        let wsUrl = wsProtocol + "//" + wsHost + "/ws/sessions?token=" + encodeURIComponent(token);
+        let wsUrl = wsProtocol + "//" + wsHost + "{WS_PREFIX}/sessions?token=" + encodeURIComponent(token);
 
         const ws = new WebSocket(wsUrl);
         window.parent._sessions_ws = ws;
@@ -2567,6 +2638,10 @@ st.sidebar.title(t("login_title"))
 st.sidebar.toggle("Bahasa Indonesia/中文", value=(st.session_state.lang == "id"), key="lang_toggle")
 st.session_state.lang = "id" if st.session_state.lang_toggle else "zh"
 
+curr_username = st.session_state.user_info.get("username", "")
+curr_user_role = st.session_state.user_info.get("role", "viewer")
+role_badge = "管理员" if curr_user_role == "admin" else "普通用户" if st.session_state.lang == "zh" else ("Admin" if curr_user_role == "admin" else "Viewer")
+st.sidebar.markdown(f"<div style='margin: 0.2rem 0 0.8rem 0; font-size: 0.88rem; color: #64748b;'>👤 {t('current_user')}: <b style='color: #0f172a;'>{curr_username}</b> <span style='font-size:0.75rem; background:#e2e8f0; padding:2px 6px; border-radius:4px;'>{role_badge}</span></div>", unsafe_allow_html=True)
 
 menu_options = [t("dashboard"), t("org_chart"), t("employees"), t("resigned"), t("labor"), t("logs")]
 if st.session_state.user_info.get("role") == "admin":
@@ -2577,6 +2652,26 @@ if st.session_state.user_info.get("username") == "admin":
     menu_options.append(t("backup_management"))
     menu_options.append(t("settings"))
 menu = st.sidebar.radio("Menu", menu_options, key="menu_radio")
+
+with st.sidebar.expander("🔑 " + t("change_password")):
+    with st.form("sidebar_change_pwd_form", clear_on_submit=True):
+        old_pwd = st.text_input(t("old_password"), type="password")
+        new_pwd = st.text_input(t("new_password"), type="password")
+        confirm_pwd = st.text_input(t("confirm_new_password"), type="password")
+        submit_pwd = st.form_submit_button(t("update"), use_container_width=True)
+        if submit_pwd:
+            if not old_pwd or not new_pwd:
+                st.error(t("username_password_required"))
+            elif len(new_pwd) < 6:
+                st.error(t("password_length_min"))
+            elif new_pwd != confirm_pwd:
+                st.error(t("password_mismatch"))
+            elif old_pwd == new_pwd:
+                st.error(t("password_same_error"))
+            else:
+                resp = api_put("/users/me/password", json_data={"old_password": old_pwd, "new_password": new_pwd})
+                if resp and resp.get("status") == "success":
+                    st.success(t("password_changed_success"))
 
 if st.sidebar.button(t("logout"), key="logout_btn"):
     st.session_state.access_token = None
@@ -3952,10 +4047,68 @@ elif menu == t("resigned"):
     st.markdown(f'<div class="section-note">{t("resigned_note")}</div>', unsafe_allow_html=True)
     tab1, tab2 = st.tabs([t("resign_list"), t("process_resign")])
     with tab1:
-        data = api_get("/employees", {"status": t("status_inactive"), "page": 1, "page_size": 10000})
+        ws_list = api_get_meta_cached("车间")
+        team_list = api_get_meta_cached("班组")
+        nationality_list = api_get_meta_cached("国籍")
+        company_list = api_get_meta_cached("公司")
+        is_id_lang = st.session_state.get("lang") == "id"
+
+        with st.form("resign_search_form", border=False):
+            col_search, col_btn = st.columns([4, 1])
+            with col_search:
+                resign_search = st.text_input(
+                    "resign_search",
+                    key="resign_search_keyword_input",
+                    placeholder="🔍 " + t("resign_search_placeholder"),
+                    label_visibility="collapsed"
+                ).strip()
+            with col_btn:
+                st.form_submit_button("🔍 " + t("search"), type="primary", use_container_width=True)
+
+        with st.expander(t("filter"), expanded=False):
+            rc1, rc2, rc3, rc4 = st.columns(4)
+            company_filter = rc1.selectbox(label("company"), [""] + company_list, format_func=lambda x: x if x else t("all_companies"), key="resign_company_filter")
+            ws_filter = rc2.selectbox(label("ws_bengkel"), [""] + ws_list, format_func=lambda x: t_val(x) if x else t("all_workshops"), key="resign_ws_filter")
+            team_filter = rc3.selectbox(label("team_grup"), [""] + team_list, format_func=lambda x: t_val(x) if x else t("all_teams"), key="resign_team_filter")
+            nation_filter = rc4.selectbox(label("nat_negara"), [""] + nationality_list, format_func=lambda x: t_val(x) if x else t("all_nations"), key="resign_nation_filter")
+
+            rcd1, rcd2 = st.columns([1.5, 3.5])
+            use_resign_date = rcd1.checkbox(t("filter_by_resign_date"), value=False, key="use_resign_date_filter")
+            r_start_date = None
+            r_end_date = None
+            if use_resign_date:
+                rd1, rd2 = rcd2.columns(2)
+                r_start_date = rd1.date_input(t("start_date"), value=date.today() - timedelta(days=90), key="resign_start_date")
+                r_end_date = rd2.date_input(t("end_date"), value=date.today(), key="resign_end_date")
+
+        curr_resign_filter_state = (resign_search, company_filter, ws_filter, team_filter, nation_filter, use_resign_date, str(r_start_date), str(r_end_date))
+        if "prev_resign_filter_state" not in st.session_state:
+            st.session_state.prev_resign_filter_state = curr_resign_filter_state
+        elif st.session_state.prev_resign_filter_state != curr_resign_filter_state:
+            st.session_state.resign_page = 1
+            st.session_state.prev_resign_filter_state = curr_resign_filter_state
+
+        page_size = st.session_state.get("resign_page_size_select", 20)
+        curr_p = st.session_state.get("resign_page", 1)
+
+        params = {
+            "status": "离职",
+            "search": resign_search,
+            "ws": ws_filter,
+            "team": team_filter,
+            "nation": nation_filter,
+            "company": company_filter,
+            "page": curr_p,
+            "page_size": page_size
+        }
+        if use_resign_date and r_start_date and r_end_date:
+            params["resign_start"] = r_start_date.strftime("%Y-%m-%d")
+            params["resign_end"] = r_end_date.strftime("%Y-%m-%d")
+
+        data = api_get("/employees", params)
         if data and data.get("data"):
             df = pd.DataFrame(data["data"])
-            display_cols = ["resign_date", "resign_op_date", "id_nomor", "name_nama", "ws_bengkel", "team_grup", "nat_negara", "remark_ket", "resign_operator"]
+            display_cols = ["resign_date", "resign_op_date", "id_nomor", "name_nama", "company", "ws_bengkel", "team_grup", "nat_negara", "remark_ket", "resign_operator"]
             for col in display_cols:
                 if col not in df.columns:
                     df[col] = ""
@@ -3966,8 +4119,72 @@ elif menu == t("resigned"):
             df_display = df_display.fillna("").astype(str)
             df_display.columns = [label(col) for col in display_cols]
             df_display = df_display.reset_index(drop=True)
-            df_display.insert(0, t("seq_no"), range(1, len(df_display) + 1))
+            df_display.insert(0, t("seq_no"), range(1 + (curr_p - 1) * page_size, 1 + (curr_p - 1) * page_size + len(df_display)))
             st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+            total_records = data.get('total', len(df))
+            max_page = max(1, (total_records - 1) // page_size + 1)
+            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
+            p_col_ps, p_col_input, p_col_page, p_col_total, p_col_export = st.columns([1.8, 1.2, 1.6, 2.0, 3.4])
+            with p_col_ps:
+                selected_ps = st.selectbox(
+                    "Baris per Halaman" if is_id_lang else "每页条数",
+                    [10, 20, 50, 100, 200, 10000],
+                    index=[10, 20, 50, 100, 200, 10000].index(page_size) if page_size in [10, 20, 50, 100, 200, 10000] else 1,
+                    format_func=lambda x: ("Semua" if is_id_lang else "全部") if x >= 10000 else (f"{x} Baris/Hal" if is_id_lang else f"{x} 条/页"),
+                    key="resign_page_size_select",
+                    label_visibility="collapsed"
+                )
+                if selected_ps != page_size:
+                    st.session_state.resign_page = 1
+                    st.rerun()
+
+            with p_col_input:
+                jump_p = st.number_input(
+                    "Halaman" if is_id_lang else "页码",
+                    min_value=1,
+                    max_value=max_page,
+                    value=curr_p,
+                    key="resign_page_input",
+                    label_visibility="collapsed"
+                )
+                if jump_p != curr_p:
+                    st.session_state.resign_page = jump_p
+                    st.rerun()
+
+            with p_col_page:
+                p_text = f"Hal <b>{curr_p}</b> / <b>{max_page}</b>" if is_id_lang else f"第 <b>{curr_p}</b> / <b>{max_page}</b> 页"
+                st.markdown(f"<div style='line-height: 38px; font-size: 14px; text-align: left; color: #374151;'>{p_text}</div>", unsafe_allow_html=True)
+
+            with p_col_total:
+                t_text = f"Total <b>{total_records}</b> Data" if is_id_lang else f"共 <b>{total_records}</b> 条记录"
+                st.markdown(f"<div style='line-height: 38px; font-size: 14px; text-align: left; color: #374151;'>{t_text}</div>", unsafe_allow_html=True)
+
+            with p_col_export:
+                if is_admin and st.button(t("export"), key="resign_export_btn"):
+                    export_params = {
+                        "status": "离职",
+                        "search": resign_search,
+                        "ws": ws_filter,
+                        "team": team_filter,
+                        "nation": nation_filter,
+                        "company": company_filter,
+                        "lang": st.session_state.get("lang", "zh")
+                    }
+                    if use_resign_date and r_start_date and r_end_date:
+                        export_params["resign_start"] = r_start_date.strftime("%Y-%m-%d")
+                        export_params["resign_end"] = r_end_date.strftime("%Y-%m-%d")
+                    with st.spinner(t("export_generating")):
+                        r = requests.get("/api/employees/export", params=export_params, headers=auth_h(), timeout=30)
+                        if r.status_code == 200:
+                            st.download_button(label="📥 " + t("export"), data=r.content,
+                                               file_name=f"resigned_employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                               key="resign_export_download")
+                        else:
+                            st.toast(t("operation_failed"), icon="❌")
+
             st.write(f"**{t('actions')}**")
             target_resign = st.selectbox(
                 t("select_employee"),
@@ -4458,7 +4675,65 @@ elif menu == t("transfer_records"):
             else:
                 st.info(t("no_active_employees_to_transfer"))
 
-    transfers = api_get("/employee/transfers")
+    is_id_lang = st.session_state.get("lang") == "id"
+
+    with st.form("transfer_search_form", border=False):
+        col_search, col_btn = st.columns([4, 1])
+        with col_search:
+            transfer_search = st.text_input(
+                "transfer_search",
+                key="transfer_search_keyword_input",
+                placeholder="🔍 " + t("transfer_search_placeholder"),
+                label_visibility="collapsed"
+            ).strip()
+        with col_btn:
+            st.form_submit_button("🔍 " + t("search"), type="primary", use_container_width=True)
+
+    with st.expander(t("filter"), expanded=False):
+        tf1, tf2 = st.columns([1.5, 2.5])
+        change_type_opts = [t("all_change_types"), "车间变更", "班组变更", "车间及班组变更"]
+        sel_type = tf1.selectbox(t("change_type"), change_type_opts, key="transfer_type_filter")
+
+        tcd1, tcd2 = tf2.columns([1.2, 2.8])
+        use_transfer_date = tcd1.checkbox(t("filter_by_transfer_date"), value=False, key="use_transfer_date_filter")
+        t_start = None
+        t_end = None
+        if use_transfer_date:
+            t_date1, t_date2 = tcd2.columns(2)
+            t_start = t_date1.date_input(t("start_date"), value=date.today() - timedelta(days=90), key="transfer_start_date")
+            t_end = t_date2.date_input(t("end_date"), value=date.today(), key="transfer_end_date")
+
+    curr_t_state = (transfer_search, sel_type, use_transfer_date, str(t_start), str(t_end))
+    if "prev_transfer_filter_state" not in st.session_state:
+        st.session_state.prev_transfer_filter_state = curr_t_state
+    elif st.session_state.prev_transfer_filter_state != curr_t_state:
+        st.session_state.transfer_page = 1
+        st.session_state.prev_transfer_filter_state = curr_t_state
+
+    page_size = st.session_state.get("transfer_page_size_select", 20)
+    curr_p = st.session_state.get("transfer_page", 1)
+
+    t_params = {
+        "search": transfer_search,
+        "page": curr_p,
+        "page_size": page_size
+    }
+    if sel_type != t("all_change_types"):
+        t_params["change_type"] = sel_type
+    if use_transfer_date and t_start and t_end:
+        t_params["date_from"] = t_start.strftime("%Y-%m-%d")
+        t_params["date_to"] = t_end.strftime("%Y-%m-%d")
+
+    res = api_get("/employee/transfers", t_params)
+    transfers = []
+    total_records = 0
+    if isinstance(res, dict):
+        transfers = res.get("data", [])
+        total_records = res.get("total", len(transfers))
+    elif isinstance(res, list):
+        transfers = res
+        total_records = len(transfers)
+
     if transfers and len(transfers) > 0:
         df = pd.DataFrame(transfers)
         df = df.rename(columns={
@@ -4470,47 +4745,108 @@ elif menu == t("transfer_records"):
             "new_value": t("new_value"),
             "operator": t("operator")
         })
-        df = df[[t("transfer_date"), t("id_nomor"), t("name_nama"), t("change_type"), t("old_value"), t("new_value"), t("operator")]]
+        cols = [t("transfer_date"), t("id_nomor"), t("name_nama"), t("change_type"), t("old_value"), t("new_value"), t("operator")]
+        df = df[[c for c in cols if c in df.columns]]
+        df = df.fillna("").astype(str)
         df = df.reset_index(drop=True)
-        df.insert(0, t("seq_no"), range(1, len(df) + 1))
+        df.insert(0, t("seq_no"), range(1 + (curr_p - 1) * page_size, 1 + (curr_p - 1) * page_size + len(df)))
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-        # Bulk delete UI
-        # Build a mapping of id to display label
-        id_options = []
-        id_to_label = {}
-        for rec in transfers:
-            rec_id = rec.get("id")
-            if rec_id is None:
-                continue
-            label = f"{rec_id}: {rec.get('id_nomor', '')} | {rec.get('name_nama', '')}"
-            id_options.append(rec_id)
-            id_to_label[rec_id] = label
-        if id_options:
-            selected_ids = st.multiselect(
-                t("select_transfers_to_delete"),
-                options=id_options,
-                format_func=lambda x: id_to_label.get(x, str(x)),
-                key="transfer_bulk_delete_select"
+        max_page = max(1, (total_records - 1) // page_size + 1)
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+        p_col_ps, p_col_input, p_col_page, p_col_total, p_col_export = st.columns([1.8, 1.2, 1.6, 2.0, 3.4])
+        with p_col_ps:
+            selected_ps = st.selectbox(
+                "Baris per Halaman" if is_id_lang else "每页条数",
+                [10, 20, 50, 100, 200, 10000],
+                index=[10, 20, 50, 100, 200, 10000].index(page_size) if page_size in [10, 20, 50, 100, 200, 10000] else 1,
+                format_func=lambda x: ("Semua" if is_id_lang else "全部") if x >= 10000 else (f"{x} Baris/Hal" if is_id_lang else f"{x} 条/页"),
+                key="transfer_page_size_select",
+                label_visibility="collapsed"
             )
-            if selected_ids:
-                if st.button(t("delete_selected"), key="bulk_delete_btn"):
-                    st.session_state.show_transfer_bulk_delete_confirm = True
-        # Confirmation dialog
-        if st.session_state.get("show_transfer_bulk_delete_confirm", False):
-            st.warning(t("confirm_delete_transfers"))
-            col_yes, col_no = st.columns(2)
-            if col_yes.button(t("confirm_delete_btn"), key="confirm_bulk_delete_yes"):
-                resp = api_delete("/employee/transfers", params={"ids": selected_ids})
-                if resp and resp.get("deleted", 0) > 0:
-                    st.session_state.toast_message = (t("operation_success"), "✅")
-                else:
-                    st.toast(t("operation_failed"), icon="❌")
-                st.session_state.show_transfer_bulk_delete_confirm = False
+            if selected_ps != page_size:
+                st.session_state.transfer_page = 1
                 st.rerun()
-            if col_no.button(t("cancel"), key="cancel_bulk_delete"):
-                st.session_state.show_transfer_bulk_delete_confirm = False
+
+        with p_col_input:
+            jump_p = st.number_input(
+                "Halaman" if is_id_lang else "页码",
+                min_value=1,
+                max_value=max_page,
+                value=curr_p,
+                key="transfer_page_input",
+                label_visibility="collapsed"
+            )
+            if jump_p != curr_p:
+                st.session_state.transfer_page = jump_p
                 st.rerun()
+
+        with p_col_page:
+            p_text = f"Hal <b>{curr_p}</b> / <b>{max_page}</b>" if is_id_lang else f"第 <b>{curr_p}</b> / <b>{max_page}</b> 页"
+            st.markdown(f"<div style='line-height: 38px; font-size: 14px; text-align: left; color: #374151;'>{p_text}</div>", unsafe_allow_html=True)
+
+        with p_col_total:
+            t_text = f"Total <b>{total_records}</b> Data" if is_id_lang else f"共 <b>{total_records}</b> 条记录"
+            st.markdown(f"<div style='line-height: 38px; font-size: 14px; text-align: left; color: #374151;'>{t_text}</div>", unsafe_allow_html=True)
+
+        with p_col_export:
+            if is_admin and st.button(t("export"), key="transfer_export_btn"):
+                exp_params = {
+                    "search": transfer_search,
+                    "lang": st.session_state.get("lang", "zh")
+                }
+                if sel_type != t("all_change_types"):
+                    exp_params["change_type"] = sel_type
+                if use_transfer_date and t_start and t_end:
+                    exp_params["date_from"] = t_start.strftime("%Y-%m-%d")
+                    exp_params["date_to"] = t_end.strftime("%Y-%m-%d")
+                with st.spinner(t("export_generating")):
+                    r = requests.get("/api/employee/transfers/export", params=exp_params, headers=auth_h(), timeout=30)
+                    if r.status_code == 200:
+                        st.download_button(label="📥 " + t("export"), data=r.content,
+                                           file_name=f"transfers_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                           key="transfer_export_download")
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
+
+        # Bulk delete UI
+        if is_admin:
+            id_options = []
+            id_to_label = {}
+            for rec in transfers:
+                rec_id = rec.get("id")
+                if rec_id is None:
+                    continue
+                emp_name = rec.get('name') or rec.get('name_nama', '')
+                label_text = f"{rec_id}: {rec.get('id_nomor', '')} | {emp_name} ({rec.get('change_type', '')})"
+                id_options.append(rec_id)
+                id_to_label[rec_id] = label_text
+            if id_options:
+                selected_ids = st.multiselect(
+                    t("select_transfers_to_delete"),
+                    options=id_options,
+                    format_func=lambda x: id_to_label.get(x, str(x)),
+                    key="transfer_bulk_delete_select"
+                )
+                if selected_ids:
+                    if st.button(t("delete_selected"), key="bulk_delete_btn"):
+                        st.session_state.show_transfer_bulk_delete_confirm = True
+            # Confirmation dialog
+            if st.session_state.get("show_transfer_bulk_delete_confirm", False):
+                st.warning(t("confirm_delete_transfers"))
+                col_yes, col_no = st.columns(2)
+                if col_yes.button(t("confirm_delete_btn"), key="confirm_bulk_delete_yes"):
+                    resp = api_delete("/employee/transfers", params={"ids": selected_ids})
+                    if resp and resp.get("deleted", 0) > 0:
+                        st.session_state.toast_message = (t("operation_success"), "✅")
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
+                    st.session_state.show_transfer_bulk_delete_confirm = False
+                    st.rerun()
+                if col_no.button(t("cancel"), key="cancel_bulk_delete"):
+                    st.session_state.show_transfer_bulk_delete_confirm = False
+                    st.rerun()
     else:
         st.info(t("no_data"))
 
@@ -5176,7 +5512,7 @@ elif menu == t("settings"):
     if not is_admin:
         st.warning(t("readonly_msg"))
         st.stop()
-    tab_settings, tab_users, tab_logo, tab_intro = st.tabs([t("meta_maintenance"), t("user_management"), t("company_logo"), t("login_intro_setting")])
+    tab_settings, tab_users, tab_dept, tab_logo, tab_intro = st.tabs([t("meta_maintenance"), t("user_management"), t("dept_name_setting"), t("company_logo"), t("login_intro_setting")])
     with tab_settings:
         m_type = st.radio(t("meta_maintenance"), [t("workshop"), t("team"), t("nationality")], horizontal=True, key="meta_type")
         items = api_get(f"/meta/{m_type}") or []
@@ -5356,6 +5692,42 @@ elif menu == t("settings"):
                                 if col_no.button("❌ " + t("cancel"), key="del_confirm_no"):
                                     st.session_state[delete_key] = False
                                     st.rerun()
+                        st.write("---")
+                        with st.expander("🔑 " + t("reset_password")):
+                            with st.form(f"reset_pwd_form_{target_user}", clear_on_submit=True):
+                                admin_new_pwd = st.text_input(t("new_password"), type="password", key=f"admin_pwd_{target_user}")
+                                admin_confirm_pwd = st.text_input(t("confirm_new_password"), type="password", key=f"admin_pwd2_{target_user}")
+                                reset_submit = st.form_submit_button(t("reset_password"), use_container_width=True)
+                                if reset_submit:
+                                    if not admin_new_pwd:
+                                        st.error(t("username_password_required"))
+                                    elif len(admin_new_pwd) < 6:
+                                        st.error(t("password_length_min"))
+                                    elif admin_new_pwd != admin_confirm_pwd:
+                                        st.error(t("password_mismatch"))
+                                    else:
+                                        resp = api_put(f"/users/{target_data['id']}/password", json_data={"new_password": admin_new_pwd})
+                                        if resp and resp.get("status") == "success":
+                                            st.session_state.toast_message = (t("reset_password_success"), "✅")
+                                            st.rerun()
+    with tab_dept:
+        st.subheader(t("dept_name_setting"))
+        st.caption(t("dept_name_setting_caption"))
+        curr_dept = get_current_dept_name()
+        with st.form("dept_name_form"):
+            new_dept_input = st.text_input(t("dept_name_input_label"), value=curr_dept, help=t("dept_name_input_help"))
+            if st.form_submit_button(t("save_dept_btn"), use_container_width=True):
+                if not new_dept_input.strip():
+                    st.toast(t("dept_name_empty_err"), icon="⚠️")
+                else:
+                    resp = api_post("/system/department_name", json_data={"dept_name": new_dept_input.strip()})
+                    if resp and resp.get("status") == "success":
+                        st.session_state["dept_name"] = new_dept_input.strip()
+                        st.cache_data.clear()
+                        st.session_state.toast_message = (t("dept_name_saved"), "✅")
+                        st.rerun()
+                    else:
+                        st.toast(t("operation_failed"), icon="❌")
     with tab_logo:
         st.subheader(t("logo_upload_title"))
         uploaded_file = st.file_uploader(t("logo_select_file"), type=["png", "jpg", "jpeg"], key="logo_upload")

@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from sqlalchemy import select, func
@@ -139,9 +140,14 @@ def build_org_chart(db, current_user=None, query_date=None):
                     pass
         rows = db.execute(stmt.group_by(employees.c.ws_bengkel, employees.c.team_grup, employees.c.nat_negara)).fetchall()
 
+    dept_name = db.execute(select(config_meta.c.meta_value).where(config_meta.c.meta_type == "dept_name")).scalar()
+    if not dept_name or not dept_name.strip():
+        dept_name = os.getenv("DEPT_NAME", "后勤三部")
+    dept_name = dept_name.strip()
+
     nodes = {
         "root": {
-            "key": "root", "name": "后勤三部", "display_name": "后勤三部",
+            "key": "root", "name": dept_name, "display_name": dept_name,
             "type": "部门", "parent": "", "level": 0, "total": 0, "nations": {}, "sort": 0
         }
     }

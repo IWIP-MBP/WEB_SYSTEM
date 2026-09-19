@@ -89,6 +89,67 @@ services:
       retries: 3
       start_period: 20s
 
+  backend_dept2:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: hr_backend_dept2
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://admin:iwip123@db:5432/hr_system_dept2
+      SECRET_KEY: iwip-secret-key-change-in-production
+      CORS_ORIGINS: "*"
+      TZ: Asia/Tokyo
+      DEPT_NAME: ACC5
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./uploads_dept2:/app/uploads
+      - ./backups_dept2:/app/backups
+      - ./routers:/app/routers
+      - ./services:/app/services
+      - ./main.py:/app/main.py
+      - ./models.py:/app/models.py
+      - ./database.py:/app/database.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend_dept2:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: hr_frontend_dept2
+    restart: always
+    depends_on:
+      backend_dept2:
+        condition: service_healthy
+    environment:
+      - API_BASE=http://backend_dept2:8000/api
+      - API_PREFIX=/api-dept2
+      - WS_PREFIX=/ws-dept2
+      - TZ=Asia/Tokyo
+      - STREAMLIT_SERVER_BASE_URL_PATH=hr-dept2
+      - DEPT_NAME=ACC5
+    ports:
+      - "8502:8501"
+    volumes:
+      - ./uploads_dept2:/app/uploads
+      - ./ui.py:/app/ui.py
+      - ./components:/app/components
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/hr-dept2/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
   nginx:
     image: nginx:alpine
     container_name: hr_nginx
@@ -103,6 +164,10 @@ services:
       backend:
         condition: service_healthy
       frontend:
+        condition: service_healthy
+      backend_dept2:
+        condition: service_healthy
+      frontend_dept2:
         condition: service_healthy
 
   ngrok:
