@@ -1,31 +1,40 @@
+# Note: web_system uses Dockerfile.backend and Dockerfile.frontend for split microservice deployment.
+# This Dockerfile serves as a standalone combined backend runner.
+
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TZ=Asia/Tokyo
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     postgresql-client \
     curl \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件并安装Python包
+# Install python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 创建必要的目录
-RUN mkdir -p /app/uploads/photos /app/uploads/exports && chmod -R 777 /app/uploads
+# Create necessary directories
+RUN mkdir -p /app/uploads/photos /app/uploads/exports /app/backups && \
+    chmod -R 755 /app/uploads /app/backups
 
-# 复制应用代码
-COPY main.py ui.py .
+# Copy application code
+COPY . .
 
-# 暴露端口
-EXPOSE 8000 8501
+# Expose backend port
+EXPOSE 8000
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:8000/api/health || exit 1
 
-# 启动命令 - 默认启动后端
+# Start command
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

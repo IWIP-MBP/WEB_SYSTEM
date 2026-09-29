@@ -1,17 +1,19 @@
+name: web_system
+
 services:
   db:
     image: postgres:15
     container_name: hr_db
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: iwip123
-      POSTGRES_DB: hr_system
-      TZ: Asia/Tokyo
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iwip123}
+      POSTGRES_DB: ${POSTGRES_DB:-hr_system}
+      TZ: ${TZ:-Asia/Tokyo}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     command:
       - "postgres"
       - "-c"
@@ -27,10 +29,12 @@ services:
       - "-c"
       - "idle_in_transaction_session_timeout=300000"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d hr_system"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-hr_system}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - default
 
   backend:
     build:
@@ -40,12 +44,12 @@ services:
     restart: always
     depends_on:
       db:
-        condition: service_healthy     # 等待数据库健康检查通过
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://admin:iwip123@db:5432/hr_system   # 注意主机名是 db
-      SECRET_KEY: iwip-secret-key-change-in-production
-      CORS_ORIGINS: "*"
-      TZ: Asia/Tokyo
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-iwip123}@db:5432/${POSTGRES_DB:-hr_system}
+      SECRET_KEY: ${SECRET_KEY:-iwip-secret-key-change-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      TZ: ${TZ:-Asia/Tokyo}
     ports:
       - "8000:8000"
     volumes:
@@ -58,10 +62,12 @@ services:
       - ./database.py:/app/database.py
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 60s
-      timeout: 10s
+      interval: 30s
+      timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 20s
+    networks:
+      - default
 
   frontend:
     build:
@@ -73,8 +79,8 @@ services:
       backend:
         condition: service_healthy
     environment:
-      - API_BASE=http://backend:8000/api
-      - TZ=Asia/Tokyo
+      - API_BASE=http://hr_backend:8000/api
+      - TZ=${TZ:-Asia/Tokyo}
       - STREAMLIT_SERVER_BASE_URL_PATH=hr
     ports:
       - "8501:8501"
@@ -88,6 +94,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    networks:
+      - default
 
   backend_dept2:
     build:
@@ -99,10 +107,10 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://admin:iwip123@db:5432/hr_system_dept2
-      SECRET_KEY: iwip-secret-key-change-in-production
-      CORS_ORIGINS: "*"
-      TZ: Asia/Tokyo
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-iwip123}@db:5432/${POSTGRES_DB_DEPT2:-hr_system_dept2}
+      SECRET_KEY: ${SECRET_KEY:-iwip-secret-key-change-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      TZ: ${TZ:-Asia/Tokyo}
       DEPT_NAME: ACC5
     ports:
       - "8001:8000"
@@ -116,10 +124,12 @@ services:
       - ./database.py:/app/database.py
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 60s
-      timeout: 10s
+      interval: 30s
+      timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 20s
+    networks:
+      - default
 
   frontend_dept2:
     build:
@@ -131,10 +141,10 @@ services:
       backend_dept2:
         condition: service_healthy
     environment:
-      - API_BASE=http://backend_dept2:8000/api
+      - API_BASE=http://hr_backend_dept2:8000/api
       - API_PREFIX=/api-dept2
       - WS_PREFIX=/ws-dept2
-      - TZ=Asia/Tokyo
+      - TZ=${TZ:-Asia/Tokyo}
       - STREAMLIT_SERVER_BASE_URL_PATH=hr-dept2
       - DEPT_NAME=ACC5
     ports:
@@ -149,6 +159,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    networks:
+      - default
 
   nginx:
     image: nginx:alpine
@@ -160,6 +172,8 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./portal:/usr/share/nginx/html/portal:ro
       - ../elevator_fault:/usr/share/nginx/html/elevator:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       backend:
         condition: service_healthy
@@ -169,6 +183,9 @@ services:
         condition: service_healthy
       frontend_dept2:
         condition: service_healthy
+    networks:
+      - default
+      - logistics-shared-net
 
   ngrok:
     image: ngrok/ngrok:latest
@@ -177,14 +194,22 @@ services:
     volumes:
       - ./ngrok.yml:/var/lib/ngrok/ngrok.yml:ro
     environment:
-      - NGROK_AUTHTOKEN=3FG5jhZvaqERYNa24VGcdXEJmkt_7UpFfjpuvWi15TXRAiknW
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
     command:
       - "http"
       - "nginx:80"
-      - "--url=civil-grueling-enigmatic.ngrok-free.dev"
+      - "--url=${NGROK_DOMAIN:-civil-grueling-enigmatic.ngrok-free.dev}"
       - "--pooling-enabled"
     depends_on:
       - nginx
+    networks:
+      - default
 
 volumes:
   postgres_data:
+
+networks:
+  default:
+  logistics-shared-net:
+    name: logistics-shared-net
+    external: true

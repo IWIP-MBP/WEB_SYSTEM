@@ -3,7 +3,7 @@ FROM python:3.10-slim AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -11,13 +11,18 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Stage 2: Final stage
+# Stage 2: Final runtime stage
 FROM python:3.10-slim
 
 WORKDIR /app
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TZ=Asia/Tokyo \
+    PATH=/root/.local/bin:$PATH
+
 # Install runtime dependencies (postgresql-client for DB backup/restore, tzdata, and curl for healthcheck)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     tzdata \
     curl \
@@ -25,10 +30,10 @@ RUN apt-get update && apt-get install -y \
 
 # Copy installed python dependencies from builder
 COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
 
 # Create necessary directories
-RUN mkdir -p /app/uploads/photos /app/uploads/exports && chmod -R 777 /app/uploads
+RUN mkdir -p /app/uploads/photos /app/uploads/exports /app/backups && \
+    chmod -R 755 /app/uploads /app/backups
 
 # Copy application code
 COPY . .
@@ -37,7 +42,7 @@ COPY . .
 EXPOSE 8000
 
 # Health check using curl
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Start command

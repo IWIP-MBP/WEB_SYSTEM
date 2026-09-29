@@ -112,6 +112,8 @@ exports/
 *.sql
 *.log
 ngrok.yml
+.env
+.env.*.local
 backups/
 backups_*/
 手动备份/
