@@ -114,14 +114,19 @@ def extract_attendance_events(attendance_files: List[bytes], current_year: int) 
             id_col = None
             date_col = None
             
-            # Scan first 20 rows to find headers
+            # Scan first 25 rows to find headers
             for r in range(1, min(25, ws.max_row + 1)):
-                row_vals = [ws.cell(row=r, column=c).value for c in range(1, ws.max_column + 1)]
-                if "工号" in row_vals:
+                row_vals = [str(ws.cell(row=r, column=c).value).strip() if ws.cell(row=r, column=c).value is not None else "" for c in range(1, ws.max_column + 1)]
+                if any("工号" in v for v in row_vals):
                     header_row_idx = r
-                    id_col = row_vals.index("工号") + 1
-                    if "日期" in row_vals:
-                        date_col = row_vals.index("日期") + 1
+                    for c_i, v in enumerate(row_vals, 1):
+                        if "工号" in v:
+                            id_col = c_i
+                            break
+                    for c_i, v in enumerate(row_vals, 1):
+                        if "日期" in v and "统计" not in v:
+                            date_col = c_i
+                            break
                     break
             
             if header_row_idx is None:
@@ -287,6 +292,54 @@ def check_inactive_or_leave(emp_id: str, d: date, emp_info: dict) -> bool:
         
     return False
 
+def inspect_excel_type(file_bytes: bytes) -> Tuple[bool, bool]:
+    """
+    检查 Excel 字节流是出勤流水还是排休模板。
+    返回: (is_attendance_log, is_schedule_template)
+    """
+    has_att = False
+    has_tpl = False
+    try:
+        xls = pd.ExcelFile(io.BytesIO(file_bytes))
+        for s in xls.sheet_names:
+            df = xls.parse(s, header=None, nrows=30)
+            for _, r in df.iterrows():
+                vals = [str(v).strip() for v in r.values if pd.notna(v)]
+                has_id = any("工号" in v or "人员编号" in v or v.lower() in ["id", "empid"] for v in vals)
+                has_date = any("日期" in v or "date" in v.lower() for v in vals)
+                if has_id and has_date:
+                    has_att = True
+                    break
+            if has_att:
+                break
+    except Exception:
+        pass
+
+    try:
+        wb = load_workbook(io.BytesIO(file_bytes), data_only=True)
+        for s in wb.sheetnames:
+            if "排休" in s or "排班" in s:
+                has_tpl = True
+            ws = wb[s]
+            for r in range(1, min(10, ws.max_row + 1)):
+                for c in range(1, min(ws.max_column, 40)):
+                    v1 = ws.cell(r, c).value
+                    v2 = ws.cell(r, c + 1).value
+                    if v1 is not None and v2 is not None:
+                        try:
+                            if int(str(v1).strip()) == 1 and int(str(v2).strip()) == 2:
+                                has_tpl = True
+                                break
+                        except ValueError:
+                            pass
+                if has_tpl:
+                    break
+            if has_tpl:
+                break
+    except Exception:
+        pass
+    return has_att, has_tpl
+
 def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> Tuple[bytes, int, int, int]:
     """
     处理多月份的出勤明细 Excel 文件并按模板更新排休。
@@ -297,8 +350,16 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
     if not template_bytes:
         raise ValueError("未上传排休模板文件")
 
+    # 智能检查是否用户不小心将出勤明细与排休模板放反了位置
+    if len(attendance_files) == 1:
+        att0_has_att, att0_is_tpl = inspect_excel_type(attendance_files[0])
+        tpl_has_att, tpl_is_tpl = inspect_excel_type(template_bytes)
+        if (not att0_has_att and att0_is_tpl) and (tpl_has_att and not tpl_is_tpl):
+            logger.warning("【智能纠错】检测到用户上传的『出勤明细』与『排休模板』互换了位置，系统已自动调换并继续执行转换。")
+            attendance_files, template_bytes = [template_bytes], attendance_files[0]
+
     all_logs = []
-    for file_bytes in attendance_files:
+    for file_idx, file_bytes in enumerate(attendance_files):
         file_stream = io.BytesIO(file_bytes)
         xls = pd.ExcelFile(file_stream)
         target_sheet = None
@@ -307,37 +368,72 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
             df_file = xls.parse(sheet_name, header=None)
             found = False
             for idx, row_vals in df_file.iterrows():
-                if "工号" in row_vals.values and "日期" in row_vals.values:
+                vals = [str(v).strip() for v in row_vals.values if pd.notna(v)]
+                has_id = any("工号" in v or "人员编号" in v or v.lower() in ["id", "empid"] for v in vals)
+                has_date = any("日期" in v or "date" in v.lower() for v in vals)
+                if has_id and has_date:
                     header_row = idx
                     target_sheet = sheet_name
                     found = True
                     break
             if found:
                 break
-        
+
         if target_sheet is None:
             target_sheet = xls.sheet_names[0]
             df_file = xls.parse(target_sheet, header=None)
             header_row = 0
             for idx, row_vals in df_file.iterrows():
-                if "工号" in row_vals.values and "日期" in row_vals.values:
+                vals = [str(v).strip() for v in row_vals.values if pd.notna(v)]
+                has_id = any("工号" in v or "人员编号" in v or v.lower() in ["id", "empid"] for v in vals)
+                has_date = any("日期" in v or "date" in v.lower() for v in vals)
+                if has_id and has_date:
                     header_row = idx
                     break
-        
+
         df_cleaned = xls.parse(target_sheet, skiprows=header_row)
         df_cleaned.columns = [str(c).strip() for c in df_cleaned.columns]
+
+        # 智能标准化列名
+        rename_map = {}
+        for col in df_cleaned.columns:
+            c_str = str(col).strip()
+            if c_str in ["员工工号", "人员编号", "EmpID", "emp_id", "ID"] or ("工号" in c_str and c_str != "工号"):
+                rename_map[col] = "工号"
+            elif c_str in ["打卡日期", "考勤日期", "工作日期", "出勤日期", "Date", "date"] or ("日期" in c_str and c_str != "日期" and "统计" not in c_str):
+                rename_map[col] = "日期"
+            elif c_str in ["员工姓名", "Name", "name"] or ("姓名" in c_str and c_str != "姓名"):
+                rename_map[col] = "姓名"
+            elif c_str in ["班次名称", "Shift", "shift"] or ("班次" in c_str and c_str != "班次"):
+                rename_map[col] = "班次"
+            elif c_str in ["加班", "加班时间", "加班小时", "Overtime", "ot"]:
+                rename_map[col] = "加班时长"
+            elif c_str in ["实际出勤", "实际出勤时间", "实际工时", "出勤时长", "出勤时间", "实际出勤时长"]:
+                rename_map[col] = "实际出勤时长"
+            elif c_str in ["应出勤", "应出勤时间", "应出勤时长", "计划工时", "标准工时"]:
+                rename_map[col] = "应出勤时长"
+        if rename_map:
+            df_cleaned.rename(columns=rename_map, inplace=True)
+
+        if "工号" not in df_cleaned.columns or "日期" not in df_cleaned.columns:
+            raise ValueError(
+                f"在第 {file_idx + 1} 个出勤文件中未找到包含『工号』和『日期』的数据列"
+                f"（工作表: '{target_sheet}'，识别到的列: {list(df_cleaned.columns)[:6]}）。"
+                f"请检查是否上传了正确的出勤流水文件，或确认是否将排休模板放错了位置。"
+            )
+
         logger.info(f"成功解析工作表 '{target_sheet}'，表头行位于 {header_row}。包含列: {list(df_cleaned.columns)}")
         all_logs.append(df_cleaned)
-    
+
     # 垂直合并
     df_all = pd.concat(all_logs, ignore_index=True)
     df_all['日期'] = pd.to_datetime(df_all['日期'].astype(str).str.strip(), errors='coerce')
     df_all = df_all.dropna(subset=['工号', '日期']).sort_values(by='日期') # 按时间严格排序
     df_all['工号'] = df_all['工号'].astype(str).str.split('.').str[0].str.strip()
-    
+
     unique_ids_logs = list(df_all['工号'].unique())
     logger.info(f"合并后的出勤记录共计 {len(df_all)} 条。包含的工号数: {len(unique_ids_logs)}。")
-    
+
     # 动态识别正在处理的最新目标月份（以流水中最新的时间作为本月）
     latest_date = df_all['日期'].max()
     if pd.isna(latest_date):
@@ -360,6 +456,8 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
             continue
         shift_name = str(row.get('班次', '')).strip()
         ot_hours = parse_ot_hours(row.get('加班时长', 0))
+        act_hours = parse_ot_hours(row.get('实际出勤时长', 0))
+        exp_hours = parse_ot_hours(row.get('应出勤时长', 0))
             
         # 仅限本月的数据，写入 1-31 号的主体排休矩阵中
         if date_val.year == current_year and date_val.month == current_month:
@@ -367,22 +465,38 @@ def convert_attendance(attendance_files: List[bytes], template_bytes: bytes) -> 
             status_text = ""
             cell_fill = None
             
-            # 判断休息或休假班次
-            if "全天休" in shift_name or shift_name == "休息":
-                if ot_hours >= 4.0:
+            # 判断休息或排休半天（上午休/下午休）班次
+            is_am_off = ("上午休" in shift_name or "上午休息" in shift_name)
+            is_pm_off = ("下午休" in shift_name or "下午休息" in shift_name)
+            is_full_off = ("全天休" in shift_name or "全天休息" in shift_name or shift_name == "休息" or ("休息" in shift_name and not (is_am_off or is_pm_off)))
+
+            if is_full_off:
+                # 全天休息：检测实际出勤时间与加班时长
+                work_hours = max(act_hours, ot_hours)
+                if work_hours >= 4.0:
                     status_text = ""
-                    if ot_hours >= 8.0:
-                        cell_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid") # 加班≥8小时：明黄色
+                    if work_hours >= 8.0:
+                        cell_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid") # 加班/出勤≥8小时：明黄色
                     else:
-                        cell_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid") # 加班≥4小时：中绿色
+                        cell_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid") # 加班/出勤≥4小时：中绿色
                 else:
                     status_text = "全"
                     cell_fill = None
-            elif "上午休" in shift_name or "上午休息" in shift_name:
-                status_text = "上"
-            elif "下午休" in shift_name or "下午休息" in shift_name:
-                status_text = "下"
-                
+
+            elif is_am_off or is_pm_off:
+                # 排休半天：上午休显示“上”，下午休显示“下”
+                status_text = "上" if is_am_off else "下"
+                # 规则：实际出勤时间 - 应出勤时间 >= 4小时标记中绿色，>= 8小时标记明黄色
+                # 若未明确标注应出勤时间，默认半天基准工时为 4.0 小时
+                base_exp = exp_hours if exp_hours > 0 else 4.0
+                extra_hours = max(act_hours - base_exp, ot_hours)
+                if extra_hours >= 8.0 or act_hours >= 12.0:
+                    cell_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid") # 实际出勤-应出勤≥8小时：明黄色
+                elif extra_hours >= 4.0 or act_hours >= 8.0:
+                    cell_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid") # 实际出勤-应出勤≥4小时：中绿色
+                else:
+                    cell_fill = None
+
             if status_text or cell_fill:
                 attendance_matrix[(emp_id, day)] = (status_text, cell_fill)
 

@@ -896,6 +896,38 @@
         </div>
       </div>
 
+      <!-- 7. 中华重大传统节日贺卡定制与打印工坊 (端午·中秋·春节·元宵等) -->
+      <div class="system-card" style="--card-accent: #f59e0b;">
+        <div>
+          <div class="card-top">
+            <div class="card-icon-box" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);">🧧</div>
+            <div class="card-status-badge" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b;">
+              <div class="card-status-dot" style="background: #f59e0b;"></div>
+              <span id="badgeCardStatus">节日专享</span>
+            </div>
+          </div>
+          <div class="card-titles">
+            <h3 id="titleCard">中华传统节日贺卡定制与打印工坊</h3>
+            <div class="subtitle" id="subCard">端午安康 · 中秋团圆 · 新春吉庆 · 网络背景拉取 · A4对折打印</div>
+          </div>
+          <div class="card-desc" id="descCard">
+            全功能传统节日定制贺卡制作工坊，支持端午节、中秋节、春节、元宵节等重大节日，内置海量典雅模板、名篇诗词、网络背景拉取与一键高保真打印/导出。
+          </div>
+          <div class="card-meta-chips">
+            <span class="meta-chip">春节/端午/中秋</span>
+            <span class="meta-chip">网络背景拉取</span>
+            <span class="meta-chip">A4 对折卡</span>
+            <span class="meta-chip">PDF 导出</span>
+            <span class="meta-chip">/card/</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a href="/card/" class="btn-enter" id="linkCardMain" target="_blank" rel="noopener noreferrer" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+            <span id="btnCardEnter">制作与打印贺卡 ›</span>
+          </a>
+        </div>
+      </div>
+
     </div>
 
   </main>
@@ -964,6 +996,11 @@
         subApi: "FastAPI Swagger 交互文档 · 跨系统数据通信网关",
         descApi: "面向开发与运维的统一 RESTful 接口调试中心，涵盖考勤打卡、权限鉴权、花名册流转及自动化脚本通道。",
         btnApiEnter: "查看接口文档 ›",
+        titleCard: "中华传统节日贺卡定制与打印工坊",
+        subCard: "端午安康 · 中秋团圆 · 新春吉庆 · 网络背景拉取 · A4对折打印",
+        descCard: "全功能传统节日定制贺卡制作工坊，支持端午节、中秋节、春节、元宵节等重大节日，内置海量典雅模板、名篇诗词、网络背景拉取与一键高保真打印/导出。",
+        btnCardEnter: "制作与打印贺卡 ›",
+        badgeCardStatus: "传统佳节专享",
         footerCopyright: "© 2026 后勤三部数字化技术中心 · 企业级容器集群管理",
         footerLan: "内网地址：10.158.0.185",
         footerWan: "外网隧道：ngrok SSL 加密",
@@ -1018,6 +1055,11 @@
         subApi: "Dokumentasi Swagger Interaktif · Gateway Integrasi Data",
         descApi: "Pusat pengujian RESTful API untuk pengembang & operasi: absensi, otentikasi akun, mutasi data, dan integrasi skrip otomatis.",
         btnApiEnter: "Lihat Dokumen API ›",
+        titleCard: "Studio Cetak & Kartu Ucapan Festival Tradisional (Imlek, Peh Cun, Musim Gugur)",
+        subCard: "Festival Peh Cun · Pertengahan Musim Gugur · Tahun Baru Imlek · Unduh Latar Online · Format A4 Lipat",
+        descCard: "Layanan kartu ucapan festival lengkap untuk Imlek, Peh Cun, Pertengahan Musim Gugur, dan Cap Go Meh dengan teks kaya, pustaka latar online, dan cetak fidelitas tinggi.",
+        btnCardEnter: "Buka Studio Kartu ›",
+        badgeCardStatus: "Spesial Hari Raya",
         footerCopyright: "© 2026 Pusat Teknologi Digital Logistik 3 · Manajemen Kontainer Perusahaan",
         footerLan: "Alamat LAN: 10.158.0.185",
         footerWan: "Tunnel WAN: Enkripsi SSL ngrok",
@@ -1151,6 +1193,12 @@
       document.getElementById("subApi").textContent = t.subApi;
       document.getElementById("descApi").textContent = t.descApi;
       document.getElementById("btnApiEnter").textContent = t.btnApiEnter;
+
+      document.getElementById("titleCard").textContent = t.titleCard;
+      document.getElementById("subCard").textContent = t.subCard;
+      document.getElementById("descCard").textContent = t.descCard;
+      document.getElementById("btnCardEnter").textContent = t.btnCardEnter;
+      document.getElementById("badgeCardStatus").textContent = t.badgeCardStatus;
 
       document.getElementById("txtFooterCopyright").textContent = t.footerCopyright;
       document.getElementById("txtFooterLan").textContent = t.footerLan;

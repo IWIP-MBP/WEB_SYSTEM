@@ -1,0 +1,2475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中华传统节日贺卡工坊（端午·中秋·春节·元宵定制与打印）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================= 全局基础与节日色彩系统 ================= */
+    :root {
+      /* 当前激活主题颜色变量（默认春节红金） */
+      --primary-color: #b91c1c;
+      --secondary-color: #991b1b;
+      --gold-accent: #d97706;
+      --deep-gold: #b45309;
+      --border-pattern: #d8b87a;
+      --paper-cream: #faf7ee;
+      --paper-texture: #fcf9f2;
+      --ink-color: #2b2b2b;
+      --seal-red: #b82424;
+      --toolbar-bg: rgba(22, 27, 34, 0.94);
+    }
+
+    /* 春节主题 (Red & Gold) */
+    [data-festival="spring"] {
+      --primary-color: #b91c1c;
+      --secondary-color: #881337;
+      --gold-accent: #eab308;
+      --deep-gold: #a16207;
+      --border-pattern: #e4c278;
+      --paper-cream: #faf5ea;
+      --seal-red: #c52222;
+      --badge-bg: #b91c1c;
+    }
+
+    /* 端午节主题 (Bamboo Jade Green & River Turquoise) */
+    [data-festival="dragon"] {
+      --primary-color: #065f46;
+      --secondary-color: #064e3b;
+      --gold-accent: #ca8a04;
+      --deep-gold: #854d0e;
+      --border-pattern: #a3c293;
+      --paper-cream: #f4f8f3;
+      --seal-red: #065f46;
+      --badge-bg: #059669;
+    }
+
+    /* 中秋节主题 (Moon Navy & Warm Gold) */
+    [data-festival="midautumn"] {
+      --primary-color: #c69234;
+      --secondary-color: #182848;
+      --gold-accent: #d97706;
+      --deep-gold: #9d6f1a;
+      --border-pattern: #d8b87a;
+      --paper-cream: #faf7ee;
+      --seal-red: #b82424;
+      --badge-bg: #d97706;
+    }
+
+    /* 元宵节主题 (Lantern Crimson & Amber Glow) */
+    [data-festival="lantern"] {
+      --primary-color: #be123c;
+      --secondary-color: #4c0519;
+      --gold-accent: #f59e0b;
+      --deep-gold: #b45309;
+      --border-pattern: #f0c080;
+      --paper-cream: #fff8f0;
+      --seal-red: #be123c;
+      --badge-bg: #be123c;
+    }
+
+    /* 国庆节主题 (Chinese Red & Golden Star) */
+    [data-festival="national"] {
+      --primary-color: #dc2626;
+      --secondary-color: #7f1d1d;
+      --gold-accent: #facc15;
+      --deep-gold: #a16207;
+      --border-pattern: #deb050;
+      --paper-cream: #faf5ea;
+      --seal-red: #dc2626;
+      --badge-bg: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', STSong, 'STKaiti', 'KaiTi', serif;
+      background: #ece8dc;
+      color: var(--ink-color);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.3s;
+    }
+
+    /* ================= 顶部悬浮控制栏 ================= */
+    .toolbar-container {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background: var(--toolbar-bg);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      padding: 12px 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #f6d365;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar-brand a.back-portal {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: normal;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      transition: all 0.2s;
+    }
+
+    .toolbar-brand a.back-portal:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .badge-festival {
+      background: var(--badge-bg, #b91c1c);
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+
+    .toolbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .select-input {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .select-input:hover, .select-input:focus {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #f6d365;
+    }
+
+    .select-input option {
+      background: #1e293b;
+      color: #fff;
+    }
+
+    .btn {
+      appearance: none;
+      border: none;
+      outline: none;
+      padding: 7px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+      color: #451a03;
+      box-shadow: 0 2px 8px rgba(246, 211, 101, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(246, 211, 101, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.24);
+      color: #fff;
+    }
+
+    .btn-bg-modal {
+      background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+    }
+
+    .btn-bg-modal:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.5);
+    }
+
+    /* 字体大小微调小按钮 */
+    .btn-mini {
+      padding: 5px 9px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-mini:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* 打印提示条 */
+    .print-tips {
+      background: #fff8e6;
+      border-left: 4px solid var(--gold-accent);
+      color: #78350f;
+      padding: 10px 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1050px;
+      margin: 14px auto 0;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .print-tips .tag-pill {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    /* ================= 贺卡工作区与A4尺寸规范 ================= */
+    .workspace {
+      padding: 24px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+    }
+
+    /* 页面标记标签 */
+    .page-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #57534e;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-label span {
+      background: #e7e5e4;
+      color: #44403c;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: normal;
+    }
+
+    /* A4 横向纸张尺寸: 297mm x 210mm */
+    .a4-page {
+      width: 297mm;
+      height: 210mm;
+      background: var(--paper-texture);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16);
+      position: relative;
+      display: flex;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      margin: 0 auto;
+      border: 1px solid #dfd7c2;
+      transition: all 0.3s;
+    }
+
+    /* 对折卡片两侧（每侧148.5mm x 210mm） */
+    .half-card {
+      width: 50%;
+      height: 100%;
+      position: relative;
+      padding: 14mm 12mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--paper-texture);
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+    }
+
+    /* 中央折线指导标记 */
+    .fold-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      border-left: 1px dashed rgba(168, 140, 100, 0.45);
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .fold-badge {
+      position: absolute;
+      top: 6mm;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(245, 240, 228, 0.92);
+      border: 1px solid #d4c4a8;
+      color: #78716c;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      letter-spacing: 1px;
+      z-index: 51;
+      backdrop-filter: blur(4px);
+    }
+
+    /* 典雅中式边框 */
+    .chinese-border {
+      position: absolute;
+      top: 6mm;
+      bottom: 6mm;
+      left: 6mm;
+      right: 6mm;
+      border: 1.5px solid var(--border-pattern);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .chinese-border::before {
+      content: "";
+      position: absolute;
+      top: 2.5px;
+      bottom: 2.5px;
+      left: 2.5px;
+      right: 2.5px;
+      border: 0.5px solid var(--border-pattern);
+    }
+
+    /* 拐角回形花纹装饰 */
+    .corner-ornament {
+      position: absolute;
+      width: 14mm;
+      height: 14mm;
+      border: 2px solid var(--gold-accent);
+      pointer-events: none;
+      z-index: 11;
+    }
+    .corner-tl { top: 7mm; left: 7mm; border-right: none; border-bottom: none; }
+    .corner-tr { top: 7mm; right: 7mm; border-left: none; border-bottom: none; }
+    .corner-bl { bottom: 7mm; left: 7mm; border-right: none; border-top: none; }
+    .corner-br { bottom: 7mm; right: 7mm; border-left: none; border-top: none; }
+
+    /* ================= 页面 1：贺卡外页（左封底，右封面） ================= */
+
+    /* 封底（左侧） */
+    .back-cover {
+      background: linear-gradient(180deg, #fdfbf7 0%, #f6f0e2 100%);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .back-cover-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 80%;
+      z-index: 12;
+    }
+
+    .back-festival-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fff1d6 0%, #fcd34d 60%, var(--gold-accent) 100%);
+      box-shadow: 0 0 18px rgba(217, 119, 6, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+    }
+
+    .back-poem {
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: #57534e;
+      line-height: 2.2;
+      font-weight: 500;
+    }
+
+    .back-seal-small {
+      width: 34px;
+      height: 34px;
+      border: 2px solid var(--seal-red);
+      color: var(--seal-red);
+      font-family: 'Ma Shan Zheng', cursive;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 1px;
+      border-radius: 3px;
+      transform: rotate(-3deg);
+      user-select: none;
+    }
+
+    .back-footer-note {
+      font-size: 11px;
+      color: #a8a29e;
+      letter-spacing: 2px;
+      margin-top: 10px;
+      text-transform: uppercase;
+    }
+
+    /* 封面（右侧） */
+    .front-cover {
+      background: #fbf8f0;
+      padding: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .front-art-box {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .front-art-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+      transition: opacity 0.3s;
+    }
+
+    /* 纯矢量/烫金封面容器（当选择矢量封面时使用） */
+    .front-vector-cover {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      padding: 20mm 15mm;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      background: linear-gradient(145deg, #1c1917 0%, #292524 100%);
+      color: #fef3c7;
+    }
+
+    .cover-style-vector .front-art-img { display: none; }
+    .cover-style-vector .front-vector-cover { display: flex; }
+
+    .vector-ornament-header {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .vector-center-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .vector-big-character {
+      font-family: 'Ma Shan Zheng', cursive;
+      font-size: 68px;
+      line-height: 1;
+      background: linear-gradient(135deg, #fef08a 0%, #f59e0b 60%, #b45309 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.4));
+      letter-spacing: 6px;
+    }
+
+    .vector-subtitle {
+      font-size: 16px;
+      letter-spacing: 8px;
+      color: #fde68a;
+      font-weight: 600;
+    }
+
+    .vector-en-title {
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: #a8a29e;
+      text-transform: uppercase;
+    }
+
+    /* ================= 页面 2：贺卡内页（左诗词，右正文） ================= */
+
+    /* 内页左侧（诗词意境） */
+    .inside-left {
+      background: linear-gradient(135deg, #fdfbf7 0%, #f4eee1 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 14mm;
+      position: relative;
+    }
+
+    .inside-poem-block {
+      max-width: 290px;
+      padding: 22px 20px;
+      border: 1px solid rgba(198, 146, 52, 0.35);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(5px);
+      border-radius: 6px;
+      position: relative;
+      z-index: 12;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    }
+
+    .inside-poem-title {
+      font-family: 'Ma Shan Zheng', cursive;
+      font-size: 26px;
+      color: var(--deep-gold);
+      margin-bottom: 6px;
+      letter-spacing: 3px;
+    }
+
+    .inside-poem-author {
+      font-size: 12px;
+      color: #78716c;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+    }
+
+    .inside-poem-text {
+      font-size: 14px;
+      line-height: 2.2;
+      color: #44403c;
+      letter-spacing: 2px;
+    }
+
+    .inside-poem-text strong {
+      color: var(--primary-color);
+      font-weight: 700;
+    }
+
+    /* 内页右侧（祝福正文） */
+    .inside-right {
+      background: #faf6ec;
+      padding: 14mm 13mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .greeting-header {
+      margin-bottom: 10px;
+      z-index: 12;
+    }
+
+    .greeting-recipient {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink-color);
+      border-bottom: 1px dashed transparent;
+      padding: 4px 6px;
+      display: inline-block;
+      min-width: 140px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .greeting-recipient:hover,
+    .greeting-recipient:focus,
+    .greeting-body:hover,
+    .greeting-body:focus,
+    .greeting-sign:hover,
+    .greeting-sign:focus,
+    .greeting-date:hover,
+    .greeting-date:focus {
+      border-bottom: 1px dashed var(--gold-accent) !important;
+      background: rgba(246, 211, 101, 0.12);
+      border-radius: 3px;
+    }
+
+    .greeting-body {
+      font-size: 15px;
+      line-height: 2.2;
+      color: #3b352b;
+      letter-spacing: 1px;
+      text-indent: 2em;
+      padding: 8px 6px;
+      min-height: 140px;
+      outline: none;
+      white-space: pre-wrap;
+      z-index: 12;
+      transition: font-size 0.2s;
+    }
+
+    .greeting-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      gap: 18px;
+      margin-top: 14px;
+      z-index: 12;
+    }
+
+    .sign-info {
+      text-align: right;
+    }
+
+    .greeting-sign {
+      font-size: 16px;
+      font-weight: 700;
+      color: #2b2b2b;
+      padding: 2px 6px;
+      outline: none;
+    }
+
+    .greeting-date {
+      font-size: 13px;
+      color: #78716c;
+      margin-top: 5px;
+      padding: 2px 6px;
+      outline: none;
+    }
+
+    .cinnabar-seal {
+      width: 44px;
+      height: 44px;
+      border: 2px solid var(--seal-red);
+      color: var(--seal-red);
+      font-family: 'Ma Shan Zheng', cursive;
+      font-size: 15px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.15;
+      padding: 2px;
+      text-align: center;
+      border-radius: 4px;
+      box-shadow: inset 0 0 4px rgba(184, 36, 36, 0.2);
+      transform: rotate(-2deg);
+      user-select: none;
+      transition: color 0.3s, border-color 0.3s;
+    }
+
+    /* 手写横线模式 */
+    .handwriting-mode .greeting-body {
+      background-image: repeating-linear-gradient(transparent, transparent 31px, #d8cbaf 32px);
+      line-height: 32px;
+      text-indent: 0;
+      color: #78716c;
+    }
+
+    /* ================= 网上背景拉取与素材库模态框 ================= */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #1e293b;
+      color: #f8fafc;
+      width: 100%;
+      max-width: 950px;
+      max-height: 90vh;
+      border-radius: 14px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.25s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      padding: 16px 24px;
+      background: #0f172a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #f6d365;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .btn-close:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-tabs {
+      display: flex;
+      background: #1e293b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0 16px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 12px 18px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #94a3b8;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+    }
+
+    .modal-body {
+      padding: 22px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* URL 输入区 */
+    .url-fetch-box {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .text-input {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-family: inherit;
+      outline: none;
+    }
+    .text-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+    }
+
+    .target-radio-group {
+      display: flex;
+      gap: 18px;
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .target-radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .fetch-status {
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: none;
+    }
+    .fetch-status.loading {
+      display: block;
+      background: rgba(14, 165, 233, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(14, 165, 233, 0.3);
+    }
+    .fetch-status.success {
+      display: block;
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .fetch-status.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* 快捷网络推荐示例库 */
+    .quick-samples {
+      margin-top: 10px;
+    }
+    .quick-title {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+    .quick-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .quick-tag {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quick-tag:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #fff;
+    }
+
+    /* ================= 免费素材库导航卡片样式 ================= */
+    .lib-guide-banner {
+      background: linear-gradient(135deg, rgba(234, 88, 12, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: #fef08a;
+      line-height: 1.6;
+    }
+
+    .lib-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .lib-card {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+
+    .lib-card:hover {
+      border-color: #f59e0b;
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .lib-card.featured-china {
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      background: linear-gradient(180deg, #1e1b2e 0%, #0f172a 100%);
+    }
+    .lib-card.featured-china:hover {
+      border-color: #ef4444;
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.25);
+    }
+
+    .lib-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .lib-title-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lib-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .lib-badge {
+      font-size: 10.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .badge-free { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .badge-hot { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-china { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+
+    .lib-desc {
+      font-size: 12.5px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .lib-tip {
+      font-size: 11.5px;
+      color: #facc15;
+      background: rgba(250, 204, 21, 0.08);
+      padding: 5px 8px;
+      border-radius: 4px;
+      border-left: 2px solid #eab308;
+      margin-top: 4px;
+    }
+
+    .lib-keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .lib-kw-tag {
+      background: rgba(255, 255, 255, 0.06);
+      color: #cbd5e1;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+
+    .lib-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .btn-lib-link {
+      flex: 1;
+      padding: 7px 12px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn-lib-link:hover {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    }
+    .btn-lib-link.red-btn {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .btn-lib-link.red-btn:hover {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .btn-copy-kw {
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e2e8f0;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-copy-kw:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* 在线素材图片卡片网格与筛选栏 */
+    .gallery-filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .filter-btn {
+      padding: 6px 14px;
+      font-size: 12.5px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: #0ea5e9;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .gallery-item {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-3px);
+      border-color: #38bdf8;
+      box-shadow: 0 8px 24px rgba(56, 189, 248, 0.3);
+    }
+
+    .gallery-thumb {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      background: #334155;
+      display: block;
+    }
+
+    .gallery-caption {
+      padding: 10px 12px;
+      font-size: 12.5px;
+      color: #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+    }
+
+    /* 本地上传拖拽区 */
+    .upload-dropzone {
+      border: 2px dashed rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(15, 23, 42, 0.5);
+    }
+    .upload-dropzone:hover {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    /* 微调滑块区 */
+    .adjust-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    /* ================= 打印专用样式 (CSS Paged Media) ================= */
+    @page {
+      size: A4 landscape;
+      margin: 0;
+    }
+
+    @media print {
+      body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .no-print,
+      .toolbar-container,
+      .print-tips,
+      .page-label,
+      .fold-badge,
+      .modal-overlay {
+        display: none !important;
+      }
+
+      .workspace {
+        padding: 0 !important;
+        gap: 0 !important;
+      }
+
+      .a4-page {
+        width: 297mm !important;
+        height: 210mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      .fold-line {
+        border-left: 0.5px dashed #ccc !important;
+      }
+
+      .greeting-recipient,
+      .greeting-body,
+      .greeting-sign,
+      .greeting-date {
+        border-bottom: none !important;
+        background: transparent !important;
+      }
+    }
+  </style>
+</head>
+<body data-festival="spring">
+
+  <!-- 顶部悬浮控制栏（打印时自动隐藏） -->
+  <header class="toolbar-container no-print">
+    <div class="toolbar-left">
+      <div class="toolbar-brand">
+        <span id="festivalEmoji">🧧</span>
+        <span id="festivalTitleText">中华传统节日贺卡工坊</span>
+        <span class="badge-festival" id="festivalBadge">春节定制中</span>
+        <a href="/" class="back-portal" title="返回后勤统一服务门户">← 门户</a>
+      </div>
+
+      <!-- 节日类别切换 -->
+      <div class="control-group">
+        <label for="festivalSelect">当前节日：</label>
+        <select id="festivalSelect" class="select-input" onchange="switchFestival(this.value)">
+          <option value="spring" selected>🧧 春节 / 新春吉庆 (Lunar New Year)</option>
+          <option value="dragon">🎋 端午节 / 龙舟艾香 (Dragon Boat)</option>
+          <option value="midautumn">🌕 中秋节 / 月满人圆 (Mid-Autumn)</option>
+          <option value="lantern">🏮 元宵节 / 上元良宵 (Lantern Festival)</option>
+          <option value="national">🇨🇳 国庆节 / 盛世华诞 (National Day)</option>
+        </select>
+      </div>
+
+      <!-- 预设文案套件 -->
+      <div class="control-group">
+        <label for="templateSelect">祝福文案：</label>
+        <select id="templateSelect" class="select-input" onchange="applyTemplate(this.value)">
+          <!-- 动态注入选项 -->
+        </select>
+      </div>
+
+      <!-- 封面版式 -->
+      <div class="control-group">
+        <label for="coverStyleSelect">封面风格：</label>
+        <select id="coverStyleSelect" class="select-input" onchange="switchCoverStyle(this.value)">
+          <option value="art">🎨 大师名画插画 (Masterpiece Art)</option>
+          <option value="vector">✨ 烫金国风矢量 (Golden Vector)</option>
+          <option value="custom">🌐 网络/自定义图 (Web Custom)</option>
+        </select>
+      </div>
+
+      <!-- 封面画作精选快捷切换 -->
+      <div class="control-group" id="coverArtVariantGroup">
+        <label for="coverArtVariantSelect">画作选款：</label>
+        <select id="coverArtVariantSelect" class="select-input" onchange="switchArtVariant(this.value)">
+          <!-- 动态注入画作选项 -->
+        </select>
+      </div>
+    </div>
+
+    <div class="toolbar-controls">
+      <!-- 网络拉取背景 / 素材库 -->
+      <button class="btn btn-bg-modal" onclick="openBgModal()" title="从国内顶级设计大站拉取背景或挑选素材">
+        🌐 网上拉取背景 / 素材库
+      </button>
+
+      <!-- 字号微调 -->
+      <div class="control-group" title="调整正文字号以适应文字长短">
+        <span>字号:</span>
+        <button class="btn-mini" onclick="adjustFontSize(-1)">A-</button>
+        <button class="btn-mini" onclick="adjustFontSize(1)">A+</button>
+      </div>
+
+      <!-- 重置文案 -->
+      <button class="btn btn-secondary" onclick="resetCurrentTemplate()" title="恢复当前模板初始文案">
+        ↺ 还原预设
+      </button>
+
+      <!-- 打印按钮 -->
+      <button class="btn btn-primary" onclick="window.print()">
+        🖨️ 立即打印 / 另存为PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- 打印小贴士 -->
+  <div class="print-tips no-print">
+    <div>
+      <span class="tag-pill">使用提示</span>
+      页面上所有文字（<strong>收件人、祝福正文、署名、日期、内页诗词</strong>）均可<strong>直接点击打字自由修改</strong>！点击<strong>“网上拉取背景”</strong>可一键打开国内站酷、花瓣、故宫等高清素材直通车，或直接选用内置的宫廷工笔、千里江山、广寒夜月等名作。打印时请勾选<strong>“背景图形”</strong>并选择<strong>“A4 横向”</strong>。
+    </div>
+  </div>
+
+  <!-- 贺卡工作区 -->
+  <main class="workspace">
+
+    <!-- 第一页：贺卡外页（左为封底，右为封面） -->
+    <div class="page-block">
+      <div class="page-label no-print">
+        📄 第一面：贺卡外页 <span>打印后沿中央虚线对折，正面右侧为封面，左侧为封底</span>
+      </div>
+
+      <div class="a4-page" id="outerCardPage">
+        <!-- 中央折线 -->
+        <div class="fold-line"></div>
+        <div class="fold-badge no-print">中央对折线 (Fold Line)</div>
+
+        <!-- 左侧：封底 (Back Cover) -->
+        <section class="half-card back-cover" id="backCoverCard">
+          <div class="chinese-border"></div>
+          <div class="corner-ornament corner-tl"></div>
+          <div class="corner-ornament corner-tr"></div>
+          <div class="corner-ornament corner-bl"></div>
+          <div class="corner-ornament corner-br"></div>
+
+          <div class="back-cover-content">
+            <div class="back-festival-icon" id="backFestivalIcon">
+              🧧
+            </div>
+            
+            <div class="back-poem" id="backPoem" contenteditable="true" title="点击可编辑封底寄语">
+              千门瑞气随春到<br>
+              万户祥光接福来
+            </div>
+
+            <div class="back-seal-small" id="backSealSmall" contenteditable="true" title="点击可编辑封底印章">吉祥</div>
+
+            <div class="back-footer-note" id="backFooterNote">
+              SPRING FESTIVAL GREETING
+            </div>
+          </div>
+        </section>
+
+        <!-- 右侧：封面 (Front Cover) -->
+        <section class="half-card front-cover" id="frontCoverCard">
+          <div class="chinese-border"></div>
+
+          <!-- 插画图片模式 -->
+          <div class="front-art-box" id="frontArtBox">
+            <img src="./spring_palace_gold.jpg" alt="节日贺卡封面" class="front-art-img" id="frontArtImg">
+          </div>
+
+          <!-- 烫金矢量模式（备选风格） -->
+          <div class="front-vector-cover" id="frontVectorCover">
+            <div class="vector-ornament-header">
+              <svg width="180" height="40" viewBox="0 0 180 40" fill="none">
+                <path d="M10 20 H70 M110 20 H170" stroke="var(--gold-accent)" stroke-width="1.5"/>
+                <circle cx="90" cy="20" r="10" stroke="var(--gold-accent)" stroke-width="1.5" fill="none"/>
+                <circle cx="90" cy="20" r="4" fill="var(--gold-accent)"/>
+              </svg>
+            </div>
+
+            <div class="vector-center-badge">
+              <div class="vector-big-character" id="vectorBigChar">春</div>
+              <div class="vector-subtitle" id="vectorSubTitle">新春吉祥 · 万事顺遂</div>
+              <div class="vector-en-title" id="vectorEnTitle">TRADITIONAL FESTIVAL CELEBRATION</div>
+            </div>
+
+            <div class="vector-ornament-footer">
+              <svg width="120" height="30" viewBox="0 0 120 30" fill="none">
+                <path d="M20 15 C 40 5, 80 5, 100 15" stroke="var(--gold-accent)" stroke-width="1.5"/>
+                <circle cx="60" cy="10" r="3" fill="var(--gold-accent)"/>
+              </svg>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 第二页：贺卡内页（左为诗词衬页，右为主祝福语） -->
+    <div class="page-block">
+      <div class="page-label no-print">
+        📄 第二面：贺卡内页 <span>可作为双面打印背面，或裁切贴入贺卡内侧</span>
+      </div>
+
+      <div class="a4-page" id="innerCardPage">
+        <!-- 中央折线 -->
+        <div class="fold-line"></div>
+        <div class="fold-badge no-print">中央对折线 (Fold Line)</div>
+
+        <!-- 左侧：古典诗词意境衬页 -->
+        <section class="half-card inside-left" id="insideLeftCard">
+          <div class="chinese-border"></div>
+          <div class="corner-ornament corner-tl"></div>
+          <div class="corner-ornament corner-tr"></div>
+          <div class="corner-ornament corner-bl"></div>
+          <div class="corner-ornament corner-br"></div>
+
+          <div class="inside-poem-block">
+            <h2 class="inside-poem-title" id="insidePoemTitle" contenteditable="true" title="点击可编辑诗词题目">元日</h2>
+            <div class="inside-poem-author" id="insidePoemAuthor" contenteditable="true" title="点击可编辑朝代作者">〔宋〕王安石</div>
+            <div class="inside-poem-text" id="insidePoemText" contenteditable="true" title="点击可编辑诗词正文">
+              爆竹声中一岁除，<br>
+              春风送暖入屠苏。<br>
+              千门万户曈曈日，<br>
+              <strong>总把新桃换旧符。</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- 右侧：定制祝福正文区 -->
+        <section class="half-card inside-right" id="greetingContainer">
+          <div class="chinese-border"></div>
+          <div class="corner-ornament corner-tl"></div>
+          <div class="corner-ornament corner-tr"></div>
+          <div class="corner-ornament corner-bl"></div>
+          <div class="corner-ornament corner-br"></div>
+
+          <!-- 称谓 -->
+          <div class="greeting-header">
+            <span class="greeting-recipient" id="greetingRecipient" contenteditable="true" title="点击直接编辑收件人称谓">
+              亲爱的朋友：
+            </span>
+          </div>
+
+          <!-- 祝福正文 -->
+          <div class="greeting-body" id="greetingBody" contenteditable="true" title="点击直接编辑祝福文案">岁序更迭，华章日新。迎着新春的第一缕晨曦与暖意，谨向您及全家致以最亲切、最热烈的新春祝福！
+
+新的一年，愿日子如红梅凌寒般坚韧绚烂，生活如春风化雨般温润祥和。祝愿家中老少平安喜乐，万事顺心，岁岁常欢愉，年年皆胜意！
+
+恭祝新春大吉，阖家幸福，福暖四季！</div>
+
+          <!-- 落款与印章 -->
+          <div class="greeting-footer">
+            <div class="sign-info">
+              <div class="greeting-sign" id="greetingSign" contenteditable="true" title="点击直接编辑落款署名">
+                挚友 敬拜
+              </div>
+              <div class="greeting-date" id="greetingDate" contenteditable="true" title="点击直接编辑日期">
+                岁次丙午 · 正月初一
+              </div>
+            </div>
+            <div class="cinnabar-seal" id="cinnabarSeal" contenteditable="true" title="点击直接编辑印章文字">
+              新春<br>大吉
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= 网上拉取背景与素材库模态框 ================= -->
+  <div class="modal-overlay" id="bgModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🌐</span> 贺卡背景素材库与网络图片拉取
+        </div>
+        <button class="btn-close" onclick="closeBgModal()">✕</button>
+      </div>
+
+      <!-- 选项卡切换 -->
+      <div class="modal-tabs">
+        <button class="tab-btn active" onclick="switchModalTab(0)">1. 🇨🇳 国内顶级设计与免版税大站</button>
+        <button class="tab-btn" onclick="switchModalTab(1)">2. 🌐 网络图片拉取 (URL)</button>
+        <button class="tab-btn" onclick="switchModalTab(2)">3. 🖼️ 内置名家国风绘卷库</button>
+        <button class="tab-btn" onclick="switchModalTab(3)">4. 📁 本地图片上传</button>
+        <button class="tab-btn" onclick="switchModalTab(4)">5. ⚙️ 画面微调</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 标签页 1：国内顶级设计与免版税大站直通车 -->
+        <div class="tab-content active" id="tab0">
+          <div class="lib-guide-banner">
+            🎯 <strong>国内优秀设计素材获取核心攻略（免 VIP / 高清原图提取）：</strong><br>
+            很多商业素材站虽然下载 PSD 需要会员，但<strong>设计展示页面的大图预览通常是无水印的超清源图</strong>！<br>
+            只需：① 点击下方推荐的国内顶级平台进入；② 挑选看中的国风海报/背景，在大图上<strong>鼠标右键点击“复制图片地址”</strong>；③ 切换到<strong>【2. 网络图片拉取】</strong>粘贴，即可免去任何下载直接满血加载！
+          </div>
+
+          <div class="lib-grid">
+            <!-- 1. 站酷 ZCOOL -->
+            <div class="lib-card featured-china">
+              <div>
+                <div class="lib-top">
+                  <div class="lib-title-box">
+                    <span style="font-size: 20px;">🔥</span>
+                    <span class="lib-title">站酷 (ZCOOL)</span>
+                  </div>
+                  <span class="lib-badge badge-china">中国顶尖原创设计</span>
+                </div>
+                <div class="lib-desc">
+                  中国最具影响力的专业设计师原创社区。汇聚大量顶级插画师的国风端午、中秋月兔、新春盛典海报作品。
+                </div>
+                <div class="lib-tip">
+                  💡 <strong>技巧：</strong>作品详情页的大图尺寸一般在 2000px 以上，右键直接“复制图片地址”即可无损拉取！
+                </div>
+                <div class="lib-keywords">
+                  <span class="lib-kw-tag">节日贺卡</span>
+                  <span class="lib-kw-tag">中式插画</span>
+                  <span class="lib-kw-tag">端午海报</span>
+                  <span class="lib-kw-tag">中秋水墨</span>
+                </div>
+              </div>
+              <div class="lib-actions">
+                <a href="https://www.zcool.com.cn/search/content?word=%E4%BC%A0%E7%BB%9F%E8%8A%82%E6%97%A5%20%E6%8F%92%E7%94%BB" target="_blank" rel="noopener noreferrer" class="btn-lib-link red-btn">
+                  🚀 前往站酷精选
+                </a>
+                <button class="btn-copy-kw" onclick="copyKeywords('传统节日 国风海报 中式插画 贺卡背景')">复制搜索词</button>
+              </div>
+            </div>
+
+            <!-- 2. 花瓣网 Huaban -->
+            <div class="lib-card featured-china">
+              <div>
+                <div class="lib-top">
+                  <div class="lib-title-box">
+                    <span style="font-size: 20px;">🌸</span>
+                    <span class="lib-title">花瓣网 (Huaban)</span>
+                  </div>
+                  <span class="lib-badge badge-china">设计师灵感图库</span>
+                </div>
+                <div class="lib-desc">
+                  国内最大的设计灵感采集平台，拥有数千万张高水准的端午青绿水墨、中秋月夜古建、新春年味剪纸画板。
+                </div>
+                <div class="lib-tip">
+                  💡 <strong>技巧：</strong>在画板点开图片后，右键“在新标签页打开图片”，复制原图 CDN 链接即可瞬间导入！
+                </div>
+                <div class="lib-keywords">
+                  <span class="lib-kw-tag">端午国风</span>
+                  <span class="lib-kw-tag">中秋月色</span>
+                  <span class="lib-kw-tag">新春年画</span>
+                  <span class="lib-kw-tag">古风宣纸</span>
+                </div>
+              </div>
+              <div class="lib-actions">
+                <a href="https://huaban.com/search?q=%E4%BC%A0%E7%BB%9F%E8%8A%82%E6%97%A5%E5%9B%BD%E9%A3%8E%E8%83%8C%E6%99%AF" target="_blank" rel="noopener noreferrer" class="btn-lib-link red-btn">
+                  🚀 前往花瓣采集
+                </a>
+                <button class="btn-copy-kw" onclick="copyKeywords('传统节日国风背景 端午插画 中秋月满 新春喜庆')">复制搜索词</button>
+              </div>
+            </div>
+
+            <!-- 3. 故宫名画记 & 数字文物库 -->
+            <div class="lib-card featured-china">
+              <div>
+                <div class="lib-top">
+                  <div class="lib-title-box">
+                    <span style="font-size: 20px;">🏛️</span>
+                    <span class="lib-title">故宫名画记 · 数字文物库</span>
+                  </div>
+                  <span class="lib-badge badge-hot">国宝原迹 · 亿级像素</span>
+                </div>
+                <div class="lib-desc">
+                  北京故宫博物院官方数字典藏，收录历代宫廷工笔画、千里江山图卷、乾隆岁朝行乐图、清代上元灯彩图等绝美国宝。
+                </div>
+                <div class="lib-tip">
+                  💡 <strong>权威公有领域：</strong>中华最顶级传统美学，无版权争议，气韵纯正高雅。
+                </div>
+                <div class="lib-keywords">
+                  <span class="lib-kw-tag">岁朝图</span>
+                  <span class="lib-kw-tag">上元灯彩</span>
+                  <span class="lib-kw-tag">水墨山水</span>
+                  <span class="lib-kw-tag">宫廷工笔</span>
+                </div>
+              </div>
+              <div class="lib-actions">
+                <a href="https://minghuaji.dpm.org.cn/" target="_blank" rel="noopener noreferrer" class="btn-lib-link">
+                  🏛️ 浏览故宫名画
+                </a>
+                <button class="btn-copy-kw" onclick="copyKeywords('岁朝行乐图 端阳 赏月 水墨')">复制国宝词</button>
+              </div>
+            </div>
+
+            <!-- 4. 百度图片【高清特大图专搜】 -->
+            <div class="lib-card">
+              <div>
+                <div class="lib-top">
+                  <div class="lib-title-box">
+                    <span style="font-size: 20px;">🔍</span>
+                    <span class="lib-title">百度特大高清海报专搜</span>
+                  </div>
+                  <span class="lib-badge badge-free">一键直达无水印源图</span>
+                </div>
+                <div class="lib-desc">
+                  已预设好过滤参数（超高分辨率、竖版、无水印、国风），直接检索各大商业平台未加水印的源站原图。
+                </div>
+                <div class="lib-tip">
+                  💡 <strong>操作：</strong>点开大图预览，右键“复制图片地址”，回这里粘贴秒加载。
+                </div>
+                <div class="lib-keywords">
+                  <span class="lib-kw-tag">特大尺寸</span>
+                  <span class="lib-kw-tag">4K海报</span>
+                  <span class="lib-kw-tag">国风背景</span>
+                </div>
+              </div>
+              <div class="lib-actions">
+                <a href="https://image.baidu.com/search/index?tn=baiduimage&word=%E4%BC%A0%E7%BB%9F%E8%8A%82%E6%97%A5+%E5%9B%BD%E9%A3%8E%E8%83%8C%E6%99%AF+%E7%AB%96%E7%89%88+%E6%97%A0%E6%B0%B4%E5%8D%B0" target="_blank" rel="noopener noreferrer" class="btn-lib-link">
+                  🚀 百度超清直搜
+                </a>
+                <button class="btn-copy-kw" onclick="copyKeywords('传统节日 国风背景 竖版 无水印 4k')">复制搜索词</button>
+              </div>
+            </div>
+
+            <!-- 5. Pixabay 中文区 -->
+            <div class="lib-card">
+              <div>
+                <div class="lib-top">
+                  <div class="lib-title-box">
+                    <span style="font-size: 20px;">🎨</span>
+                    <span class="lib-title">Pixabay 中文图库</span>
+                  </div>
+                  <span class="lib-badge badge-free">免版税商用 · 400万+</span>
+                </div>
+                <div class="lib-desc">
+                  全面支持中文搜索，拥有海量春节剪纸、端午龙舟、中秋满月、水墨山水等免版权插画与矢量图，免注明出处。
+                </div>
+                <div class="lib-keywords">
+                  <span class="lib-kw-tag">春节</span>
+                  <span class="lib-kw-tag">端午</span>
+                  <span class="lib-kw-tag">中秋</span>
+                  <span class="lib-kw-tag">国风水墨</span>
+                </div>
+              </div>
+              <div class="lib-actions">
+                <a href="https://pixabay.com/zh/images/search/%E4%B8%AD%E5%9B%BD%E4%BC%A0%E7%BB%9F%E8%8A%82%E6%97%A5/" target="_blank" rel="noopener noreferrer" class="btn-lib-link">
+                  🚀 前往 Pixabay
+                </a>
+                <button class="btn-copy-kw" onclick="copyKeywords('春节 端午 中秋 国风 水墨 红灯笼 祥云')">复制搜索词</button>
+              </div>
+            </div>
+
+            <!-- 6. 中华珍宝馆 -->
+            <div class="lib-card">
+              <div>
+                <div class="lib-top">
+                  <div class="lib-title-box">
+                    <span style="font-size: 20px;">📜</span>
+                    <span class="lib-title">中华珍宝馆</span>
+                  </div>
+                  <span class="lib-badge badge-hot">历代法帖 · 书画珍藏</span>
+                </div>
+                <div class="lib-desc">
+                  中国传世书画数字微距档案库，收录王羲之、苏轼、米芾历代书法真迹拓片与宋元花鸟山水长卷，文人雅韵至极。
+                </div>
+                <div class="lib-keywords">
+                  <span class="lib-kw-tag">历代名帖</span>
+                  <span class="lib-kw-tag">水调歌头</span>
+                  <span class="lib-kw-tag">元日古诗</span>
+                </div>
+              </div>
+              <div class="lib-actions">
+                <a href="http://www.ltfc.net/" target="_blank" rel="noopener noreferrer" class="btn-lib-link">
+                  📜 浏览珍宝馆
+                </a>
+                <button class="btn-copy-kw" onclick="copyKeywords('苏轼 水调歌头 王羲之 书法 绢本')">复制搜索词</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 标签页 2：网络URL拉取 -->
+        <div class="tab-content" id="tab1">
+          <div class="url-fetch-box">
+            <div style="font-size: 13.5px; color: #94a3b8;">
+              可输入任何互联网图片地址（从站酷、花瓣、百度大图或公司内部 MinIO 复制的图片 URL），一键拉取并应用为贺卡背景：
+            </div>
+
+            <div class="input-row">
+              <input type="url" id="webImgUrlInput" class="text-input" placeholder="请粘贴图片完整网址（例如 https://img.zcool.cn/... 或 https://...）">
+              <button class="btn btn-bg-modal" onclick="fetchWebImage()">🚀 拉取并应用</button>
+            </div>
+
+            <div class="target-radio-group">
+              <span>应用位置：</span>
+              <label><input type="radio" name="applyTarget" value="cover" checked> 贺卡封面 (Front Cover)</label>
+              <label><input type="radio" name="applyTarget" value="left"> 内页左侧诗词底衬</label>
+              <label><input type="radio" name="applyTarget" value="right"> 内页右侧信纸背景</label>
+            </div>
+
+            <div class="fetch-status" id="fetchStatus"></div>
+
+            <div class="quick-samples">
+              <div class="quick-title">💡 快速点击填入精选网络样张（自动验证拉取）：</div>
+              <div class="quick-tags">
+                <span class="quick-tag" onclick="quickFillUrl('https://images.unsplash.com/photo-1548625361-197e416a2d6b?auto=format&fit=crop&w=1200&q=80')">🏮 新春红灯笼</span>
+                <span class="quick-tag" onclick="quickFillUrl('https://images.unsplash.com/photo-1512418490979-92798cec1380?auto=format&fit=crop&w=1200&q=80')">❄️ 故宫雪景红墙</span>
+                <span class="quick-tag" onclick="quickFillUrl('https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80')">🎋 幽篁青翠竹林</span>
+                <span class="quick-tag" onclick="quickFillUrl('https://images.unsplash.com/photo-1532767153582-b1a0e5145009?auto=format&fit=crop&w=1200&q=80')">🌕 皓月银辉夜空</span>
+                <span class="quick-tag" onclick="quickFillUrl('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1200&q=80')">📜 古典洒金宣纸底纹</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 标签页 3：内置名家国风绘卷库 -->
+        <div class="tab-content" id="tab2">
+          <!-- 筛选按钮条 -->
+          <div class="gallery-filter-bar">
+            <button class="filter-btn active" onclick="filterGallery('all')">全部名家画作</button>
+            <button class="filter-btn" onclick="filterGallery('spring')">🧧 故宫与新春</button>
+            <button class="filter-btn" onclick="filterGallery('dragon')">🎋 端午青绿江山</button>
+            <button class="filter-btn" onclick="filterGallery('midautumn')">🌕 广寒玉兔与中秋</button>
+            <button class="filter-btn" onclick="filterGallery('lantern')">🏮 上元水乡灯彩</button>
+            <button class="filter-btn" onclick="filterGallery('texture')">📜 古代泥金宣纸卷轴</button>
+          </div>
+
+          <div class="gallery-grid" id="curatedGalleryGrid">
+            <!-- 动态注入预设 -->
+          </div>
+        </div>
+
+        <!-- 标签页 4：本地图片上传 -->
+        <div class="tab-content" id="tab3">
+          <div class="upload-dropzone" onclick="document.getElementById('localFileInput').click()">
+            <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
+            <div style="font-size: 15px; font-weight: 600; color: #f1f5f9; margin-bottom: 4px;">点击选择本地下载的高清图片 或 拖拽至此处</div>
+            <div style="font-size: 12.5px; color: #94a3b8;">支持从站酷、包图、花瓣保存下来的超清 JPG/PNG 文件，无损载入，安全可靠</div>
+            <input type="file" id="localFileInput" style="display:none" accept="image/*" onchange="handleLocalFileUpload(event)">
+          </div>
+        </div>
+
+        <!-- 标签页 5：画面微调 -->
+        <div class="tab-content" id="tab4">
+          <div style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">
+            精细调节应用背景图的显示尺寸与透明度，确保祝福文字清晰易读：
+          </div>
+
+          <div class="adjust-grid">
+            <div class="slider-group">
+              <label>内页衬图透明度: <span id="opacityVal">40%</span></label>
+              <input type="range" id="opacityRange" min="10" max="100" value="40" oninput="updateBgOpacity(this.value)">
+            </div>
+
+            <div class="slider-group">
+              <label>背景填充模式:</label>
+              <select id="bgFitSelect" class="select-input" onchange="updateBgFit(this.value)">
+                <option value="cover">充满裁剪 (Cover - 推荐)</option>
+                <option value="contain">完整居中 (Contain)</option>
+                <option value="repeat">平铺纹理 (Repeat)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <button class="btn btn-secondary" onclick="clearCustomBackground()">
+              ↺ 清除所有自定义背景并还原默认
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 节日数据库与核心逻辑 ================= -->
+  <script>
+    // 节日基础数据配置库
+    const FESTIVALS = {
+      spring: {
+        name: "春节",
+        emoji: "🧧",
+        badge: "岁序更迭 · 恭贺新禧",
+        bigChar: "春",
+        vectorSub: "新春大吉 · 阖家安康",
+        vectorEn: "LUNAR NEW YEAR CELEBRATION",
+        artImage: "./spring_palace_gold.jpg",
+        artVariants: [
+          { name: "👑 故宫雪映红墙 (恭贺新禧·宫廷画院级)", url: "./spring_palace_gold.jpg" },
+          { name: "🏮 大唐华灯盛世 (万象更新·喜庆华美)", url: "./spring_festival_art.jpg" }
+        ],
+        defaultBackIcon: "🧧",
+        templates: {
+          warm: {
+            name: "新春团圆亲友版",
+            recipient: "亲爱的家人 / 挚友：",
+            body: "岁序更迭，华章日新。迎着新春的第一缕晨曦与暖意，谨向您及全家致以最亲切、最热烈的新春祝福！\n\n新的一年，愿日子如红梅凌寒般坚韧绚烂，生活如春风化雨般温润祥和。祝愿家中老少平安喜乐，万事顺心，岁岁常欢愉，年年皆胜意！\n\n恭祝新春大吉，阖家幸福，福暖四季！",
+            sign: "晚辈 / 挚友 敬拜",
+            date: "岁次丙午 · 正月初一",
+            seal: "新春<br>大吉",
+            poemTitle: "元日",
+            poemAuthor: "〔宋〕王安石",
+            poemText: "爆竹声中一岁除，<br>春风送暖入屠苏。<br>千门万户曈曈日，<br><strong>总把新桃换旧符。</strong>",
+            backPoem: "千门瑞气随春到<br>万户祥光接福来",
+            backSeal: "吉祥",
+            backFooter: "SPRING FESTIVAL GREETING",
+            handwritten: false
+          },
+          business: {
+            name: "企业商务贺岁尊享版",
+            recipient: "尊敬的合作伙伴 / 业界同仁：",
+            body: "律回春渐，万象更新。在这辞旧迎新、吉庆祥和的岁首时刻，谨向长期以来携手同行、鼎力支持的您与贵公司致以最崇高的敬意与诚挚谢忱！\n\n回首过往，我们并肩耕耘，见证合作硕果；展望新程，我们同心聚力，必将再谱锦绣华章。\n\n衷心祝愿贵公司骏业日新、大展宏图！祝您及家人新岁昌盛，财源广进，万事亨通！",
+            sign: "团队全体同仁 敬贺",
+            date: "2026年 岁首吉旦",
+            seal: "鼎力<br>共赢",
+            poemTitle: "春夜喜雨",
+            poemAuthor: "〔唐〕杜甫",
+            poemText: "好雨知时节，当春乃发生。<br>随风潜入夜，润物细无声。<br>野径云俱黑，江船火独明。<br><strong>晓看红湿处，花重锦官城。</strong>",
+            backPoem: "春风浩荡开新景<br>盛业宏图展画卷",
+            backSeal: "宏图",
+            backFooter: "PROSPEROUS NEW YEAR",
+            handwritten: false
+          },
+          classical: {
+            name: "诗意文人雅韵版",
+            recipient: "台鉴：",
+            body: "梅传春信，雪兆丰年。一元复始之际，遥望故人，倍增眷念。\n\n愿君岁华如锦，笔底生花；风骨似松竹之苍劲，雅量如江海之涵容。愿新春胜意，四时安和，心中有丘壑，眉间无烦忧。\n\n特奉素笺，肃拜春祺，恭祝年年祥吉，清欢常伴！",
+            sign: "友 顿首拜",
+            date: "岁在丙午 · 新春上日",
+            seal: "岁岁<br>清欢",
+            poemTitle: "春日偶成",
+            poemAuthor: "〔唐〕高适",
+            poemText: "草木初荣日，天地始清和。<br>春风浩荡来，万里入烟萝。<br><strong>莫道秋江冷，韶光胜岁多。</strong>",
+            backPoem: "天增岁月人增寿<br>春满乾坤福满门",
+            backSeal: "清雅",
+            backFooter: "PEACE & BLESSINGS",
+            handwritten: false
+          },
+          team: {
+            name: "部门团队关怀版",
+            recipient: "亲爱的后勤保障团队同仁：",
+            body: "金岁更新，春回大地！在这个阖家欢聚的美好节日里，感谢每一位坚守岗位、默默奉献的同仁与身后默默支持的家属！\n\n正是大家的辛勤耕耘与担当实干，守护了园区的高效运转与美好生活。新的一年，让我们凝心聚力，共赴美好明天！\n\n祝大家新春快乐，工作顺心，身体健康，阖家美满幸福！",
+            sign: "管理委员会 敬贺",
+            date: "新春佳节 · 贺岁呈祥",
+            seal: "福暖<br>安康",
+            poemTitle: "立春偶成",
+            poemAuthor: "〔宋〕张栻",
+            poemText: "律回岁晚冰霜少，<br>春到人间草木知。<br>便觉眼前生意满，<br><strong>东风吹水绿参差。</strong>",
+            backPoem: "和睦同心成伟业<br>平安奉献筑基石",
+            backSeal: "福暖",
+            backFooter: "TEAM EXCELLENCE & CARE",
+            handwritten: false
+          },
+          handwritten: {
+            name: "亲笔手写空白留念版",
+            recipient: "致：________________",
+            body: "（此处为您预留的手写横线区，您可以直接打印出来后，用毛笔或钢笔亲手书写独一无二的心意与新年期许……）\n\n\n\n",
+            sign: "您的姓名：___________",
+            date: "____年___月___日",
+            seal: "迎春<br>接福",
+            poemTitle: "元日",
+            poemAuthor: "〔宋〕王安石",
+            poemText: "爆竹声中一岁除，<br>春风送暖入屠苏。<br>千门万户曈曈日，<br><strong>总把新桃换旧符。</strong>",
+            backPoem: "天增岁月人增寿<br>春满乾坤福满门",
+            backSeal: "吉祥",
+            backFooter: "HANDWRITTEN GREETING",
+            handwritten: true
+          }
+        }
+      },
+
+      dragon: {
+        name: "端午节",
+        emoji: "🎋",
+        badge: "端午安康 · 龙舟竞渡",
+        bigChar: "端",
+        vectorSub: "端阳安康 · 粽香万里",
+        vectorEn: "DRAGON BOAT FESTIVAL",
+        artImage: "./dragon_boat_art.jpg",
+        artVariants: [
+          { name: "🎋 青绿千里江山 (龙舟竞渡·玉粽碧水)", url: "./dragon_boat_art.jpg" }
+        ],
+        defaultBackIcon: "🎋",
+        templates: {
+          warm: {
+            name: "端午安康亲友版",
+            recipient: "亲爱的家人 / 朋友：",
+            body: "粽叶飘香五月节，艾草芳菲挂门庭。在这有着两千多年历史沉淀的传统端午佳节，愿一缕清幽的艾香带去我最温润的问候。\n\n愿糯米的甘甜化作日常的甘美，五彩丝线的长绳系住您与家人的平安吉祥。远离暑热与尘嚣，身心自在，体魄康健。\n\n祝端午安康，阖家平安，百病不侵，诸事顺遂！",
+            sign: "挚友 敬上",
+            date: "农历五月初五 · 端午安康",
+            seal: "端午<br>安康",
+            poemTitle: "渔家傲·端午",
+            poemAuthor: "〔宋〕欧阳修",
+            poemText: "五月榴花妖艳烘，<br>绿杨带雨垂垂重。<br>五色新丝缠角粽。<br>金盘送，生绡画扇盘双凤。<br><br><strong>正是浴兰时节动，<br>菖蒲酒美清尊共。</strong>",
+            backPoem: "绿蚁新醅香泛蚁<br>碧艾灵符辟群邪",
+            backSeal: "安康",
+            backFooter: "DRAGON BOAT FESTIVAL GREETING",
+            handwritten: false
+          },
+          business: {
+            name: "商务合作伙伴端阳志礼版",
+            recipient: "尊敬的战略合作伙伴：",
+            body: "时维仲夏，榴花绚烂。值此华夏端午良节，谨向贵公司领导及全体同仁致以最美好的节日问候与真挚祝愿！\n\n如龙舟竞渡，唯击鼓齐心者方能乘风破浪；如商海扬帆，唯诚信相守者方可行稳致远。感恩一路相携，愿未来的合作似龙舟竞发，势如破竹！\n\n衷心祝愿贵公司蒸蒸日上，业绩长虹！祝您端午安康，工作顺遂，福寿康宁！",
+            sign: "业务合作团队 谨呈",
+            date: "岁次端阳 · 仲夏吉日",
+            seal: "同舟<br>共济",
+            poemTitle: "端午日赐衣",
+            poemAuthor: "〔唐〕杜甫",
+            poemText: "宫衣亦有名，端午被恩荣。<br>细葛含风软，香罗叠雪轻。<br>自天题处湿，当暑著来清。<br><strong>意内称长短，终身忝赏盛。</strong>",
+            backPoem: "千帆竞发争上游<br>万舸争流谱新篇",
+            backSeal: "共进",
+            backFooter: "HONOR & PARTNERSHIP",
+            handwritten: false
+          },
+          classical: {
+            name: "端阳风雅文人版",
+            recipient: "仁兄 / 益友 鉴：",
+            body: "风来兰佩，雨润芳草。五月仲夏，菖蒲泛绿，正是思古怀贤、吟咏抒怀之时。\n\n遥寄江上一抹艾香，敬奉心底一泓清泉。愿君秉浩然正气，如龙舟破浪于沧海；怀赤子之心，似幽兰生香于空谷。\n\n端肃奉达，遥祝端阳清怡，平安顺遂，文思泉涌！",
+            sign: "愚弟 顿首拜",
+            date: "端阳吉日 · 浴兰良宵",
+            seal: "兰芷<br>清芳",
+            poemTitle: "和端午",
+            poemAuthor: "〔宋〕张耒",
+            poemText: "竞渡深悲千载冤，<br>忠魂一去讵能还。<br>国亡身殒今何有，<br><strong>只留离骚在世间。</strong>",
+            backPoem: "艾旗招百福<br>蒲剑斩千邪",
+            backSeal: "祥和",
+            backFooter: "PEACE & TRADITION",
+            handwritten: false
+          },
+          team: {
+            name: "团队员工慰问版",
+            recipient: "各位辛勤奉献的后勤同仁：",
+            body: "粽香传情，关怀暖心！端午佳节来临之际，中心向默默奉献在各个服务岗位上的全体员工及家属致以最诚挚的节日问候！\n\n大家如紧系在一起的彩丝绳，齐心协力拧成一股绳，为后勤系统的平稳安全运行筑牢防线。炎炎夏日，请大家注意防暑降温、劳逸结合。\n\n祝全体同仁端午安康，阖家欢乐，平安吉祥！",
+            sign: "后勤服务中心 敬启",
+            date: "端午佳节 · 岁次仲夏",
+            seal: "夏日<br>安康",
+            poemTitle: "渔家傲·端午",
+            poemAuthor: "〔宋〕欧阳修",
+            poemText: "五月榴花妖艳烘，<br>绿杨带雨垂垂重。<br>五色新丝缠角粽。<br>金盘送，生绡画扇盘双凤。<br><br><strong>正是浴兰时节动，<br>菖蒲酒美清尊共。</strong>",
+            backPoem: "心怀责任保平稳<br>润物无声映真情",
+            backSeal: "关怀",
+            backFooter: "EMPLOYEE WELLBEING",
+            handwritten: false
+          },
+          handwritten: {
+            name: "端午亲笔手写留白版",
+            recipient: "致：________________",
+            body: "（此处为您预留的手写横线区，您可以直接打印出来后，用钢笔亲手书写独一无二的端午安康祝福……）\n\n\n\n",
+            sign: "您的姓名：___________",
+            date: "____年___月___日",
+            seal: "端午<br>吉祥",
+            poemTitle: "渔家傲·端午",
+            poemAuthor: "〔宋〕欧阳修",
+            poemText: "五月榴花妖艳烘，<br>绿杨带雨垂垂重。<br>五色新丝缠角粽。<br>金盘送，生绡画扇盘双凤。<br><br><strong>正是浴兰时节动，<br>菖蒲酒美清尊共。</strong>",
+            backPoem: "艾旗招百福<br>蒲剑斩千邪",
+            backSeal: "安康",
+            backFooter: "HANDWRITTEN GREETING",
+            handwritten: true
+          }
+        }
+      },
+
+      midautumn: {
+        name: "中秋节",
+        emoji: "🌕",
+        badge: "花好月圆 · 广寒清辉",
+        bigChar: "月",
+        vectorSub: "月圆人圆 · 花好月好",
+        vectorEn: "MID-AUTUMN FESTIVAL",
+        artImage: "./midautumn_guanghan_art.jpg",
+        artVariants: [
+          { name: "🌕 广寒月照千山 (玉兔金桂·宋画山水)", url: "./midautumn_guanghan_art.jpg" },
+          { name: "🥮 花好月圆祥和 (月华满堂·团聚美满)", url: "./mid_autumn_art.jpg" }
+        ],
+        defaultBackIcon: "🌕",
+        templates: {
+          warm: {
+            name: "温情亲友版（温馨团圆）",
+            recipient: "亲爱的朋友：",
+            body: "岁月中秋至，月满正清辉。在这象征团圆与美满的佳节里，愿一轮明月带去我最真挚的问候。\n\n愿您的生活如秋月般圆满明朗，事业似清风般顺畅通达。无论身在何方，抬头同望一轮明月，心意相通。\n\n祝中秋快乐，阖家幸福，万事顺遂！",
+            sign: "挚友 敬上",
+            date: "农历八月十五 · 岁次中秋",
+            seal: "团圆<br>美满",
+            poemTitle: "水调歌头",
+            poemAuthor: "〔宋〕苏轼",
+            poemText: "明月几时有？把酒问青天。<br>不知天上宫阙，今夕是何年。<br>我欲乘风归去，又恐琼楼玉宇，<br>高处不胜寒。起舞弄清影，何似在人间？<br><br>人有悲欢离合，月有阴晴圆缺，<br>此事古难全。<br><strong>但愿人长久，千里共婵娟。</strong>",
+            backPoem: "月圆人圆事事圆<br>花好月好万家好",
+            backSeal: "吉祥",
+            backFooter: "MID-AUTUMN FESTIVAL GREETING",
+            handwritten: false
+          },
+          business: {
+            name: "商务尊贵版（合作伙伴）",
+            recipient: "尊敬的合作伙伴 / 业界同仁：",
+            body: "时维中秋，月朗风清。值此花好月圆的传统佳节，谨向您及贵团队致以最诚挚的节日祝福与崇高敬意！\n\n感谢长期以来的信任、并肩同行与卓越支持。愿我们携手共进，共创辉煌篇章。\n\n衷心祝愿贵公司蒸蒸日上，笃行致远！祝您及家人中秋吉祥，福暖四季，诸事顺意！",
+            sign: "团队全体同仁 敬贺",
+            date: "2026年 岁次中秋",
+            seal: "同心<br>共赢",
+            poemTitle: "望月怀远",
+            poemAuthor: "〔唐〕张九龄",
+            poemText: "海上生明月，天涯共此时。<br>情人怨遥夜，竟夕起相思。<br>灭烛怜光满，披衣觉露滋。<br><strong>不堪盈手赠，还寝梦佳期。</strong>",
+            backPoem: "共沐清辉展宏图<br>同心携手赢未来",
+            backSeal: "共赢",
+            backFooter: "BUSINESS EXCELLENCE",
+            handwritten: false
+          },
+          classical: {
+            name: "诗意高雅版（文人诗韵）",
+            recipient: "尊鉴：",
+            body: "金风送爽，玉露生香。八月天宇澄澈，三五良宵月满。\n\n遥寄桂花一缕香，遥奉明月一片心。愿得清光长作伴，人间岁岁有清欢。\n\n肃此奉达，恭祝中秋清吉，福寿安康，雅怀常在！",
+            sign: "敬呈",
+            date: "丙午秋 · 八月望日",
+            seal: "吉祥<br>如意",
+            poemTitle: "水调歌头",
+            poemAuthor: "〔宋〕苏轼",
+            poemText: "明月几时有？把酒问青天。<br>不知天上宫阙，今夕是何年。<br>人有悲欢离合，月有阴晴圆缺，<br>此事古难全。<br><strong>但愿人长久，千里共婵娟。</strong>",
+            backPoem: "月满西楼桂子香<br>清光千里共婵娟",
+            backSeal: "清雅",
+            backFooter: "PEACE & TRANQUILITY",
+            handwritten: false
+          },
+          team: {
+            name: "团队员工关怀版",
+            recipient: "亲爱的后勤同仁及家人们：",
+            body: "月到中秋分外明，情到深处暖人心。值此中秋佳节，谨向坚守在服务第一线的全体员工和默默付出的家属致以最诚挚的节日问候！\n\n每一位同仁的辛勤努力，汇聚成了我们坚实有力的发展基石。月圆人团圆，无论您是在家阖家欢聚还是坚守岗位，愿月光普照，温暖相随！\n\n祝大家中秋快乐，身体健康，阖家幸福！",
+            sign: "后勤管理部 敬呈",
+            date: "中秋佳节 · 岁次中秋",
+            seal: "情暖<br>中秋",
+            poemTitle: "十五夜望月",
+            poemAuthor: "〔唐〕王建",
+            poemText: "中庭地白树栖鸦，<br>冷露无声湿桂花。<br><strong>今夜月明人尽望，<br>不知秋思落谁家。</strong>",
+            backPoem: "同心筑梦共此时<br>守望相助暖家园",
+            backSeal: "关爱",
+            backFooter: "STAFF CARE GREETING",
+            handwritten: false
+          },
+          handwritten: {
+            name: "亲笔手写版（留白横线）",
+            recipient: "致：________________",
+            body: "（此处为您预留的手写横线区，您可以直接打印出来后，用钢笔亲手书写独一无二的心意与祝福……）\n\n\n\n",
+            sign: "您的姓名：___________",
+            date: "____年___月___日",
+            seal: "中秋<br>欢喜",
+            poemTitle: "水调歌头",
+            poemAuthor: "〔宋〕苏轼",
+            poemText: "明月几时有？把酒问青天。<br>不知天上宫阙，今夕是何年。<br><strong>但愿人长久，千里共婵娟。</strong>",
+            backPoem: "月圆人圆事事圆<br>花好月好万家好",
+            backSeal: "团圆",
+            backFooter: "HANDWRITTEN GREETING",
+            handwritten: true
+          }
+        }
+      },
+
+      lantern: {
+        name: "元宵节",
+        emoji: "🏮",
+        badge: "上元良宵 · 万家灯火",
+        bigChar: "元",
+        vectorSub: "上元佳节 · 灯火良宵",
+        vectorEn: "LANTERN FESTIVAL",
+        artImage: "./lantern_festival_art.jpg",
+        artVariants: [
+          { name: "🏮 上元鱼龙夜舞 (水乡千门灯火·彩龙飞舞)", url: "./lantern_festival_art.jpg" }
+        ],
+        defaultBackIcon: "🏮",
+        templates: {
+          warm: {
+            name: "元宵良宵美满版",
+            recipient: "亲爱的家人 / 朋友：",
+            body: "一曲笙歌春如海，千门灯火夜似昼。正月十五上元佳节，愿一盏盏温暖的花灯为您点亮前程，一碗碗甜糯的元宵为您盛满甜美。\n\n愿新的一年圆圆满满，灯火璀璨；月圆人圆，所行化坦途，所求皆所愿！\n\n祝元宵节快乐，阖家安康，喜乐常在！",
+            sign: "挚友 敬贺",
+            date: "正月十五 · 上元良宵",
+            seal: "圆圆<br>满满",
+            poemTitle: "青玉案·元夕",
+            poemAuthor: "〔宋〕辛弃疾",
+            poemText: "东风夜放花千树。更吹落、星如雨。<br>宝马雕车香满路。凤箫声动，玉壶光转，一夜鱼龙舞。<br><br><strong>众里寻他千百度。<br>蓦然回首，那人却在，灯火阑珊处。</strong>",
+            backPoem: "花灯万盏迎春到<br>汤圆一碗话团圆",
+            backSeal: "良宵",
+            backFooter: "LANTERN FESTIVAL GREETING",
+            handwritten: false
+          },
+          classical: {
+            name: "上元诗意雅聚版",
+            recipient: "雅鉴：",
+            body: "玉宇澄澈，华灯初上。良宵逢吉，与君遥拜。\n\n愿此夜星桥铁锁开，愿君胸怀坦荡如明月，步步生辉似银花。赏花灯，品元宵，岁岁年年，常聚常欢。\n\n恭祝上元大吉，阖家清吉安泰！",
+            sign: "知己 谨白",
+            date: "上元佳宵 · 岁次元夕",
+            seal: "吉祥<br>如意",
+            poemTitle: "生查子·元夕",
+            poemAuthor: "〔宋〕欧阳修",
+            poemText: "去年元夜时，花市灯如昼。<br>月上柳梢头，人约黄昏后。<br><strong>今年元夜时，月与灯依旧。<br>不见去年人，泪湿春衫袖。</strong>",
+            backPoem: "良宵美景伴清辉<br>明月花灯照吉时",
+            backSeal: "团圆",
+            backFooter: "PEACE & JOY",
+            handwritten: false
+          }
+        }
+      },
+
+      national: {
+        name: "国庆节",
+        emoji: "🇨🇳",
+        badge: "盛世华诞 · 举国同庆",
+        bigChar: "庆",
+        vectorSub: "锦绣中华 · 国泰民安",
+        vectorEn: "NATIONAL DAY CELEBRATION",
+        artImage: "./spring_palace_gold.jpg",
+        artVariants: [
+          { name: "🇨🇳 盛世锦绣重檐 (故宫金瓦·江山多娇)", url: "./spring_palace_gold.jpg" }
+        ],
+        defaultBackIcon: "⭐",
+        templates: {
+          celebration: {
+            name: "盛世华诞共庆版",
+            recipient: "各界同仁 / 亲朋好友：",
+            body: "金秋十月，神州同庆；万里山河，红旗飘扬。在这举国欢庆的庄严与盛大节日里，谨向您及家人致以最美好的祝愿！\n\n愿生于华夏的自豪常驻心间，愿祖国繁荣昌盛、国泰民安！愿我们在新时代的浪潮中乘风破浪，共创锦绣前程。\n\n祝国庆节快乐，阖家安康，幸福美满！",
+            sign: "同仁 敬祝",
+            date: "十月一日 · 欢度国庆",
+            seal: "国泰<br>民安",
+            poemTitle: "沁园春·雪",
+            poemAuthor: "毛泽东",
+            poemText: "北国风光，千里冰封，万里雪飘。<br>望长城内外，惟余莽莽；大河上下，顿失滔滔。<br>江山如此多娇，引无数英雄竞折腰。<br><strong>俱往矣，数风流人物，还看今朝。</strong>",
+            backPoem: "万里河山披锦绣<br>千秋伟业谱华章",
+            backSeal: "盛世",
+            backFooter: "NATIONAL DAY CELEBRATION",
+            handwritten: false
+          }
+        }
+      }
+    };
+
+    // 精选国风名家绘卷库（全部为本地高保真无水印大师画卷）
+    const CURATED_GALLERY = [
+      {
+        title: "👑 恭贺新禧·故宫雪景金瓦",
+        tag: "spring",
+        url: "./spring_palace_gold.jpg",
+        thumb: "./spring_palace_gold.jpg"
+      },
+      {
+        title: "🏮 新春吉祥·喜庆华灯宫苑",
+        tag: "spring",
+        url: "./spring_festival_art.jpg",
+        thumb: "./spring_festival_art.jpg"
+      },
+      {
+        title: "🎋 端阳竞渡·碧水龙舟香粽",
+        tag: "dragon",
+        url: "./dragon_boat_art.jpg",
+        thumb: "./dragon_boat_art.jpg"
+      },
+      {
+        title: "🌕 广寒清辉·玉兔金桂山水",
+        tag: "midautumn",
+        url: "./midautumn_guanghan_art.jpg",
+        thumb: "./midautumn_guanghan_art.jpg"
+      },
+      {
+        title: "🥮 花好月圆·月华满堂清辉",
+        tag: "midautumn",
+        url: "./mid_autumn_art.jpg",
+        thumb: "./mid_autumn_art.jpg"
+      },
+      {
+        title: "🏮 上元良宵·千门灯火鱼龙舞",
+        tag: "lantern",
+        url: "./lantern_festival_art.jpg",
+        thumb: "./lantern_festival_art.jpg"
+      },
+      {
+        title: "📜 古典泥金·洒线熟宣山水卷轴",
+        tag: "texture",
+        url: "./chinese_antique_scroll.jpg",
+        thumb: "./chinese_antique_scroll.jpg"
+      }
+    ];
+
+    let currentFestival = "spring";
+    let currentTemplateKey = "warm";
+    let currentCoverStyle = "art";
+    let currentFontSize = 15;
+    let customCoverUrl = null;
+
+    // 页面初始化
+    document.addEventListener("DOMContentLoaded", () => {
+      initCuratedGallery("all");
+      switchFestival("spring");
+    });
+
+    // 复制搜索关键词工具
+    function copyKeywords(text) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert(`✅ 已成功复制推荐搜索词：\n“${text}”\n\n您可以直接在打开的素材库搜索框中粘贴（Ctrl+V）！`);
+        }).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      alert(`✅ 已复制搜索词：“${text}”`);
+    }
+
+    // 切换节日分类
+    function switchFestival(festKey) {
+      if (!FESTIVALS[festKey]) return;
+      currentFestival = festKey;
+      document.body.setAttribute("data-festival", festKey);
+
+      const festData = FESTIVALS[festKey];
+      document.getElementById("festivalEmoji").innerText = festData.emoji;
+      document.getElementById("festivalTitleText").innerText = festData.name + "贺卡定制与打印工坊";
+      document.getElementById("festivalBadge").innerText = festData.badge;
+      document.getElementById("backFestivalIcon").innerText = festData.defaultBackIcon;
+      document.getElementById("vectorBigChar").innerText = festData.bigChar;
+      document.getElementById("vectorSubTitle").innerText = festData.vectorSub;
+      document.getElementById("vectorEnTitle").innerText = festData.vectorEn;
+
+      // 更新模板下拉框
+      const tSelect = document.getElementById("templateSelect");
+      tSelect.innerHTML = "";
+      const tKeys = Object.keys(festData.templates);
+      tKeys.forEach(key => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.innerText = festData.templates[key].name;
+        tSelect.appendChild(opt);
+      });
+
+      // 更新封面画作变体下拉框
+      const vSelect = document.getElementById("coverArtVariantSelect");
+      vSelect.innerHTML = "";
+      festData.artVariants.forEach((v, idx) => {
+        const opt = document.createElement("option");
+        opt.value = v.url;
+        opt.innerText = v.name;
+        vSelect.appendChild(opt);
+      });
+
+      // 切换封面图（如果当前不是自定义模式）
+      if (currentCoverStyle === "art") {
+        document.getElementById("frontArtImg").src = festData.artImage;
+        vSelect.value = festData.artImage;
+      }
+
+      // 默认应用第一个模板
+      currentTemplateKey = tKeys[0];
+      applyTemplate(currentTemplateKey);
+    }
+
+    // 切换画作选款
+    function switchArtVariant(url) {
+      currentCoverStyle = "art";
+      document.getElementById("coverStyleSelect").value = "art";
+      document.getElementById("frontCoverCard").classList.remove("cover-style-vector");
+      document.getElementById("frontArtImg").src = url;
+    }
+
+    // 应用祝福文案模板
+    function applyTemplate(key) {
+      currentTemplateKey = key;
+      const festData = FESTIVALS[currentFestival];
+      const data = festData.templates[key];
+      if (!data) return;
+
+      document.getElementById("greetingRecipient").innerText = data.recipient;
+      document.getElementById("greetingBody").innerText = data.body;
+      document.getElementById("greetingSign").innerText = data.sign;
+      document.getElementById("greetingDate").innerText = data.date;
+      document.getElementById("cinnabarSeal").innerHTML = data.seal;
+
+      document.getElementById("insidePoemTitle").innerText = data.poemTitle;
+      document.getElementById("insidePoemAuthor").innerText = data.poemAuthor;
+      document.getElementById("insidePoemText").innerHTML = data.poemText;
+
+      document.getElementById("backPoem").innerHTML = data.backPoem;
+      document.getElementById("backSealSmall").innerText = data.backSeal;
+      document.getElementById("backFooterNote").innerText = data.backFooter;
+
+      const container = document.getElementById("greetingContainer");
+      if (data.handwritten) {
+        container.classList.add("handwriting-mode");
+      } else {
+        container.classList.remove("handwriting-mode");
+      }
+    }
+
+    // 还原当前模板
+    function resetCurrentTemplate() {
+      applyTemplate(currentTemplateKey);
+    }
+
+    // 切换封面风格
+    function switchCoverStyle(style) {
+      currentCoverStyle = style;
+      const frontCover = document.getElementById("frontCoverCard");
+      const artImg = document.getElementById("frontArtImg");
+
+      frontCover.classList.remove("cover-style-vector");
+
+      if (style === "vector") {
+        frontCover.classList.add("cover-style-vector");
+      } else if (style === "art") {
+        const vUrl = document.getElementById("coverArtVariantSelect").value;
+        artImg.src = vUrl || FESTIVALS[currentFestival].artImage;
+      } else if (style === "custom") {
+        if (customCoverUrl) {
+          artImg.src = customCoverUrl;
+        } else {
+          openBgModal();
+        }
+      }
+    }
+
+    // 正文字号调整
+    function adjustFontSize(delta) {
+      currentFontSize = Math.max(12, Math.min(22, currentFontSize + delta));
+      document.getElementById("greetingBody").style.fontSize = currentFontSize + "px";
+    }
+
+    // ================= 网上拉取背景与素材库功能 =================
+    function openBgModal() {
+      document.getElementById("bgModal").classList.add("active");
+    }
+
+    function closeBgModal() {
+      document.getElementById("bgModal").classList.remove("active");
+    }
+
+    function switchModalTab(index) {
+      const tabs = document.querySelectorAll(".tab-btn");
+      const contents = document.querySelectorAll(".tab-content");
+      tabs.forEach((t, i) => t.classList.toggle("active", i === index));
+      contents.forEach((c, i) => c.classList.toggle("active", i === index));
+    }
+
+    function quickFillUrl(url) {
+      document.getElementById("webImgUrlInput").value = url;
+    }
+
+    // 从网络拉取并应用图片
+    function fetchWebImage() {
+      const urlInput = document.getElementById("webImgUrlInput");
+      const url = urlInput.value.trim();
+      const statusBox = document.getElementById("fetchStatus");
+
+      if (!url) {
+        statusBox.className = "fetch-status error";
+        statusBox.innerText = "⚠️ 请先输入有效的网络图片地址！";
+        return;
+      }
+
+      statusBox.className = "fetch-status loading";
+      statusBox.innerText = "⏳ 正在拉取网络图片并校验有效性...";
+
+      const target = document.querySelector('input[name="applyTarget"]:checked').value;
+      const testImg = new Image();
+
+      testImg.onload = function() {
+        statusBox.className = "fetch-status success";
+        statusBox.innerText = "✅ 图片拉取成功！已应用到目标区域。";
+        applyLoadedBackground(url, target);
+      };
+
+      testImg.onerror = function() {
+        statusBox.className = "fetch-status error";
+        statusBox.innerText = "❌ 图片加载失败，请检查网址是否正确，或目标站点是否阻止外部跨域访问。";
+      };
+
+      testImg.src = url;
+    }
+
+    // 将拉取或上传的背景应用到卡片
+    function applyLoadedBackground(imageUrl, target) {
+      if (target === "cover") {
+        customCoverUrl = imageUrl;
+        document.getElementById("frontArtImg").src = imageUrl;
+        document.getElementById("coverStyleSelect").value = "custom";
+        switchCoverStyle("custom");
+      } else if (target === "left") {
+        const leftCard = document.getElementById("insideLeftCard");
+        leftCard.style.backgroundImage = `url('${imageUrl}')`;
+        leftCard.style.backgroundSize = "cover";
+      } else if (target === "right") {
+        const rightCard = document.getElementById("greetingContainer");
+        rightCard.style.backgroundImage = `url('${imageUrl}')`;
+        rightCard.style.backgroundSize = "cover";
+      }
+    }
+
+    // 本地文件上传处理
+    function handleLocalFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const target = document.querySelector('input[name="applyTarget"]:checked').value;
+        applyLoadedBackground(e.target.result, target);
+        alert("🎉 本地图片已成功载入并应用！");
+        closeBgModal();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 筛选名家画作库
+    function filterGallery(filterTag) {
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.innerText.includes(filterTag) || (filterTag === 'all' && btn.innerText.includes('全部')));
+      });
+      initCuratedGallery(filterTag);
+    }
+
+    // 渲染名家画作库
+    function initCuratedGallery(filterTag = "all") {
+      const grid = document.getElementById("curatedGalleryGrid");
+      grid.innerHTML = "";
+      const filtered = filterTag === "all" ? CURATED_GALLERY : CURATED_GALLERY.filter(item => item.tag === filterTag);
+      
+      filtered.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "gallery-item";
+        card.innerHTML = `
+          <img src="${item.thumb}" class="gallery-thumb" alt="${item.title}">
+          <div class="gallery-caption">
+            <span>${item.title}</span>
+            <span style="color:#38bdf8; font-weight:600;">应用 ›</span>
+          </div>
+        `;
+        card.onclick = () => {
+          applyLoadedBackground(item.thumb, "cover");
+          alert(`✨ 已成功将【${item.title}】设为贺卡封面！`);
+          closeBgModal();
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    // 更新透明度
+    function updateBgOpacity(val) {
+      document.getElementById("opacityVal").innerText = val + "%";
+      const opacityDecimal = val / 100;
+      document.getElementById("insideLeftCard").style.opacity = opacityDecimal;
+    }
+
+    // 更新填充模式
+    function updateBgFit(mode) {
+      document.getElementById("insideLeftCard").style.backgroundSize = mode;
+      document.getElementById("greetingContainer").style.backgroundSize = mode;
+    }
+
+    // 清除自定义背景
+    function clearCustomBackground() {
+      customCoverUrl = null;
+      document.getElementById("insideLeftCard").style.backgroundImage = "";
+      document.getElementById("insideLeftCard").style.opacity = "1";
+      document.getElementById("greetingContainer").style.backgroundImage = "";
+      document.getElementById("coverStyleSelect").value = "art";
+      switchCoverStyle("art");
+      alert("已重置所有自定义背景为官方预设！");
+    }
+
+    // 点击模态框遮罩关闭
+    document.getElementById("bgModal").addEventListener("click", function(e) {
+      if (e.target === this) closeBgModal();
+    });
+  </script>
+</body>
+</html>

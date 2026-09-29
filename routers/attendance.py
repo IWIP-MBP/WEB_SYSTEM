@@ -83,6 +83,12 @@ def convert_attendance_endpoint(
     except ValueError as val_err:
         logger.warning(f"考勤转换参数校验失败: {val_err}")
         raise HTTPException(status_code=400, detail=str(val_err))
+    except KeyError as key_err:
+        logger.warning(f"考勤转换缺少必要数据列: {key_err}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"文件数据解析失败，缺少必要的数据列/字段: {key_err}。请检查上传的出勤明细或排休模板是否符合格式要求。"
+        )
     except Exception as e:
         logger.error(f"考勤转换执行中发生未知异常: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"转换服务发生未知内部错误: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"转换服务发生内部错误: {str(e)}")

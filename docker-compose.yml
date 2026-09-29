@@ -159,7 +159,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./portal:/usr/share/nginx/html/portal:ro
-      - "D:/电梯故障排查:/usr/share/nginx/html/elevator:ro"
+      - ../elevator_fault:/usr/share/nginx/html/elevator:ro
     depends_on:
       backend:
         condition: service_healthy

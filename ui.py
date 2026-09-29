@@ -5466,6 +5466,7 @@ elif menu == t("attendance_converter"):
         st.warning(t("readonly_msg"))
         st.stop()
         
+    st.info("💡 **操作指引**：步骤一请上传包含**考勤打卡流水/Data Log**的明细文件（可多选多个月份流水）；步骤二上传待填写的**排班/排休模板表**（包含1~31日表格）。系统已内置智能防呆，若两处文件不慎放反将自动识别调换并处理。")
     uploaded_logs = st.file_uploader(t("upload_attendance_logs"), type=["xlsx", "xls"], accept_multiple_files=True, key="uploaded_attendance_logs")
     uploaded_template = st.file_uploader(t("upload_attendance_template"), type=["xlsx"], key="uploaded_attendance_template")
     
